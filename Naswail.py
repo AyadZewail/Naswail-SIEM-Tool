@@ -1,11 +1,9 @@
 import sys
 import numpy as np
 import time
-import multiprocessing
+import psutil
 from sklearn.svm import OneClassSVM
-from PyQt6.QtWidgets import (
-    QApplication, QMainWindow, QVBoxLayout, QWidget, QTableWidget, QTableWidgetItem, QTextEdit, QSplitter, QHBoxLayout, QPushButton, QLineEdit, QLabel, QDialog
-)
+from PyQt6.QtWidgets import *
 from PyQt6.QtCore import Qt, QThread, pyqtSignal, QTimer
 from scapy.all import sniff, wrpcap
 from statistics import mean, median, mode, stdev, variance
@@ -32,7 +30,24 @@ class PacketSnifferApp(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Naswail")
-        self.setGeometry(100, 100, 1000, 700)
+        self.setGeometry(0, 0, 1000, 700)
+        self.showMaximized()
+        
+        # Data storage for packets, stats, and processes
+        self.packets = []
+        self.filtered_packets = []
+        self.packet_features = []
+        self.new_packet_features = []
+        self.packet_stats = {"total": 0, "tcp": 0, "udp": 0, "icmp": 0}
+        self.model = LinearRegression()
+        self.anmodel = OneClassSVM(kernel='rbf', gamma=0.1, nu=0.1)
+        self.bandwidth_data = []
+        self.times = []
+        self.counts = []
+        self.anomalies = []
+        self.apps = dict()
+        self.futureTraffic = 0
+        self.r2 = 0
 
         # Main layout
         main_layout = QVBoxLayout()
@@ -56,10 +71,16 @@ class PacketSnifferApp(QMainWindow):
         control_layout = QHBoxLayout()
         self.filter_input = QLineEdit()
         self.filter_input.setPlaceholderText("Filter by IP or Protocol")
+
         self.filter_button = QPushButton("Apply Filter")
         self.filter_button.clicked.connect(self.apply_filter)
+
+        self.app_analysis = QPushButton("App Analysis")
+        self.app_analysis.clicked.connect(self.get_applications_with_ports)
+
         self.export_button = QPushButton("Export Packets")
         self.export_button.clicked.connect(self.export_packets)
+
         self.stats_label = QLabel("Packets: 0 | TCP: 0 | UDP: 0 | ICMP: 0")
 
         #Add Widgets
@@ -67,6 +88,7 @@ class PacketSnifferApp(QMainWindow):
         control_layout.addWidget(self.filter_button)
         control_layout.addWidget(self.export_button)
         control_layout.addWidget(self.stats_label)
+        control_layout.addWidget(self.app_analysis)
         main_layout.addLayout(control_layout)
 
         # Table to display packets
@@ -75,24 +97,19 @@ class PacketSnifferApp(QMainWindow):
         self.packet_table.setHorizontalHeaderLabels(["Timestamp", "Source", "Destination", "Protocol"])
         self.packet_table.cellClicked.connect(self.display_packet_details)
         left_splitter.addWidget(self.packet_table)
+        
+        #Display Available Apps
+        self.available_apps = QTableWidget()
+        self.available_apps.setColumnCount(3)
+        self.available_apps.setHorizontalHeaderLabels(["App ID", "App Name", "App Status"])
+        self.available_apps.cellClicked.connect(self.analyze_app)
+        left_splitter.addWidget(self.available_apps)
+
 
         # Text edit to display detailed packet info
         self.packet_details = QTextEdit()
         self.packet_details.setReadOnly(True)
         left_splitter.addWidget(self.packet_details)
-
-        # Data storage for packets and stats
-        self.packets = []
-        self.filtered_packets = []
-        self.packet_features = []
-        self.new_packet_features = []
-        self.packet_stats = {"total": 0, "tcp": 0, "udp": 0, "icmp": 0}
-        self.model = LinearRegression()
-        self.anmodel = OneClassSVM(kernel='rbf', gamma=0.1, nu=0.1)
-
-
-        # Bandwidth tracking
-        self.bandwidth_data = []  # List to store bandwidth usage over time
 
         # Start sniffing packets
         self.sniffer_thread = PacketSnifferThread()
@@ -138,18 +155,9 @@ class PacketSnifferApp(QMainWindow):
         self.bandwidth_button.clicked.connect(self.plot_bandwidth)
         right_layout.addWidget(self.bandwidth_button)
 
-        #time-series labels
-        self.times = []
-        self.counts = []
-
         self.timer = QTimer(self)  # Timer instance
         self.timer.timeout.connect(self.tick)  # Connect the timer to a function
         self.timer.start(1000) 
-
-        self.anomalies = []
-
-        self.futureTraffic = 0
-        self.r2 = 0
         
         # Create a QWidget to hold the layout
         right_widget = QWidget()
@@ -413,6 +421,60 @@ class PacketSnifferApp(QMainWindow):
             self.new_packet_features = []
             X_train = np.array(self.packet_features)
             self.anmodel.fit(X_train)
+
+    def get_applications_with_ports(self):
+        apps_with_ports = []
+
+        for proc in psutil.process_iter(attrs=['pid', 'name', 'exe', 'status']):
+            try:
+                pid = proc.info['pid']
+                app_name = proc.info['name']
+                app_path = proc.info['exe']
+                app_status = proc.info['status']
+
+                # Get network connections for this process
+                connections = psutil.Process(pid).net_connections(kind='inet')
+                for conn in connections:
+                    local_ip, local_port = conn.laddr
+                    apps_with_ports.append({
+                        "Application": app_name,
+                        "IP": local_ip,
+                        "Port": local_port,
+                        "Path": app_path,
+                        "Status": app_status
+                    })
+            except (psutil.AccessDenied, psutil.NoSuchProcess):
+                continue
+
+        self.apps = apps_with_ports
+        self.available_apps.setRowCount(0)
+        for app in self.apps:
+            row_position = self.available_apps.rowCount()
+            self.available_apps.insertRow(row_position)
+            self.available_apps.setItem(row_position, 0, QTableWidgetItem(str(app["Port"])))
+            self.available_apps.setItem(row_position, 1, QTableWidgetItem(str(app["Application"])))
+            self.available_apps.setItem(row_position, 2, QTableWidgetItem(str(app["IP"])))
+    
+    def analyze_app(self, row):
+        target_app = self.apps[row]
+        self.packet_table.setRowCount(0)  # Clear the table
+
+        self.filtered_packets = []
+        for packet in self.packets:
+            src_ip = packet["IP"].src if packet.haslayer("IP") else "N/A"
+            dst_ip = packet["IP"].dst if packet.haslayer("IP") else "N/A"
+            protocol = packet.sprintf("%IP.proto%") if packet.haslayer("IP") else "Other"
+            port = packet["TCP"].sport if packet.haslayer("TCP") else "N/A"
+
+            if target_app["IP"] in src_ip.lower() or target_app["IP"] in dst_ip.lower() or str(target_app["Port"]) in port:
+                self.filtered_packets.append(packet)
+
+                row_position = self.packet_table.rowCount()
+                self.packet_table.insertRow(row_position)
+                self.packet_table.setItem(row_position, 0, QTableWidgetItem(datetime.fromtimestamp(packet.time).strftime("%I:%M:%S %p")))
+                self.packet_table.setItem(row_position, 1, QTableWidgetItem(src_ip))
+                self.packet_table.setItem(row_position, 2, QTableWidgetItem(dst_ip))
+                self.packet_table.setItem(row_position, 3, QTableWidgetItem(protocol))
 
 
 if __name__ == "__main__":
