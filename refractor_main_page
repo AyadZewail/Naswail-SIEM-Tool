@@ -33,6 +33,93 @@ packetInput = 0
 packetFile = None
 clearRead = 0
 packetIndex = 0
+class ApplicationsSystem:
+    def __init__(self, ui_main_window):
+        self.ui = ui_main_window
+        self.apps = dict()
+        self.packet_obj = None  # Delay initialization
+    def set_packet_system(self, packet_obj):
+        """Set the packet system after both are initialized."""
+        self.packet_obj = packet_obj
+    def get_applications_with_ports(self):
+        apps_with_ports = []
+
+        for proc in psutil.process_iter(attrs=['pid', 'name', 'exe', 'status']):
+            try:
+                pid = proc.info['pid']
+                app_name = proc.info['name']
+                app_path = proc.info['exe']
+                app_status = proc.info['status']
+
+                connections = psutil.Process(pid).net_connections(kind='inet')
+                for conn in connections:
+                    local_ip, local_port = conn.laddr
+                    apps_with_ports.append({
+                        "Application": app_name,
+                        "IP": local_ip,
+                        "Port": local_port,
+                        "Path": app_path,
+                        "Status": app_status
+                    })
+            except (psutil.AccessDenied, psutil.NoSuchProcess):
+                continue
+
+        self.apps = apps_with_ports
+        self.ui.tableWidget_3.setRowCount(0)
+        for app in self.apps:
+            row_position = self.ui.tableWidget_3.rowCount()
+            self.ui.tableWidget_3.insertRow(row_position)
+            self.ui.tableWidget_3.setItem(row_position, 0, QTableWidgetItem(str(app["Port"])))
+            self.ui.tableWidget_3.setItem(row_position, 1, QTableWidgetItem(str(app["Application"])))
+            self.ui.tableWidget_3.setItem(row_position, 2, QTableWidgetItem(str(app["IP"])))
+
+    def analyze_app(self, row):
+        self.packet_obj.filterapplied = True
+        target_app = self.apps[row]
+        self.ui.tableWidget.setRowCount(0)
+
+        self.filtered_packets = []
+        for packet in self.packet_obj.packets:
+            macsrc = packet["Ethernet"].src if packet.haslayer("Ethernet") else "N/A"
+            macdst = packet["Ethernet"].dst if packet.haslayer("Ethernet") else "N/A"
+            # Extract packet length
+            packet_length = int(len(packet))
+
+        # Extract IP version
+            ip_version = "IPv6" if packet.haslayer("IPv6") else "IPv4" if packet.haslayer("IP") else "N/A"
+            # Extract port information for TCP/UDP
+            sport = None
+            dport = None
+            if packet.haslayer("TCP"):
+                sport = packet["TCP"].sport
+                dport = packet["TCP"].dport
+            elif packet.haslayer("UDP"):
+                sport = packet["UDP"].sport
+                dport = packet["UDP"].dport
+
+            packet_length = int(len(packet))
+            src_ip = packet["IP"].src if packet.haslayer("IP") else "N/A"
+            dst_ip = packet["IP"].dst if packet.haslayer("IP") else "N/A"
+            protocol = self.packet_obj.get_protocol(packet)
+            port = packet["TCP"].sport if packet.haslayer("TCP") else "N/A"
+
+            if target_app["IP"] in src_ip.lower() or target_app["IP"] in dst_ip.lower() or str(target_app["Port"]) in str(port):
+                self.packet_obj.filtered_packets.append(packet)
+
+                row_position = self.ui.tableWidget.rowCount()
+                self.ui.tableWidget.insertRow(row_position)
+                self.ui.tableWidget.setItem(row_position, 0, QTableWidgetItem(datetime.fromtimestamp(packet.time).strftime("%I:%M:%S %p")))
+                self.ui.tableWidget.setItem(row_position, 1, QTableWidgetItem(src_ip))
+                self.ui.tableWidget.setItem(row_position, 2, QTableWidgetItem(dst_ip))
+                self.ui.tableWidget.setItem(row_position, 3, QTableWidgetItem(protocol))
+                   # Add MAC addresses and port info to the table
+                self.ui.tableWidget.setItem(row_position, 4, QTableWidgetItem(macsrc))
+                self.ui.tableWidget.setItem(row_position, 5, QTableWidgetItem(macdst))
+                self.ui.tableWidget.setItem(row_position, 6, QTableWidgetItem(str(sport) if sport else "N/A"))
+                self.ui.tableWidget.setItem(row_position, 7, QTableWidgetItem(str(dport) if dport else "N/A"))
+                self.ui.tableWidget.setItem(row_position, 8, QTableWidgetItem(str(packet_length)))
+                self.ui.tableWidget.setItem(row_position, 9, QTableWidgetItem(ip_version))
+
 class SensorSystem:
     def __init__(self, ui_main_window):
         self.ui = ui_main_window
@@ -407,7 +494,7 @@ class PacketSystem:
 
         # Filter packets
         self.filtered_packets = []
-        if(self.senFlag == -1):
+        if(self.sensor_obj.senFlag == -1):
             x = self.packets
         else:
             x = self.sensor_obj.sensors
@@ -592,11 +679,12 @@ class Naswail(QMainWindow, Ui_MainWindow):
        # Initialize PacketSystem and SensorSystem without passing each other directly
         self.PacketSystemobj = PacketSystem(self)
         self.SensorSystemobj = SensorSystem(self)
+        self.Appsystemobj = ApplicationsSystem(self)
 
         # Now link them after both are created
         self.SensorSystemobj.set_packet_system(self.PacketSystemobj)
         self.PacketSystemobj.set_sensor_system(self.SensorSystemobj)
-
+        self.Appsystemobj.set_packet_system(self.PacketSystemobj)
 
         #
         #Logo Image
@@ -610,7 +698,7 @@ class Naswail(QMainWindow, Ui_MainWindow):
         self.tableWidget.setColumnCount(10)
         self.tableWidget.setHorizontalHeaderLabels(["Timestamp", "Source", "Destination", "Protocol","macsrc","macdst","srcport","dstport","length","IP version"])
         self.tableWidget.cellClicked.connect(self.PacketSystemobj.display_packet_details)
-        self.tabWidget.currentChanged.connect(lambda index: self.get_applications_with_ports() if index == 3 else None)
+        self.tabWidget.currentChanged.connect(lambda index: self.Appsystemobj.get_applications_with_ports() if index == 3 else None)
 
         self.tableWidget_2.setColumnCount(2)
         self.tableWidget_2.setHorizontalHeaderLabels(["Name", "IP"])
@@ -618,11 +706,11 @@ class Naswail(QMainWindow, Ui_MainWindow):
         
         self.tableWidget_3.setColumnCount(3)
         self.tableWidget_3.setHorizontalHeaderLabels(["Port", "Application", "Status"])
-        self.tableWidget_3.cellClicked.connect(self.analyze_app)
+        self.tableWidget_3.cellClicked.connect(self.Appsystemobj.analyze_app)
         
         self.tableWidget_4.setColumnCount(4)
         self.tableWidget_4.setHorizontalHeaderLabels(["Timestamp", "Source", "Destination", "Protocol"])
-        self.tableWidget_4.cellClicked.connect(self.analyze_app)
+        self.tableWidget_4.cellClicked.connect(self.Appsystemobj.analyze_app)
 
         self.pushButton_5.clicked.connect(self.toggleCapture)
         self.pushButton_6.clicked.connect(self.toggleCapture)
@@ -699,84 +787,7 @@ class Naswail(QMainWindow, Ui_MainWindow):
         self.elapsedTime = f"{hours:02}:{minutes:02}:{seconds:02}"
         self.label_6.setText(str(self.elapsedTime))
 
-    def get_applications_with_ports(self):
-        apps_with_ports = []
-
-        for proc in psutil.process_iter(attrs=['pid', 'name', 'exe', 'status']):
-            try:
-                pid = proc.info['pid']
-                app_name = proc.info['name']
-                app_path = proc.info['exe']
-                app_status = proc.info['status']
-
-                connections = psutil.Process(pid).net_connections(kind='inet')
-                for conn in connections:
-                    local_ip, local_port = conn.laddr
-                    apps_with_ports.append({
-                        "Application": app_name,
-                        "IP": local_ip,
-                        "Port": local_port,
-                        "Path": app_path,
-                        "Status": app_status
-                    })
-            except (psutil.AccessDenied, psutil.NoSuchProcess):
-                continue
-
-        self.apps = apps_with_ports
-        self.tableWidget_3.setRowCount(0)
-        for app in self.apps:
-            row_position = self.tableWidget_3.rowCount()
-            self.tableWidget_3.insertRow(row_position)
-            self.tableWidget_3.setItem(row_position, 0, QTableWidgetItem(str(app["Port"])))
-            self.tableWidget_3.setItem(row_position, 1, QTableWidgetItem(str(app["Application"])))
-            self.tableWidget_3.setItem(row_position, 2, QTableWidgetItem(str(app["IP"])))
-
-    def analyze_app(self, row):
-        self.filterapplied = True
-        target_app = self.apps[row]
-        self.tableWidget.setRowCount(0)
-
-        self.filtered_packets = []
-        for packet in self.packets:
-            macsrc = packet["Ethernet"].src if packet.haslayer("Ethernet") else "N/A"
-            macdst = packet["Ethernet"].dst if packet.haslayer("Ethernet") else "N/A"
-            # Extract packet length
-            packet_length = int(len(packet))
-
-        # Extract IP version
-            ip_version = "IPv6" if packet.haslayer("IPv6") else "IPv4" if packet.haslayer("IP") else "N/A"
-            # Extract port information for TCP/UDP
-            sport = None
-            dport = None
-            if packet.haslayer("TCP"):
-                sport = packet["TCP"].sport
-                dport = packet["TCP"].dport
-            elif packet.haslayer("UDP"):
-                sport = packet["UDP"].sport
-                dport = packet["UDP"].dport
-
-            packet_length = int(len(packet))
-            src_ip = packet["IP"].src if packet.haslayer("IP") else "N/A"
-            dst_ip = packet["IP"].dst if packet.haslayer("IP") else "N/A"
-            protocol = self.get_protocol(packet)
-            port = packet["TCP"].sport if packet.haslayer("TCP") else "N/A"
-
-            if target_app["IP"] in src_ip.lower() or target_app["IP"] in dst_ip.lower() or str(target_app["Port"]) in str(port):
-                self.filtered_packets.append(packet)
-
-                row_position = self.tableWidget.rowCount()
-                self.tableWidget.insertRow(row_position)
-                self.tableWidget.setItem(row_position, 0, QTableWidgetItem(datetime.fromtimestamp(packet.time).strftime("%I:%M:%S %p")))
-                self.tableWidget.setItem(row_position, 1, QTableWidgetItem(src_ip))
-                self.tableWidget.setItem(row_position, 2, QTableWidgetItem(dst_ip))
-                self.tableWidget.setItem(row_position, 3, QTableWidgetItem(protocol))
-                   # Add MAC addresses and port info to the table
-                self.tableWidget.setItem(row_position, 4, QTableWidgetItem(macsrc))
-                self.tableWidget.setItem(row_position, 5, QTableWidgetItem(macdst))
-                self.tableWidget.setItem(row_position, 6, QTableWidgetItem(str(sport) if sport else "N/A"))
-                self.tableWidget.setItem(row_position, 7, QTableWidgetItem(str(dport) if dport else "N/A"))
-                self.tableWidget.setItem(row_position, 8, QTableWidgetItem(str(packet_length)))
-                self.tableWidget.setItem(row_position, 9, QTableWidgetItem(ip_version))
+    
 
     def toggleCapture(self):
         if self.capture == 1:
@@ -811,16 +822,6 @@ class Naswail(QMainWindow, Ui_MainWindow):
         packetInput = 0
         packetFile = ""
         PacketSnifferThread.run(self.sniffer_thread)
-
-    
-    
-    def is_local_ip(self,ip):
-        """Check if an IP address is private (local)."""
-        try:
-            ip_obj = ipaddress.ip_address(ip)
-            return ip_obj.is_private  # Returns True for private IPs, False otherwise
-        except ValueError:
-            return False  # Handle invalid IP addresses gracefully
     
     def packet_to_dataframe(self, packet, columns):
         data = {col: '<unknown>' for col in columns}  # Initialize all columns with 'unknown'
