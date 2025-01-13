@@ -708,15 +708,78 @@ class Naswail(QMainWindow, Ui_MainWindow):
         self.showMaximized()
 
         global packetInput, clearRead
+        #line edit related bug fix
+        self.filterapplied=False
         #
-        #line edit
-        # Apply white background (#FFFFFF) to all QLineEdits
-       # Apply oceanic blue background (#1E3A3A) to all QLineEdits
-        # Apply gradient background to QLineEdits
-        # Apply dark black background color to QLineEdits
-        # Apply navy blue background color to QLineEdits
-        # Apply grey background color to QLineEdits
-       # Apply light off-white background color to QLineEdits
+        self.pushButton.clicked.connect(self.resetfilter)
+        self.packets = []
+        self.times = []
+        self.counts = []
+        self.capture = -1
+        self.start_time = QTime.currentTime()
+        self.elapsedTime = 0
+        self.scene = QGraphicsScene(self)
+        self.total_inside_packets=0
+        self.total_outside_packets=0
+        #objects
+       # Initialize PacketSystem and SensorSystem without passing each other directly
+        self.PacketSystemobj = PacketSystem(self)
+        self.SensorSystemobj = SensorSystem(self)
+        self.Appsystemobj = ApplicationsSystem(self)
+        # Now link them after both are created
+        self.SensorSystemobj.set_packet_system(self.PacketSystemobj)
+        self.PacketSystemobj.set_sensor_system(self.SensorSystemobj)
+        self.Appsystemobj.set_packet_system(self.PacketSystemobj)
+        #
+        #Logo Image
+        pixmap = QPixmap(r"logo.jpg")
+        self.pixmap_item = QGraphicsPixmapItem(pixmap)
+        self.scene.addItem(self.pixmap_item)
+        self.graphicsView.setScene(self.scene)
+        self.graphicsView.setFixedSize(71, 61)
+        self.graphicsView.fitInView(self.scene.sceneRect(), Qt.AspectRatioMode.KeepAspectRatio)
+        self.tableWidget.setColumnCount(10)
+        self.tableWidget.setHorizontalHeaderLabels(["Timestamp", "Source", "Destination", "Protocol","macsrc","macdst","srcport","dstport","length","IP version"])
+        self.tableWidget.cellClicked.connect(self.PacketSystemobj.display_packet_details)
+        self.tabWidget.currentChanged.connect(lambda index: self.Appsystemobj.get_applications_with_ports() if index == 3 else None)
+        self.tableWidget_2.setColumnCount(2)
+        self.tableWidget_2.setHorizontalHeaderLabels(["Name", "IP"])
+        self.tableWidget_2.cellClicked.connect(self.SensorSystemobj.filter_sensors)
+        self.tableWidget_3.setColumnCount(3)
+        self.tableWidget_3.setHorizontalHeaderLabels(["Port", "Application", "Status"])
+        self.tableWidget_3.cellClicked.connect(self.Appsystemobj.analyze_app)
+        self.tableWidget_4.setColumnCount(4)
+        self.tableWidget_4.setHorizontalHeaderLabels(["Timestamp", "Source", "Destination", "Protocol"])
+        self.tableWidget_4.cellClicked.connect(self.Appsystemobj.analyze_app)
+        self.pushButton_5.clicked.connect(self.toggleCapture)
+        self.pushButton_6.clicked.connect(self.toggleCapture)
+        self.pushButton_7.clicked.connect(self.SensorSystemobj.toggleSenFlag)
+        self.actionImport_Packets.triggered.connect(self.import_file)
+        self.actionExport_Packets.triggered.connect(self.export_packets)
+        self.actionLive_Capture.triggered.connect(self.resetInput)
+        self.buttonBox_2.clicked.connect(lambda _: self.SensorSystemobj.updateSensor(1))
+        self.buttonBox_2.rejected.connect(lambda _: self.SensorSystemobj.updateSensor(2))
+        # Connect checkboxes to the apply_filter method
+        self.checkBox.stateChanged.connect(self.PacketSystemobj.apply_filter)      # UDP
+        self.checkBox_2.stateChanged.connect(self.PacketSystemobj.apply_filter)    # TCP
+        self.checkBox_3.stateChanged.connect(self.PacketSystemobj.apply_filter)    # ICMP
+        self.checkBox_4.stateChanged.connect(self.PacketSystemobj.apply_filter)    # DNS
+        self.checkBox_5.stateChanged.connect(self.PacketSystemobj.apply_filter)    # DHCP
+        self.checkBox_6.stateChanged.connect(self.PacketSystemobj.apply_filter)    # HTTP
+        self.checkBox_7.stateChanged.connect(self.PacketSystemobj.apply_filter)    # HTTPS
+        self.checkBox_8.stateChanged.connect(self.PacketSystemobj.apply_filter)    # TELNET
+        self.checkBox_9.stateChanged.connect(self.PacketSystemobj.apply_filter)    # FTP
+        self.checkBox_10.stateChanged.connect(self.PacketSystemobj.apply_filter)   # Other
+        self.pushButton_9.clicked.connect(self.PacketSystemobj.apply_filter)
+        self.sniffer_thread = PacketSnifferThread()
+        self.sniffer_thread.packet_captured.connect(self.PacketSystemobj.process_packet)
+        self.sniffer_thread.start()
+        self.stats_timer = QTimer()
+        self.stats_timer.timeout.connect(self.tick)
+        self.stats_timer.start(1000)
+        self.ct = 0
+        self.pushButton_2.clicked.connect(self.open_analysis)
+        self.pushButton_3.clicked.connect(self.open_tool)
         self.lineEdit.setStyleSheet("""
             QLineEdit {
                 background-color: grey
@@ -742,113 +805,6 @@ class Naswail(QMainWindow, Ui_MainWindow):
                 background-color: grey
             }
         """)
-        
-        #line edit related bug fix
-        self.filterapplied=False
-        #
-        self.pushButton.clicked.connect(self.resetfilter)
-        self.packets = []
-        self.captured_packets = []
-        self.filtered_packets = []
-        self.packet_features = []
-        self.new_packet_features = []
-        self.sensors = {}
-        self.packet_stats = {"total": 0, "tcp": 0, "udp": 0, "icmp": 0}
-        self.model = LinearRegression()
-        self.bandwidth_data = []
-        self.times = []
-        self.counts = []
-        self.anomalies = []
-        self.le = LabelEncoder()
-        self.apps = dict()
-        self.futureTraffic = 0
-        self.r2 = 0
-        self.sen_info = []
-        self.ct_sensor_packet = []
-        self.sensors_name = []
-        self.senFlag = -1
-        self.singleSenFlag = -1
-        self.sen_ct = 0
-        self.capture = -1
-        self.start_time = QTime.currentTime()
-        self.elapsedTime = 0
-       
-        self.scene = QGraphicsScene(self)
-        self.total_inside_packets=0
-        self.total_outside_packets=0
-       
-        #objects
-        
-       # Initialize PacketSystem and SensorSystem without passing each other directly
-        self.PacketSystemobj = PacketSystem(self)
-        self.SensorSystemobj = SensorSystem(self)
-        self.Appsystemobj = ApplicationsSystem(self)
-
-        # Now link them after both are created
-        self.SensorSystemobj.set_packet_system(self.PacketSystemobj)
-        self.PacketSystemobj.set_sensor_system(self.SensorSystemobj)
-        self.Appsystemobj.set_packet_system(self.PacketSystemobj)
-
-        #
-        #Logo Image
-        pixmap = QPixmap(r"logo.jpg")
-        self.pixmap_item = QGraphicsPixmapItem(pixmap)
-        self.scene.addItem(self.pixmap_item)
-        self.graphicsView.setScene(self.scene)
-        self.graphicsView.setFixedSize(71, 61)
-        self.graphicsView.fitInView(self.scene.sceneRect(), Qt.AspectRatioMode.KeepAspectRatio)
-
-        self.tableWidget.setColumnCount(10)
-        self.tableWidget.setHorizontalHeaderLabels(["Timestamp", "Source", "Destination", "Protocol","macsrc","macdst","srcport","dstport","length","IP version"])
-        self.tableWidget.cellClicked.connect(self.PacketSystemobj.display_packet_details)
-        self.tabWidget.currentChanged.connect(lambda index: self.Appsystemobj.get_applications_with_ports() if index == 3 else None)
-
-        self.tableWidget_2.setColumnCount(2)
-        self.tableWidget_2.setHorizontalHeaderLabels(["Name", "IP"])
-        self.tableWidget_2.cellClicked.connect(self.SensorSystemobj.filter_sensors)
-        
-        self.tableWidget_3.setColumnCount(3)
-        self.tableWidget_3.setHorizontalHeaderLabels(["Port", "Application", "Status"])
-        self.tableWidget_3.cellClicked.connect(self.Appsystemobj.analyze_app)
-        
-        self.tableWidget_4.setColumnCount(4)
-        self.tableWidget_4.setHorizontalHeaderLabels(["Timestamp", "Source", "Destination", "Protocol"])
-        self.tableWidget_4.cellClicked.connect(self.Appsystemobj.analyze_app)
-
-        self.pushButton_5.clicked.connect(self.toggleCapture)
-        self.pushButton_6.clicked.connect(self.toggleCapture)
-        self.pushButton_7.clicked.connect(self.SensorSystemobj.toggleSenFlag)
-
-        self.actionImport_Packets.triggered.connect(self.import_file)
-        self.actionExport_Packets.triggered.connect(self.export_packets)
-        self.actionLive_Capture.triggered.connect(self.resetInput)
-
-        self.buttonBox_2.clicked.connect(lambda _: self.SensorSystemobj.updateSensor(1))
-        self.buttonBox_2.rejected.connect(lambda _: self.SensorSystemobj.updateSensor(2))
-        
-        # Connect checkboxes to the apply_filter method
-        self.checkBox.stateChanged.connect(self.PacketSystemobj.apply_filter)      # UDP
-        self.checkBox_2.stateChanged.connect(self.PacketSystemobj.apply_filter)    # TCP
-        self.checkBox_3.stateChanged.connect(self.PacketSystemobj.apply_filter)    # ICMP
-        self.checkBox_4.stateChanged.connect(self.PacketSystemobj.apply_filter)    # DNS
-        self.checkBox_5.stateChanged.connect(self.PacketSystemobj.apply_filter)    # DHCP
-        self.checkBox_6.stateChanged.connect(self.PacketSystemobj.apply_filter)    # HTTP
-        self.checkBox_7.stateChanged.connect(self.PacketSystemobj.apply_filter)    # HTTPS
-        self.checkBox_8.stateChanged.connect(self.PacketSystemobj.apply_filter)    # TELNET
-        self.checkBox_9.stateChanged.connect(self.PacketSystemobj.apply_filter)    # FTP
-        self.checkBox_10.stateChanged.connect(self.PacketSystemobj.apply_filter)   # Other
-        self.pushButton_9.clicked.connect(self.PacketSystemobj.apply_filter)
-
-        self.sniffer_thread = PacketSnifferThread()
-        self.sniffer_thread.packet_captured.connect(self.PacketSystemobj.process_packet)
-        self.sniffer_thread.start()
-
-        self.stats_timer = QTimer()
-        self.stats_timer.timeout.connect(self.tick)
-        self.stats_timer.start(1000)
-        self.ct = 0
-        self.pushButton_2.clicked.connect(self.open_analysis)
-        self.pushButton_3.clicked.connect(self.open_tool)
     def open_tool(self):
         self.secondary_widget2=SecondaryWidget2(self)
         self.hide()
@@ -857,7 +813,6 @@ class Naswail(QMainWindow, Ui_MainWindow):
             self.secondary_widget = SecondaryWidget(self)  # Pass reference to the main window
             self.hide()
             self.secondary_widget.show()
-    
     def resetfilter(self):
         self.PacketSystemobj.filterapplied=False
         self.SensorSystemobj.senFlag = -1 
@@ -877,10 +832,6 @@ class Naswail(QMainWindow, Ui_MainWindow):
         for checkbox in checkboxes:
             checkbox.setCheckState(Qt.CheckState.Unchecked)
         self.PacketSystemobj.filterapplied = False
-    #end of reset filter
-
-   
-
     def tick(self):
         current_time = QTime.currentTime()
         elapsed_seconds = self.start_time.secsTo(current_time)
@@ -889,9 +840,6 @@ class Naswail(QMainWindow, Ui_MainWindow):
         seconds = elapsed_seconds % 60
         self.elapsedTime = f"{hours:02}:{minutes:02}:{seconds:02}"
         self.label_6.setText(str(self.elapsedTime))
-
-    
-
     def toggleCapture(self):
         if self.capture == 1:
             print(self.captured_packets)
@@ -929,9 +877,7 @@ class Naswail(QMainWindow, Ui_MainWindow):
         self.sniffer_thread.quit()  # Stops the current thread
         self.sniffer_thread.wait()  # Wait for the thread to finish
         self.sniffer_thread.start()  # Start a new thread
-     
-    
-
+ 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
     window = Naswail()
