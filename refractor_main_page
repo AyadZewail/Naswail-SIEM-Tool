@@ -124,13 +124,13 @@ class SensorSystem:
     def __init__(self, ui_main_window):
         self.ui = ui_main_window
         self.sen_info = []
-        self.ct_sensor_packet = []
+        self.sensor_packet = []
         self.sensors_name = []
         self.senFlag = -1
         self.singleSenFlag = -1
         self.sen_ct = 0
         self.packet_obj = None  # Delay initialization
-     
+        self.ct_sensor_packet=[]    
         self.sensors = {}
         self.show_donut_chart()
 
@@ -150,6 +150,7 @@ class SensorSystem:
                 self.ui.tableWidget.setRowCount(0)
 
                 for packet in self.packet_obj.packets:
+
                     src_mac = packet["Ether"].src if packet.haslayer("Ether") else "N/A"
                     dst_mac = packet["Ether"].dst if packet.haslayer("Ether") else "N/A"
                     protocol = self.get_protocol(packet)
@@ -158,6 +159,7 @@ class SensorSystem:
                     ip_dst=packet["IP"].dst if packet.haslayer("IP") else "N/A"
 
                     if sensor_mac.lower() in src_mac.lower() or sensor_mac.lower() in dst_mac.lower():
+                        self.sensor_packet.append(packet)
                         row_position = self.ui.tableWidget.rowCount()
                         self.ui.tableWidget.insertRow(row_position)
                         self.ui.tableWidget.setItem(row_position, 0, QTableWidgetItem(datetime.fromtimestamp(packet.time).strftime("%I:%M:%S %p")))
@@ -535,7 +537,7 @@ class PacketSystem:
         if(self.sensor_obj.senFlag == -1):
             x = self.packets
         else:
-            x = self.sensor_obj.sensors
+            x = self.sensor_obj.sensor_packet
         for packet in x:
             src_ip = packet["IP"].src if packet.haslayer("IP") else "N/A"
             dst_ip = packet["IP"].dst if packet.haslayer("IP") else "N/A"
