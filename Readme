@@ -1,0 +1,1 @@
+#each file that contains the word _page at the end is the actual code to be run while the other files are meant to be the ui files
