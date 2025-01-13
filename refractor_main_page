@@ -33,12 +33,157 @@ packetInput = 0
 packetFile = None
 clearRead = 0
 packetIndex = 0
+class SensorSystem:
+    def __init__(self, ui_main_window):
+        self.ui = ui_main_window
+        self.sen_info = []
+        self.ct_sensor_packet = []
+        self.sensors_name = []
+        self.senFlag = -1
+        self.singleSenFlag = -1
+        self.sen_ct = 0
+        self.packet_obj = None  # Delay initialization
+     
+        self.sensors = {}
+        self.show_donut_chart()
+
+    def set_packet_system(self, packet_obj):
+        """Set the packet system after both are initialized."""
+      
+       
+        self.packet_obj = packet_obj
+    
+    def filter_sensors(self, row, col):
+            
+            self.singleSenFlag *= -1
+            self.senFlag = -1
+         
+            if(self.singleSenFlag == 1):
+                sensor_mac = self.tableWidget_2.item(row, col).text()
+                self.tableWidget.setRowCount(0)
+
+                for packet in self.packet_obj.packets:
+                    src_mac = packet["Ether"].src if packet.haslayer("Ether") else "N/A"
+                    dst_mac = packet["Ether"].dst if packet.haslayer("Ether") else "N/A"
+                    protocol = self.get_protocol(packet)
+                    port = packet["TCP"].sport if packet.haslayer("TCP") else "N/A"
+                    
+                    if sensor_mac.lower() in src_mac.lower() or sensor_mac.lower() in dst_mac.lower():
+                        row_position = self.tableWidget.rowCount()
+                        self.tableWidget.insertRow(row_position)
+                        self.tableWidget.setItem(row_position, 0, QTableWidgetItem(datetime.fromtimestamp(packet.time).strftime("%I:%M:%S %p")))
+                        self.tableWidget.setItem(row_position, 1, QTableWidgetItem(src_mac))
+                        self.tableWidget.setItem(row_position, 2, QTableWidgetItem(dst_mac))
+                        self.tableWidget.setItem(row_position, 3, QTableWidgetItem(protocol))
+                        self.tableWidget.setItem(row_position, 4, QTableWidgetItem(str(port)))
+
+
+    #end of filter
+    def updateSensor(self, a):
+        senName = self.ui.lineEdit_3.text().strip()
+        senMAC = self.ui.lineEdit_4.text().strip()
+       
+        if(a == 1):
+            self.sen_info.append(senName)
+            self.sen_info.append(0)
+            self.sensors[senName] = senMAC
+            
+         
+
+        else:
+            self.sensors.pop(senName)
+           
+        self.sensors_name.append(senName)
+      
+        #print(self.sensors)
+        plt.close()
+        self.show_donut_chart()
+        self.displaySensorTable()
+
+    def displaySensorTable(self):
+        self.show_donut_chart
+        self.ui.tableWidget_2.setRowCount(0)
+        for name, mac in self.sensors.items():
+            row_position = self.ui.tableWidget_2.rowCount()
+            self.ui.tableWidget_2.insertRow(row_position)
+            self.ui.tableWidget_2.setItem(row_position, 0, QTableWidgetItem(str(name)))
+            self.ui.tableWidget_2.setItem(row_position, 1, QTableWidgetItem(str(mac)))
+    def show_donut_chart(self):
+        # Data for the chart
+        sizes = [1]  # Percentages
+        labels = ['']  # Empty labels to hide text
+        s=0
+        for s in range(len(self.sensors)):
+            sizes.append(s)
+            labels.append('')
+        #end of for
+        colors = ['#ff4d4d', '#3399ff', '#33ff33']  # Custom colors
+        
+        # Create the figure and axes
+        fig, ax = plt.subplots(figsize=(6, 6))  # Set size of the figure
+        
+        # Draw the donut chart
+        wedges, texts = ax.pie(
+            sizes,
+            labels=labels,
+            startangle=90,
+            colors=colors,
+            wedgeprops=dict(width=0.3)  # Create the "donut" effect
+        )
+        
+        # Set aspect ratio to be equal
+        ax.axis('equal')
+        ax.set_title('Sensors')
+        
+        # Ensure transparency
+        fig.patch.set_visible(False)  # Completely hide the figure background
+        ax.patch.set_alpha(0)         # Transparent axes background
+        
+        # Render the figure to a Qt widget
+        canvas = FigureCanvas(fig)
+        canvas.setStyleSheet("background: transparent;")  # Ensure no background for the canvas
+        canvas.setGeometry(0, 0, self.ui.graphicsView_2.width(), self.ui.graphicsView_2.height())
+        
+        # Set up a transparent scene for QGraphicsView
+        scene = QGraphicsScene()
+        scene.setBackgroundBrush(Qt.GlobalColor.transparent)  # Ensure the scene background is transparent
+        scene.addWidget(canvas)
+        self.ui.graphicsView_2.setScene(scene)
+    def toggleSenFlag(self):
+        self.senFlag *= -1
+        self.singleSenFlag = -1
+       
+        if self.senFlag == 1:
+            self.ui.tableWidget.setRowCount(0)
+
+            for packet in self.packet_obj.packets:
+                src_mac = packet["Ether"].src if packet.haslayer("Ether") else "N/A"
+                dst_mac = packet["Ether"].dst if packet.haslayer("Ether") else "N/A"
+                protocol = self.packet_obj.get_protocol(packet)
+                port = packet["TCP"].sport if packet.haslayer("TCP") else "N/A"
+                
+                for sensor_name, sensor_mac in self.sensors.items():
+                    if sensor_mac.lower() in src_mac.lower() or sensor_mac.lower() in dst_mac.lower():
+                        for s in range(0,len(self.sen_info)-1,2):
+                            if self.sen_info[s]==sensor_name:
+                               self.sen_info[s+1]+=1
+                        row_position = self.ui.tableWidget.rowCount()
+                        self.ui.tableWidget.insertRow(row_position)
+                        
+                        self.ui.tableWidget.setItem(row_position, 0, QTableWidgetItem(datetime.fromtimestamp(packet.time).strftime("%I:%M:%S %p")))
+                        self.ui.tableWidget.setItem(row_position, 1, QTableWidgetItem(src_mac))
+                        self.ui.tableWidget.setItem(row_position, 2, QTableWidgetItem(dst_mac))
+                        self.ui.tableWidget.setItem(row_position, 3, QTableWidgetItem(protocol))
+                        self.ui.tableWidget.setItem(row_position, 4, QTableWidgetItem(str(port)))
+
+            self.ct_sensor_packet.append(self.sen_ct)
+           
 class PacketSystem:
      
     def __init__(self, ui_main_window):
         self.ui = ui_main_window
-       # Store the Ui_MainWindow reference
         self.packets = []
+        self.bandwidth_data = []
         self.captured_packets = []
         self.filtered_packets = []
         self.packet_features = []
@@ -50,10 +195,12 @@ class PacketSystem:
         self.inside_percentage = 0
         self.filterapplied = False
         self.packet_stats = {"total": 0, "tcp": 0, "udp": 0, "icmp": 0}
-        self.senFlag=-1
-        self.singleSenFlag=0
-        self.capture=1
-        
+        self.sensor_obj = None
+        self.capture = 1
+
+    def set_sensor_system(self, sensor_obj):
+        """Set the sensor system after both are initialized."""
+        self.sensor_obj = sensor_obj
 
     def process_packet(self, packet):
         try:
@@ -100,7 +247,7 @@ class PacketSystem:
             row_position = self.ui.tableWidget.rowCount()
             if self.filterapplied:
                 self.apply_filter()
-            elif self.senFlag == 1 or self.singleSenFlag == 1:
+            elif self.sensor_obj.senFlag == 1 or self.sensor_obj.singleSenFlag == 1:
                 pass
             else:
                 self.packets.append(packet)
@@ -135,7 +282,7 @@ class PacketSystem:
                 self.ui.tableWidget.setItem(row_position, 7, QTableWidgetItem(str(dport) if dport else "N/A"))
                 self.ui.tableWidget.setItem(row_position, 8, QTableWidgetItem(str(packet_length)))
                 self.ui.tableWidget.setItem(row_position, 9, QTableWidgetItem(ip_version))
-
+                
             time_series[timestamp] = len(self.packets)
 
             if len(self.bandwidth_data) == 0 or self.bandwidth_data[-1][0] != readable_time:
@@ -263,7 +410,7 @@ class PacketSystem:
         if(self.senFlag == -1):
             x = self.packets
         else:
-            x = self.sensors
+            x = self.sensor_obj.sensors
         for packet in x:
             src_ip = packet["IP"].src if packet.haslayer("IP") else "N/A"
             dst_ip = packet["IP"].dst if packet.haslayer("IP") else "N/A"
@@ -427,7 +574,7 @@ class Naswail(QMainWindow, Ui_MainWindow):
         self.capture = -1
         self.start_time = QTime.currentTime()
         self.elapsedTime = 0
-        self.show_donut_chart()
+       
         self.scene = QGraphicsScene(self)
         self.total_inside_packets=0
         self.total_outside_packets=0
@@ -441,7 +588,15 @@ class Naswail(QMainWindow, Ui_MainWindow):
         acc = accuracy_score(self.y_test, self.train_predictions)
         print("Accuracy: {:.4%}".format(acc))
         #objects
-        self.PacketSystemobj = PacketSystem(self) 
+        
+       # Initialize PacketSystem and SensorSystem without passing each other directly
+        self.PacketSystemobj = PacketSystem(self)
+        self.SensorSystemobj = SensorSystem(self)
+
+        # Now link them after both are created
+        self.SensorSystemobj.set_packet_system(self.PacketSystemobj)
+        self.PacketSystemobj.set_sensor_system(self.SensorSystemobj)
+
 
         #
         #Logo Image
@@ -459,7 +614,7 @@ class Naswail(QMainWindow, Ui_MainWindow):
 
         self.tableWidget_2.setColumnCount(2)
         self.tableWidget_2.setHorizontalHeaderLabels(["Name", "IP"])
-        self.tableWidget_2.cellClicked.connect(self.filter_sensors)
+        self.tableWidget_2.cellClicked.connect(self.SensorSystemobj.filter_sensors)
         
         self.tableWidget_3.setColumnCount(3)
         self.tableWidget_3.setHorizontalHeaderLabels(["Port", "Application", "Status"])
@@ -471,14 +626,14 @@ class Naswail(QMainWindow, Ui_MainWindow):
 
         self.pushButton_5.clicked.connect(self.toggleCapture)
         self.pushButton_6.clicked.connect(self.toggleCapture)
-        self.pushButton_7.clicked.connect(self.toggleSenFlag)
+        self.pushButton_7.clicked.connect(self.SensorSystemobj.toggleSenFlag)
 
         self.actionImport_Packets.triggered.connect(self.import_file)
         self.actionExport_Packets.triggered.connect(self.export_packets)
         self.actionLive_Capture.triggered.connect(self.resetInput)
 
-        self.buttonBox_2.clicked.connect(lambda _: self.updateSensor(1))
-        self.buttonBox_2.rejected.connect(lambda _: self.updateSensor(2))
+        self.buttonBox_2.clicked.connect(lambda _: self.SensorSystemobj.updateSensor(1))
+        self.buttonBox_2.rejected.connect(lambda _: self.SensorSystemobj.updateSensor(2))
         
         # Connect checkboxes to the apply_filter method
         self.checkBox.stateChanged.connect(self.PacketSystemobj.apply_filter)      # UDP
@@ -514,6 +669,8 @@ class Naswail(QMainWindow, Ui_MainWindow):
     
     def resetfilter(self):
         self.PacketSystemobj.filterapplied=False
+        self.SensorSystemobj.senFlag = -1 
+        self.SensorSystemobj.singleSenFlag = -1
         checkboxes = [
             self.checkBox,
             self.checkBox_2,
@@ -655,56 +812,7 @@ class Naswail(QMainWindow, Ui_MainWindow):
         packetFile = ""
         PacketSnifferThread.run(self.sniffer_thread)
 
-    def updateSensor(self, a):
-        senName = self.lineEdit_3.text().strip()
-        senMAC = self.lineEdit_4.text().strip()
-       
-        if(a == 1):
-            self.sen_info.append(senName)
-            self.sen_info.append(0)
-            self.sensors[senName] = senMAC
-        else:
-            self.sensors.pop(senName)
-        self.sensors_name.append(senName)
-        #print(self.sensors)
-        plt.close()
-        self.show_donut_chart()
-        self.displaySensorTable()
-
-    def displaySensorTable(self):
-        self.show_donut_chart
-        self.tableWidget_2.setRowCount(0)
-        for name, mac in self.sensors.items():
-            row_position = self.tableWidget_2.rowCount()
-            self.tableWidget_2.insertRow(row_position)
-            self.tableWidget_2.setItem(row_position, 0, QTableWidgetItem(str(name)))
-            self.tableWidget_2.setItem(row_position, 1, QTableWidgetItem(str(mac)))
-
-    def toggleSenFlag(self):
-        self.senFlag *= -1
-        self.singleSenFlag = -1
-        if self.senFlag == 1:
-            self.tableWidget.setRowCount(0)
-
-            for packet in self.packets:
-                src_mac = packet["Ether"].src if packet.haslayer("Ether") else "N/A"
-                dst_mac = packet["Ether"].dst if packet.haslayer("Ether") else "N/A"
-                protocol = self.get_protocol(packet)
-                port = packet["TCP"].sport if packet.haslayer("TCP") else "N/A"
-                
-                for sensor_name, sensor_mac in self.sensors.items():
-                    if sensor_mac.lower() in src_mac.lower() or sensor_mac.lower() in dst_mac.lower():
-                        for s in range(0,len(self.sen_info)-1,2):
-                            if self.sen_info[s]==sensor_name:
-                               self.sen_info[s+1]+=1
-                        row_position = self.tableWidget.rowCount()
-                        self.tableWidget.insertRow(row_position)
-                        
-                        self.tableWidget.setItem(row_position, 0, QTableWidgetItem(datetime.fromtimestamp(packet.time).strftime("%I:%M:%S %p")))
-                        self.tableWidget.setItem(row_position, 1, QTableWidgetItem(src_mac))
-                        self.tableWidget.setItem(row_position, 2, QTableWidgetItem(dst_mac))
-                        self.tableWidget.setItem(row_position, 3, QTableWidgetItem(protocol))
-            self.ct_sensor_packet.append(self.sen_ct)
+    
     
     def is_local_ip(self,ip):
         """Check if an IP address is private (local)."""
@@ -811,74 +919,6 @@ class Naswail(QMainWindow, Ui_MainWindow):
 
 
         return X_train, y_train, X_test, y_test
-    
-    def show_donut_chart(self):
-        # Data for the chart
-        sizes = [1]  # Percentages
-        labels = ['']  # Empty labels to hide text
-        s=0
-        for s in range(len(self.sensors)):
-            sizes.append(s)
-            labels.append('')
-        #end of for
-        colors = ['#ff4d4d', '#3399ff', '#33ff33']  # Custom colors
-        
-        # Create the figure and axes
-        fig, ax = plt.subplots(figsize=(6, 6))  # Set size of the figure
-        
-        # Draw the donut chart
-        wedges, texts = ax.pie(
-            sizes,
-            labels=labels,
-            startangle=90,
-            colors=colors,
-            wedgeprops=dict(width=0.3)  # Create the "donut" effect
-        )
-        
-        # Set aspect ratio to be equal
-        ax.axis('equal')
-        ax.set_title('Sensors')
-        
-        # Ensure transparency
-        fig.patch.set_visible(False)  # Completely hide the figure background
-        ax.patch.set_alpha(0)         # Transparent axes background
-        
-        # Render the figure to a Qt widget
-        canvas = FigureCanvas(fig)
-        canvas.setStyleSheet("background: transparent;")  # Ensure no background for the canvas
-        canvas.setGeometry(0, 0, self.graphicsView_2.width(), self.graphicsView_2.height())
-        
-        # Set up a transparent scene for QGraphicsView
-        scene = QGraphicsScene()
-        scene.setBackgroundBrush(Qt.GlobalColor.transparent)  # Ensure the scene background is transparent
-        scene.addWidget(canvas)
-        self.graphicsView_2.setScene(scene)
-
-    def filter_sensors(self, row, col):
-        self.singleSenFlag *= -1
-        self.senFlag = -1
-        if(self.singleSenFlag == 1):
-            sensor_mac = self.tableWidget_2.item(row, col).text()
-            self.tableWidget.setRowCount(0)
-
-            for packet in self.packets:
-                src_mac = packet["Ether"].src if packet.haslayer("Ether") else "N/A"
-                dst_mac = packet["Ether"].dst if packet.haslayer("Ether") else "N/A"
-                protocol = self.get_protocol(packet)
-                port = packet["TCP"].sport if packet.haslayer("TCP") else "N/A"
-                
-                if sensor_mac.lower() in src_mac.lower() or sensor_mac.lower() in dst_mac.lower():
-                    row_position = self.tableWidget.rowCount()
-                    self.tableWidget.insertRow(row_position)
-                    self.tableWidget.setItem(row_position, 0, QTableWidgetItem(datetime.fromtimestamp(packet.time).strftime("%I:%M:%S %p")))
-                    self.tableWidget.setItem(row_position, 1, QTableWidgetItem(src_mac))
-                    self.tableWidget.setItem(row_position, 2, QTableWidgetItem(dst_mac))
-                    self.tableWidget.setItem(row_position, 3, QTableWidgetItem(protocol))
-    
-
-    #end of filter
-
-
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
