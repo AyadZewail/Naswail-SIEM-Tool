@@ -274,6 +274,7 @@ class SensorSystem:
 
                 for sensor_name, sensor_mac in self.sensors.items():
                     if sensor_mac.lower() in src_mac.lower() or sensor_mac.lower() in dst_mac.lower():
+                        self.sensor_packet.append(packet)
                         for s in range(0,len(self.sen_info)-1,2):
                             if self.sen_info[s]==sensor_name:
                                self.sen_info[s+1]+=1
