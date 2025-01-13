@@ -282,9 +282,21 @@ class PacketSystem:
         self.inside_percentage = 0
         self.filterapplied = False
         self.packet_stats = {"total": 0, "tcp": 0, "udp": 0, "icmp": 0}
+        self.anomalies = []
         self.sensor_obj = None
         self.capture = 1
-
+        #machin learning stuff
+        self.le = LabelEncoder()
+        self.train = pd.read_csv('TrainATest2.csv', low_memory=False)
+       # self.test = pd.read_csv('Simulation.csv', low_memory=False)
+        self.X_train, self.y_train, self.X_test, self.y_test = self.encode(self.train)
+        self.classes = self.train.columns[:-1].to_numpy()
+        self.anmodel = RandomForestClassifier()
+        self.anmodel.fit(self.X_train, self.y_train)
+        self.train_predictions = self.anmodel.predict(self.X_test)
+        acc = accuracy_score(self.y_test, self.train_predictions)
+        print("Accuracy: {:.4%}".format(acc))
+        ##############
     def set_sensor_system(self, sensor_obj):
         """Set the sensor system after both are initialized."""
         self.sensor_obj = sensor_obj
@@ -341,20 +353,20 @@ class PacketSystem:
                 if self.capture == 1:
                     self.captured_packets.append(packet)
                 self.new_packet_features.append([packet_length, timestamp, protocol])
-                #formattedPacket = self.packet_to_dataframe(packet, self.classes)
-                #formattedPacket2 = self.encodePacket(formattedPacket)
-                #anomalyCheck = self.anmodel.predict(formattedPacket2)
-                #if(anomalyCheck.item()):
-                 #   print("Anomaly")
-                  #  self.anomalies.append(packet)
-                    #print(self.anomalies)
-                   # row_position = self.ui.tableWidget_4.rowCount()
+                formattedPacket = self.packet_to_dataframe(packet, self.classes)
+                formattedPacket2 = self.encodePacket(formattedPacket)
+                anomalyCheck = self.anmodel.predict(formattedPacket2)
+                if(anomalyCheck.item()):
+                    print("Anomaly")
+                    self.anomalies.append(packet)
+                    print(self.anomalies)
+                    row_position = self.ui.tableWidget_4.rowCount()
                     
-                    #self.ui.tableWidget_4.insertRow(row_position)
-                    #self.ui.tableWidget_4.setItem(row_position, 0, QTableWidgetItem(readable_time))
-                    #self.ui.tableWidget_4.setItem(row_position, 1, QTableWidgetItem(src_ip))
-                    #self.ui.tableWidget_4.setItem(row_position, 2, QTableWidgetItem(dst_ip))
-                    #self.ui.tableWidget_4.setItem(row_position, 3, QTableWidgetItem(protocol))
+                    self.ui.tableWidget_4.insertRow(row_position)
+                    self.ui.tableWidget_4.setItem(row_position, 0, QTableWidgetItem(readable_time))
+                    self.ui.tableWidget_4.setItem(row_position, 1, QTableWidgetItem(src_ip))
+                    self.ui.tableWidget_4.setItem(row_position, 2, QTableWidgetItem(dst_ip))
+                    self.ui.tableWidget_4.setItem(row_position, 3, QTableWidgetItem(protocol))
 
                 self.ui.tableWidget.insertRow(row_position)
                 self.ui.tableWidget.setItem(row_position, 0, QTableWidgetItem(readable_time))
@@ -557,7 +569,106 @@ class PacketSystem:
                 self.ui.tableWidget.setItem(row_position, 8, QTableWidgetItem(str(packet_length)))
                 self.ui.tableWidget.setItem(row_position, 9, QTableWidgetItem(ip_version))
         self.apply_filter=False
+    
     #end of filter
+    def packet_to_dataframe(self, packet, columns):
+        
+        data = {col: '<unknown>' for col in columns}  # Initialize all columns with 'unknown'
+        #print(columns)
+        #data = pd.DataFrame
+        # Map values from packet to DataFrame
+        #print(packet)
+        if Raw in packet:
+            data['frame.len'] = packet.len
+            #data['frame.time_epoch'] = packet.time
+        if IP in packet:
+            data['ip.len'] = packet[IP].len
+            data['ip.ttl'] = packet[IP].ttl
+            data['ip.proto'] = packet[IP].proto
+            data['ip.version'] = packet[IP].version
+        if TCP in packet:
+            data['tcp.srcport'] = packet[TCP].sport
+            data['tcp.dstport'] = packet[TCP].dport
+            data['tcp.len'] = len(packet[TCP].payload)
+            data['tcp.seq'] = packet[TCP].seq
+            data['tcp.flags.ack'] = 1 if packet[TCP].flags.A else 0
+            data['tcp.flags.fin'] = 1 if packet[TCP].flags.F else 0
+            data['tcp.flags.reset'] = 1 if packet[TCP].flags.R else 0
+            data['tcp.window_size'] = packet[TCP].window
+            #data['tcp.stream'] = packet[TCP].options if packet[TCP].options else '<unknown>'
+        if UDP in packet:
+            data['udp.srcport'] = packet[UDP].sport
+            data['udp.dstport'] = packet[UDP].dport
+            data['udp.length'] = packet[UDP].len
+        if DNS in packet:  # Use DNS class directly, not a string
+            if packet[DNS].qd:  # Access the DNS layer directly
+                data['dns.qry.type'] = packet[DNS].qd.qtype
+            data['dns.flags.response'] = 1 if packet[DNS].qr else 0
+            data['dns.flags.recdesired'] = 1 if packet[DNS].rd else 0
+        
+        #print(data)
+
+        # Return as a DataFrame
+        return pd.DataFrame([data])
+    
+    def encodePacket(self, data):
+        for col in data.select_dtypes(include=['object']).columns:
+            #unique_count = data[col].nunique()
+            #print(f"Processing column: {col} | Unique values: {unique_count} im in encodePacket")
+
+            # For high-cardinality columns, use Label Encoding
+            #print(data[col])
+            data[col] = self.le.transform(data[col].astype(str))
+        
+        return data
+    
+    def encode(self, data):
+        # Programmatically identify all checksum columns and set up irrelevant columns for dropping
+        drop_columns = ['frame.time_epoch', 'tcp.stream']
+
+        # Fill missing values with placeholders
+        data = data.fillna('<unknown>')
+
+        # Drop irrelevant columns
+        data = data.drop(columns=[col for col in drop_columns if col in data.columns], axis=1)
+
+        # Split into features (X) and target (y)
+        X = data.drop(columns=['alert'], axis=1, errors='ignore')
+        y = data['alert']
+
+        # Split into training and testing sets
+        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+        # Fit and encode the train data
+        for col in X_train.select_dtypes(include=['object']).columns:
+            #unique_count = data[col].nunique()
+            #print(f"Processing column: {col} | Unique values: {unique_count} im in encode")
+
+            # For high-cardinality columns, use Label Encoding
+            X_train[col] = self.le.fit_transform(X_train[col].astype(str))
+            #print(self.le.classes_)
+        y_train = self.le.fit_transform(y_train.astype(str))
+        #print(self.le.classes_)
+
+        #map unknown data
+        for col in X_test.select_dtypes(include=['object']).columns:
+            X_test[col] = X_test[col].map(lambda s: '<unknown>' if s not in self.le.classes_ else s)
+        y_test = y_test.map(lambda s: '<unknown>' if s not in self.le.classes_ else s)
+        
+        self.le.classes_ = np.append(self.le.classes_, '<unknown>')
+        #labelHeaders = list(self.le.classes_)
+        #print(labelHeaders)
+
+        #encode test data according to fitted label encoder
+        for col in X_test.select_dtypes(include=['object']).columns:
+            #unique_count = data[col].nunique()
+            #print(f"Processing column: {col} | Unique values: {unique_count}")
+            X_test[col] = self.le.transform(X_test[col].astype(str))
+        print(y_test)
+        y_test = self.le.transform(y_test.astype(str))
+
+
+        return X_train, y_train, X_test, y_test
     
 class PacketSnifferThread(QThread):
     packet_captured = pyqtSignal(object)
@@ -665,15 +776,7 @@ class Naswail(QMainWindow, Ui_MainWindow):
         self.scene = QGraphicsScene(self)
         self.total_inside_packets=0
         self.total_outside_packets=0
-        self.train = pd.read_csv('TrainATest2.csv', low_memory=False)
-       # self.test = pd.read_csv('Simulation.csv', low_memory=False)
-        self.X_train, self.y_train, self.X_test, self.y_test = self.encode(self.train)
-        self.classes = self.train.columns[:-1].to_numpy()
-        self.anmodel = RandomForestClassifier()
-        self.anmodel.fit(self.X_train, self.y_train)
-        self.train_predictions = self.anmodel.predict(self.X_test)
-        acc = accuracy_score(self.y_test, self.train_predictions)
-        print("Accuracy: {:.4%}".format(acc))
+       
         #objects
         
        # Initialize PacketSystem and SensorSystem without passing each other directly
@@ -794,6 +897,7 @@ class Naswail(QMainWindow, Ui_MainWindow):
             print(self.captured_packets)
             self.captured_packets.clear()
         self.capture *= -1
+        self.PacketSystemobj.capture*=-1
 
     def import_file(self):
         global packetFile, packetInput
@@ -804,6 +908,7 @@ class Naswail(QMainWindow, Ui_MainWindow):
             ext = os.path.splitext(packetFile)[1].lower()
             if ext == '.pcap':
                 packetInput = 1
+                
             elif ext == '.csv':
                 packetInput = 2
             PacketSnifferThread.run(self.sniffer_thread)
@@ -812,7 +917,7 @@ class Naswail(QMainWindow, Ui_MainWindow):
 
     def export_packets(self):
         try:
-            wrpcap("captured_packets.pcap", self.packets)
+            wrpcap("captured_packets.pcap", self.PacketSystemobj.packets)
             print("Packets exported successfully.")
         except Exception as e:
             print(f"Error exporting packets: {e}")
@@ -821,105 +926,11 @@ class Naswail(QMainWindow, Ui_MainWindow):
         global packetIndex, packetInput, packetFile
         packetInput = 0
         packetFile = ""
-        PacketSnifferThread.run(self.sniffer_thread)
+        self.sniffer_thread.quit()  # Stops the current thread
+        self.sniffer_thread.wait()  # Wait for the thread to finish
+        self.sniffer_thread.start()  # Start a new thread
+     
     
-    def packet_to_dataframe(self, packet, columns):
-        data = {col: '<unknown>' for col in columns}  # Initialize all columns with 'unknown'
-        #print(columns)
-        #data = pd.DataFrame
-        # Map values from packet to DataFrame
-        #print(packet)
-        if Raw in packet:
-            data['frame.len'] = packet.len
-            #data['frame.time_epoch'] = packet.time
-        if IP in packet:
-            data['ip.len'] = packet[IP].len
-            data['ip.ttl'] = packet[IP].ttl
-            data['ip.proto'] = packet[IP].proto
-            data['ip.version'] = packet[IP].version
-        if TCP in packet:
-            data['tcp.srcport'] = packet[TCP].sport
-            data['tcp.dstport'] = packet[TCP].dport
-            data['tcp.len'] = len(packet[TCP].payload)
-            data['tcp.seq'] = packet[TCP].seq
-            data['tcp.flags.ack'] = 1 if packet[TCP].flags.A else 0
-            data['tcp.flags.fin'] = 1 if packet[TCP].flags.F else 0
-            data['tcp.flags.reset'] = 1 if packet[TCP].flags.R else 0
-            data['tcp.window_size'] = packet[TCP].window
-            #data['tcp.stream'] = packet[TCP].options if packet[TCP].options else '<unknown>'
-        if UDP in packet:
-            data['udp.srcport'] = packet[UDP].sport
-            data['udp.dstport'] = packet[UDP].dport
-            data['udp.length'] = packet[UDP].len
-        if DNS in packet:  # Use DNS class directly, not a string
-            if packet[DNS].qd:  # Access the DNS layer directly
-                data['dns.qry.type'] = packet[DNS].qd.qtype
-            data['dns.flags.response'] = 1 if packet[DNS].qr else 0
-            data['dns.flags.recdesired'] = 1 if packet[DNS].rd else 0
-        
-        #print(data)
-
-        # Return as a DataFrame
-        return pd.DataFrame([data])
-    
-    def encodePacket(self, data):
-        for col in data.select_dtypes(include=['object']).columns:
-            #unique_count = data[col].nunique()
-            #print(f"Processing column: {col} | Unique values: {unique_count} im in encodePacket")
-
-            # For high-cardinality columns, use Label Encoding
-            #print(data[col])
-            data[col] = self.le.transform(data[col].astype(str))
-        
-        return data
-    
-    def encode(self, data):
-        # Programmatically identify all checksum columns and set up irrelevant columns for dropping
-        drop_columns = ['frame.time_epoch', 'tcp.stream']
-
-        # Fill missing values with placeholders
-        data = data.fillna('<unknown>')
-
-        # Drop irrelevant columns
-        data = data.drop(columns=[col for col in drop_columns if col in data.columns], axis=1)
-
-        # Split into features (X) and target (y)
-        X = data.drop(columns=['alert'], axis=1, errors='ignore')
-        y = data['alert']
-
-        # Split into training and testing sets
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-
-        # Fit and encode the train data
-        for col in X_train.select_dtypes(include=['object']).columns:
-            #unique_count = data[col].nunique()
-            #print(f"Processing column: {col} | Unique values: {unique_count} im in encode")
-
-            # For high-cardinality columns, use Label Encoding
-            X_train[col] = self.le.fit_transform(X_train[col].astype(str))
-            #print(self.le.classes_)
-        y_train = self.le.fit_transform(y_train.astype(str))
-        #print(self.le.classes_)
-
-        #map unknown data
-        for col in X_test.select_dtypes(include=['object']).columns:
-            X_test[col] = X_test[col].map(lambda s: '<unknown>' if s not in self.le.classes_ else s)
-        y_test = y_test.map(lambda s: '<unknown>' if s not in self.le.classes_ else s)
-        
-        self.le.classes_ = np.append(self.le.classes_, '<unknown>')
-        #labelHeaders = list(self.le.classes_)
-        #print(labelHeaders)
-
-        #encode test data according to fitted label encoder
-        for col in X_test.select_dtypes(include=['object']).columns:
-            #unique_count = data[col].nunique()
-            #print(f"Processing column: {col} | Unique values: {unique_count}")
-            X_test[col] = self.le.transform(X_test[col].astype(str))
-        print(y_test)
-        y_test = self.le.transform(y_test.astype(str))
-
-
-        return X_train, y_train, X_test, y_test
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
