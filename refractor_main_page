@@ -362,7 +362,7 @@ class PacketSystem:
                 dport = packet["UDP"].dport
 
             packet_length = int(len(packet))
-
+            layer = "udp" if packet.haslayer("UDP") else "tcp" if packet.haslayer("TCP") else "N/A"
             self.packet_stats["total"] += 1
             if protocol.lower() == "tcp":
                 self.packet_stats["tcp"] += 1
@@ -370,7 +370,7 @@ class PacketSystem:
                 self.packet_stats["udp"] += 1
             elif protocol.lower() == "icmp":
                 self.packet_stats["icmp"] += 1
-
+             
             # Add to table
             row_position = self.ui.tableWidget.rowCount()
             if self.filterapplied:
@@ -396,20 +396,20 @@ class PacketSystem:
                     self.ui.tableWidget_4.setItem(row_position, 1, QTableWidgetItem(src_ip))
                     self.ui.tableWidget_4.setItem(row_position, 2, QTableWidgetItem(dst_ip))
                     self.ui.tableWidget_4.setItem(row_position, 3, QTableWidgetItem(protocol))
-
+                
                 self.ui.tableWidget.insertRow(row_position)
                 self.ui.tableWidget.setItem(row_position, 0, QTableWidgetItem(readable_time))
                 self.ui.tableWidget.setItem(row_position, 1, QTableWidgetItem(src_ip))
                 self.ui.tableWidget.setItem(row_position, 2, QTableWidgetItem(dst_ip))
                 self.ui.tableWidget.setItem(row_position, 3, QTableWidgetItem(protocol))
-
+                self.ui.tableWidget.setItem(row_position, 4, QTableWidgetItem(layer))
                 # Add MAC addresses and port info to the table
-                self.ui.tableWidget.setItem(row_position, 4, QTableWidgetItem(macsrc))
-                self.ui.tableWidget.setItem(row_position, 5, QTableWidgetItem(macdst))
-                self.ui.tableWidget.setItem(row_position, 6, QTableWidgetItem(str(sport) if sport else "N/A"))
-                self.ui.tableWidget.setItem(row_position, 7, QTableWidgetItem(str(dport) if dport else "N/A"))
-                self.ui.tableWidget.setItem(row_position, 8, QTableWidgetItem(str(packet_length)))
-                self.ui.tableWidget.setItem(row_position, 9, QTableWidgetItem(ip_version))
+                self.ui.tableWidget.setItem(row_position, 5, QTableWidgetItem(macsrc))
+                self.ui.tableWidget.setItem(row_position, 6, QTableWidgetItem(macdst))
+                self.ui.tableWidget.setItem(row_position, 7, QTableWidgetItem(str(sport) if sport else "N/A"))
+                self.ui.tableWidget.setItem(row_position, 8, QTableWidgetItem(str(dport) if dport else "N/A"))
+                self.ui.tableWidget.setItem(row_position, 9, QTableWidgetItem(str(packet_length)))
+                self.ui.tableWidget.setItem(row_position, 10, QTableWidgetItem(ip_version))
                 
             time_series[timestamp] = len(self.packets)
 
@@ -549,9 +549,18 @@ class PacketSystem:
             dst_is_local = self.is_local_ip(dst_ip)
 
             # Check if the packet matches the selected protocols
+            layer = "UDP" if packet.haslayer("UDP") else "TCP" if packet.haslayer("TCP") else "Other"
             protocol_match = protocol in selected_protocols if selected_protocols else True
+            if "udp" in selected_protocols and layer == "UDP":
+             protocol_match = True
+            elif "tcp" in selected_protocols and layer == "TCP":
+
+             protocol_match = True
 
             # Check source and destination filters
+            packet_time = datetime.fromtimestamp(float(packet.time))
+            
+
             src_match = src_filter in src_ip if src_filter else True
             dst_match = dst_filter in dst_ip if dst_filter else True
 
@@ -574,6 +583,7 @@ class PacketSystem:
 
             # Extract IP version
                 ip_version = "IPv6" if packet.haslayer("IPv6") else "IPv4" if packet.haslayer("IP") else "N/A"
+                layer = "udp" if packet.haslayer("UDP") else "tcp" if packet.haslayer("TCP") else "Other"
                 # Extract port information for TCP/UDP
                 sport = None
                 dport = None
@@ -590,13 +600,14 @@ class PacketSystem:
                 self.ui.tableWidget.setItem(row_position, 1, QTableWidgetItem(src_ip))
                 self.ui.tableWidget.setItem(row_position, 2, QTableWidgetItem(dst_ip))
                 self.ui.tableWidget.setItem(row_position, 3, QTableWidgetItem(protocol))
+                self.ui.tableWidget.setItem(row_position, 4, QTableWidgetItem(layer))
                    # Add MAC addresses and port info to the table
-                self.ui.tableWidget.setItem(row_position, 4, QTableWidgetItem(macsrc))
-                self.ui.tableWidget.setItem(row_position, 5, QTableWidgetItem(macdst))
-                self.ui.tableWidget.setItem(row_position, 6, QTableWidgetItem(str(sport) if sport else "N/A"))
-                self.ui.tableWidget.setItem(row_position, 7, QTableWidgetItem(str(dport) if dport else "N/A"))
-                self.ui.tableWidget.setItem(row_position, 8, QTableWidgetItem(str(packet_length)))
-                self.ui.tableWidget.setItem(row_position, 9, QTableWidgetItem(ip_version))
+                self.ui.tableWidget.setItem(row_position, 5, QTableWidgetItem(macsrc))
+                self.ui.tableWidget.setItem(row_position, 6, QTableWidgetItem(macdst))
+                self.ui.tableWidget.setItem(row_position, 7, QTableWidgetItem(str(sport) if sport else "N/A"))
+                self.ui.tableWidget.setItem(row_position, 8, QTableWidgetItem(str(dport) if dport else "N/A"))
+                self.ui.tableWidget.setItem(row_position, 9, QTableWidgetItem(str(packet_length)))
+                self.ui.tableWidget.setItem(row_position, 10, QTableWidgetItem(ip_version))
         self.apply_filter=False
     
     #end of filter
@@ -768,7 +779,7 @@ class Naswail(QMainWindow, Ui_MainWindow):
         self.graphicsView.setFixedSize(71, 61)
         self.graphicsView.fitInView(self.scene.sceneRect(), Qt.AspectRatioMode.KeepAspectRatio)
         self.tableWidget.setColumnCount(10)
-        self.tableWidget.setHorizontalHeaderLabels(["Timestamp", "Source", "Destination", "Protocol","macsrc","macdst","srcport","dstport","length","IP version"])
+        self.tableWidget.setHorizontalHeaderLabels(["Timestamp", "Source", "Destination", "Protocol","layer","macsrc","macdst","srcport","dstport","length","IP version"])
         self.tableWidget.cellClicked.connect(self.PacketSystemobj.display_packet_details)
         self.tabWidget.currentChanged.connect(lambda index: self.Appsystemobj.get_applications_with_ports() if index == 3 else None)
         self.tableWidget_2.setColumnCount(2)
