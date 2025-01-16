@@ -20,7 +20,7 @@ from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 import matplotlib.pyplot as plt
 from datetime import datetime, timedelta
-from Analysis2 import Ui_Naswail_Anlaysis
+from UI_Analysis import Ui_Naswail_Analysis
 
 
 class SecondaryWidget(QWidget, Ui_Naswail_Anlaysis):
