@@ -21,6 +21,7 @@ from matplotlib.figure import Figure
 import matplotlib.pyplot as plt
 from datetime import datetime, timedelta
 from UI_Analysis import Ui_Naswail_Anlaysis
+from Code_Tools import Window_Tools
 
 
 class Window_Analysis(QWidget, Ui_Naswail_Anlaysis):
@@ -42,6 +43,7 @@ class Window_Analysis(QWidget, Ui_Naswail_Anlaysis):
         # Connect PushButton_5 click to display pie chart
         self.ui.pushButton_5.clicked.connect(self.display_pie_chart)
         self.ui.pushButton_4.clicked.connect(self.show_main_window)
+        self.ui.pushButton_3.clicked.connect(self.show_tools_window)
         self.ui.pushButton_6.clicked.connect(self.display_histogram)
         self.ui.pushButton_7.clicked.connect(self.display_graph)
         self.ui.pushButton_9.clicked.connect(self.display_time_series)
@@ -725,7 +727,11 @@ class Window_Analysis(QWidget, Ui_Naswail_Anlaysis):
         """Show the main window and hide this widget."""
         self.main_window.show()
         self.hide()
-
+    def show_tools_window(self):
+        """Show the tools window and hide this widget."""
+        self.secondary_widget2 = Window_Tools(self.main_window)
+        self.hide()
+        self.secondary_widget2.show()
 
 
 if __name__ == "__main__":
