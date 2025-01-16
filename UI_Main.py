@@ -1888,7 +1888,7 @@ class Ui_MainWindow(object):
         self.comboBox.setItemText(2, _translate("MainWindow", "Outside Traffic"))
         self.label_3.setText(_translate("MainWindow", "Type Of Traffic"))
         self.pushButton.setText(_translate("MainWindow", "Reset"))
-        self.pushButton_9.setText(_translate("MainWindow", "Reset"))
+        self.pushButton_9.setText(_translate("MainWindow", "Apply"))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab), _translate("MainWindow", "Packet Filter"))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_2), _translate("MainWindow", "Packet Details"))
         self.label_11.setText(_translate("MainWindow", "Device name"))
