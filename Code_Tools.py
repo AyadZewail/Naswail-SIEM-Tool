@@ -21,6 +21,7 @@ from matplotlib.figure import Figure
 import matplotlib.pyplot as plt
 from datetime import datetime, timedelta
 from UI_Tools import Ui_Naswail_Tool
+
 class Window_Tools(QWidget, Ui_Naswail_Tool):
     def __init__(self, main_window):
         super().__init__()
@@ -31,12 +32,19 @@ class Window_Tools(QWidget, Ui_Naswail_Tool):
         self.init_ui()
 
     def init_ui(self):
-        self.setWindowTitle("Secondary Widget")
-        self.showMaximized()
+            self.setWindowTitle("Secondary Widget")
+            self.showMaximized()
+            self.ui.pushButton_4.clicked.connect(self.show_main_window)
+            self.ui.pushButton_2.clicked.connect(self.show_analysis_window)
+    def show_analysis_window(self):
+            """Show the analysis window and hide this widget."""
+            self.secondary_widget = self.main_window.open_analysis()
+            self.hide()
+            
     def show_main_window(self):
-        """Show the main window and hide this widget."""
-        self.main_window.show()
-        self.hide()
+            """Show the main window and hide this widget."""
+            self.main_window.show()
+            self.hide()
 
 
 
