@@ -473,7 +473,7 @@ class PacketSystem:
                 if packet.haslayer("TCP"):
                     sport = packet["TCP"].sport
                     dport = packet["TCP"].dport
-                    if dport == 21 or sport == 21:
+                    if dport == 20 or sport == 20:
                         return "ftp"
                     elif dport == 23 or sport == 23:
                         return "telnet"
@@ -573,8 +573,10 @@ class PacketSystem:
             if "udp" in selected_protocols and layer == "UDP":
              protocol_match = True
             elif "tcp" in selected_protocols and layer == "TCP":
-
              protocol_match = True
+            elif "other" in selected_protocols and layer=="Other":
+                protocol_match=True
+             
 
             # Check source and destination filters
             packet_time = datetime.fromtimestamp(float(packet.time))
@@ -901,9 +903,7 @@ class Naswail(QMainWindow, Ui_MainWindow):
         self.elapsedTime = f"{hours:02}:{minutes:02}:{seconds:02}"
         self.label_6.setText(str(self.elapsedTime))
     def toggleCapture(self):
-        if self.capture == 1:
-            print(self.captured_packets)
-            self.captured_packets.clear()
+      
         self.capture *= -1
         self.PacketSystemobj.capture*=-1
 
