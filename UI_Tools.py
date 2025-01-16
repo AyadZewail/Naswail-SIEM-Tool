@@ -1,4 +1,4 @@
-# Form implementation generated from reading ui file 'Analysis2.ui'
+# Form implementation generated from reading ui file 'tool.ui'
 #
 # Created by: PyQt6 UI code generator 6.7.1
 #
@@ -9,12 +9,12 @@
 from PyQt6 import QtCore, QtGui, QtWidgets
 
 
-class Ui_Naswail_Anlaysis(object):
-    def setupUi(self, Naswail_Anlaysis):
-        Naswail_Anlaysis.setObjectName("Naswail_Anlaysis")
-        Naswail_Anlaysis.resize(1575, 3555)
-        Naswail_Anlaysis.setMinimumSize(QtCore.QSize(1000, 1000))
-        Naswail_Anlaysis.setStyleSheet("QWidget:window {                    /* Borders around the code editor and debug window */\n"
+class Ui_Naswail_Tool(object):
+    def setupUi(self, Naswail_Tool):
+        Naswail_Tool.setObjectName("Naswail_Tool")
+        Naswail_Tool.resize(1575, 3555)
+        Naswail_Tool.setMinimumSize(QtCore.QSize(1000, 1000))
+        Naswail_Tool.setStyleSheet("QWidget:window {                    /* Borders around the code editor and debug window */\n"
 "        border: 1px solid #263238;\n"
 "        background-color: #263238;\n"
 "}\n"
@@ -1650,7 +1650,7 @@ class Ui_Naswail_Anlaysis(object):
 "{\n"
 "    border-left: 1px solid #fffff8;\n"
 "}")
-        self.horizontalLayoutWidget = QtWidgets.QWidget(parent=Naswail_Anlaysis)
+        self.horizontalLayoutWidget = QtWidgets.QWidget(parent=Naswail_Tool)
         self.horizontalLayoutWidget.setGeometry(QtCore.QRect(240, 20, 1031, 41))
         self.horizontalLayoutWidget.setObjectName("horizontalLayoutWidget")
         self.horizontalLayout = QtWidgets.QHBoxLayout(self.horizontalLayoutWidget)
@@ -1665,7 +1665,7 @@ class Ui_Naswail_Anlaysis(object):
         self.pushButton_2 = QtWidgets.QPushButton(parent=self.horizontalLayoutWidget)
         self.pushButton_2.setObjectName("pushButton_2")
         self.horizontalLayout.addWidget(self.pushButton_2)
-        self.label_4 = QtWidgets.QLabel(parent=Naswail_Anlaysis)
+        self.label_4 = QtWidgets.QLabel(parent=Naswail_Tool)
         self.label_4.setGeometry(QtCore.QRect(90, 20, 141, 41))
         font = QtGui.QFont()
         font.setFamily("Segoe UI Variable Small Semibol")
@@ -1674,13 +1674,13 @@ class Ui_Naswail_Anlaysis(object):
         font.setWeight(75)
         self.label_4.setFont(font)
         self.label_4.setObjectName("label_4")
-        self.graphicsView = QtWidgets.QGraphicsView(parent=Naswail_Anlaysis)
+        self.graphicsView = QtWidgets.QGraphicsView(parent=Naswail_Tool)
         self.graphicsView.setGeometry(QtCore.QRect(10, 20, 71, 61))
         self.graphicsView.setObjectName("graphicsView")
-        self.graphicsView_2 = QtWidgets.QGraphicsView(parent=Naswail_Anlaysis)
+        self.graphicsView_2 = QtWidgets.QGraphicsView(parent=Naswail_Tool)
         self.graphicsView_2.setGeometry(QtCore.QRect(10, 10, 81, 51))
         self.graphicsView_2.setObjectName("graphicsView_2")
-        self.scrollArea = QtWidgets.QScrollArea(parent=Naswail_Anlaysis)
+        self.scrollArea = QtWidgets.QScrollArea(parent=Naswail_Tool)
         self.scrollArea.setGeometry(QtCore.QRect(20, 80, 1511, 3381))
         self.scrollArea.setMinimumSize(QtCore.QSize(1000, 0))
         self.scrollArea.setLineWidth(1)
@@ -1691,80 +1691,11 @@ class Ui_Naswail_Anlaysis(object):
         self.scrollArea.setAlignment(QtCore.Qt.AlignmentFlag.AlignLeading|QtCore.Qt.AlignmentFlag.AlignLeft|QtCore.Qt.AlignmentFlag.AlignTop)
         self.scrollArea.setObjectName("scrollArea")
         self.scrollAreaWidgetContents = QtWidgets.QWidget()
+        self.scrollAreaWidgetContents.setGeometry(QtCore.QRect(0, 0, 1501, 13291))
         self.scrollAreaWidgetContents.setMinimumSize(QtCore.QSize(1291, 13291))
         self.scrollAreaWidgetContents.setObjectName("scrollAreaWidgetContents")
-        self.pushButton_9 = QtWidgets.QPushButton(parent=self.scrollAreaWidgetContents)
-        self.pushButton_9.setGeometry(QtCore.QRect(510, 1410, 93, 28))
-        self.pushButton_9.setObjectName("pushButton_9")
-        self.label_9 = QtWidgets.QLabel(parent=self.scrollAreaWidgetContents)
-        self.label_9.setGeometry(QtCore.QRect(100, 670, 1091, 31))
-        font = QtGui.QFont()
-        font.setFamily("Yu Gothic UI Semibold")
-        font.setPointSize(18)
-        font.setBold(True)
-        font.setWeight(75)
-        self.label_9.setFont(font)
-        self.label_9.setStyleSheet("QLabel {\n"
-"    color: white;\n"
-"}\n"
-"")
-        self.label_9.setObjectName("label_9")
-        self.widget_5 = QtWidgets.QWidget(parent=self.scrollAreaWidgetContents)
-        self.widget_5.setGeometry(QtCore.QRect(90, 717, 1371, 601))
-        self.widget_5.setObjectName("widget_5")
-        self.widget_3 = QtWidgets.QWidget(parent=self.scrollAreaWidgetContents)
-        self.widget_3.setGeometry(QtCore.QRect(70, 2790, 1391, 461))
-        self.widget_3.setObjectName("widget_3")
-        self.label_13 = QtWidgets.QLabel(parent=self.scrollAreaWidgetContents)
-        self.label_13.setGeometry(QtCore.QRect(560, 2630, 141, 20))
-        self.label_13.setStyleSheet("QLabel {\n"
-"    color: white;\n"
-"}\n"
-"")
-        self.label_13.setObjectName("label_13")
-        self.widget = QtWidgets.QWidget(parent=self.scrollAreaWidgetContents)
-        self.widget.setGeometry(QtCore.QRect(50, 68, 1411, 471))
-        self.widget.setObjectName("widget")
-        self.label_8 = QtWidgets.QLabel(parent=self.scrollAreaWidgetContents)
-        self.label_8.setGeometry(QtCore.QRect(600, 3280, 141, 20))
-        self.label_8.setStyleSheet("QLabel {\n"
-"    color: white;\n"
-"}\n"
-"")
-        self.label_8.setObjectName("label_8")
-        self.comboBox_6 = QtWidgets.QComboBox(parent=self.scrollAreaWidgetContents)
-        self.comboBox_6.setGeometry(QtCore.QRect(500, 1380, 161, 22))
-        self.comboBox_6.setObjectName("comboBox_6")
-        self.comboBox_6.addItem("")
-        self.comboBox_6.addItem("")
-        self.comboBox_6.addItem("")
-        self.comboBox_2 = QtWidgets.QComboBox(parent=self.scrollAreaWidgetContents)
-        self.comboBox_2.setGeometry(QtCore.QRect(540, 578, 161, 22))
-        self.comboBox_2.setObjectName("comboBox_2")
-        self.comboBox_2.addItem("")
-        self.comboBox_2.addItem("")
-        self.comboBox_2.addItem("")
-        self.comboBox_4 = QtWidgets.QComboBox(parent=self.scrollAreaWidgetContents)
-        self.comboBox_4.setGeometry(QtCore.QRect(586, 3320, 161, 22))
-        self.comboBox_4.setObjectName("comboBox_4")
-        self.comboBox_4.addItem("")
-        self.comboBox_4.addItem("")
-        self.comboBox_4.addItem("")
-        self.comboBox_4.addItem("")
-        self.pushButton_7 = QtWidgets.QPushButton(parent=self.scrollAreaWidgetContents)
-        self.pushButton_7.setGeometry(QtCore.QRect(590, 3350, 93, 28))
-        self.pushButton_7.setObjectName("pushButton_7")
-        self.widget_4 = QtWidgets.QWidget(parent=self.scrollAreaWidgetContents)
-        self.widget_4.setGeometry(QtCore.QRect(70, 2130, 1401, 481))
-        self.widget_4.setObjectName("widget_4")
-        self.comboBox_5 = QtWidgets.QComboBox(parent=self.scrollAreaWidgetContents)
-        self.comboBox_5.setGeometry(QtCore.QRect(546, 2670, 161, 22))
-        self.comboBox_5.setObjectName("comboBox_5")
-        self.comboBox_5.addItem("")
-        self.comboBox_5.addItem("")
-        self.comboBox_5.addItem("")
         self.label_2 = QtWidgets.QLabel(parent=self.scrollAreaWidgetContents)
-        self.label_2.setGeometry(QtCore.QRect(40, 20, 1101, 20))
+        self.label_2.setGeometry(QtCore.QRect(40, 630, 1101, 31))
         font = QtGui.QFont()
         font.setFamily("Yu Gothic UI Semibold")
         font.setPointSize(14)
@@ -1776,124 +1707,59 @@ class Ui_Naswail_Anlaysis(object):
 "}\n"
 "")
         self.label_2.setObjectName("label_2")
-        self.label_5 = QtWidgets.QLabel(parent=self.scrollAreaWidgetContents)
-        self.label_5.setGeometry(QtCore.QRect(550, 550, 141, 20))
-        self.label_5.setStyleSheet("QLabel {\n"
-"    color: white;\n"
-"}\n"
-"")
-        self.label_5.setObjectName("label_5")
-        self.pushButton_8 = QtWidgets.QPushButton(parent=self.scrollAreaWidgetContents)
-        self.pushButton_8.setGeometry(QtCore.QRect(570, 2700, 93, 28))
-        self.pushButton_8.setObjectName("pushButton_8")
-        self.label_14 = QtWidgets.QLabel(parent=self.scrollAreaWidgetContents)
-        self.label_14.setGeometry(QtCore.QRect(510, 1340, 141, 20))
-        self.label_14.setStyleSheet("QLabel {\n"
-"    color: white;\n"
-"}\n"
-"")
-        self.label_14.setObjectName("label_14")
-        self.label_10 = QtWidgets.QLabel(parent=self.scrollAreaWidgetContents)
-        self.label_10.setGeometry(QtCore.QRect(70, 2080, 1141, 31))
+        self.tableWidget = QtWidgets.QTableWidget(parent=self.scrollAreaWidgetContents)
+        self.tableWidget.setGeometry(QtCore.QRect(80, 700, 1131, 501))
+        self.tableWidget.setObjectName("tableWidget")
+        self.tableWidget.setColumnCount(0)
+        self.tableWidget.setRowCount(0)
+        self.label_15 = QtWidgets.QLabel(parent=self.scrollAreaWidgetContents)
+        self.label_15.setGeometry(QtCore.QRect(75, 20, 1101, 31))
         font = QtGui.QFont()
         font.setFamily("Yu Gothic UI Semibold")
-        font.setPointSize(18)
+        font.setPointSize(14)
         font.setBold(True)
         font.setWeight(75)
-        self.label_10.setFont(font)
-        self.label_10.setStyleSheet("QLabel {\n"
+        self.label_15.setFont(font)
+        self.label_15.setStyleSheet("QLabel {\n"
 "    color: white;\n"
 "}\n"
 "")
-        self.label_10.setObjectName("label_10")
-        self.label_7 = QtWidgets.QLabel(parent=self.scrollAreaWidgetContents)
-        self.label_7.setGeometry(QtCore.QRect(130, 2739, 941, 41))
+        self.label_15.setObjectName("label_15")
+        self.tableWidget_3 = QtWidgets.QTableWidget(parent=self.scrollAreaWidgetContents)
+        self.tableWidget_3.setGeometry(QtCore.QRect(80, 90, 1131, 501))
+        self.tableWidget_3.setObjectName("tableWidget_3")
+        self.tableWidget_3.setColumnCount(0)
+        self.tableWidget_3.setRowCount(0)
+        self.label_18 = QtWidgets.QLabel(parent=self.scrollAreaWidgetContents)
+        self.label_18.setGeometry(QtCore.QRect(60, 1300, 1101, 31))
         font = QtGui.QFont()
         font.setFamily("Yu Gothic UI Semibold")
-        font.setPointSize(16)
+        font.setPointSize(14)
         font.setBold(True)
         font.setWeight(75)
-        self.label_7.setFont(font)
-        self.label_7.setStyleSheet("QLabel {\n"
+        self.label_18.setFont(font)
+        self.label_18.setStyleSheet("QLabel {\n"
 "    color: white;\n"
 "}\n"
 "")
-        self.label_7.setObjectName("label_7")
-        self.pushButton_5 = QtWidgets.QPushButton(parent=self.scrollAreaWidgetContents)
-        self.pushButton_5.setGeometry(QtCore.QRect(550, 610, 93, 28))
-        self.pushButton_5.setObjectName("pushButton_5")
-        self.label_3 = QtWidgets.QLabel(parent=self.scrollAreaWidgetContents)
-        self.label_3.setGeometry(QtCore.QRect(80, 1450, 1121, 41))
-        font = QtGui.QFont()
-        font.setFamily("Yu Gothic UI Semibold")
-        font.setPointSize(18)
-        font.setBold(True)
-        font.setWeight(75)
-        self.label_3.setFont(font)
-        self.label_3.setStyleSheet("QLabel {\n"
-"    color: white;\n"
-"}\n"
-"")
-        self.label_3.setObjectName("label_3")
-        self.widget_2 = QtWidgets.QWidget(parent=self.scrollAreaWidgetContents)
-        self.widget_2.setGeometry(QtCore.QRect(70, 1510, 1401, 431))
-        self.widget_2.setObjectName("widget_2")
-        self.comboBox_3 = QtWidgets.QComboBox(parent=self.scrollAreaWidgetContents)
-        self.comboBox_3.setGeometry(QtCore.QRect(536, 2000, 161, 22))
-        self.comboBox_3.setObjectName("comboBox_3")
-        self.comboBox_3.addItem("")
-        self.comboBox_3.addItem("")
-        self.comboBox_3.addItem("")
-        self.label_6 = QtWidgets.QLabel(parent=self.scrollAreaWidgetContents)
-        self.label_6.setGeometry(QtCore.QRect(550, 1960, 141, 20))
-        self.label_6.setStyleSheet("QLabel {\n"
-"    color: white;\n"
-"}\n"
-"")
-        self.label_6.setObjectName("label_6")
-        self.pushButton_6 = QtWidgets.QPushButton(parent=self.scrollAreaWidgetContents)
-        self.pushButton_6.setGeometry(QtCore.QRect(550, 2029, 93, 28))
-        self.pushButton_6.setObjectName("pushButton_6")
+        self.label_18.setObjectName("label_18")
+        self.tableWidget_6 = QtWidgets.QTableWidget(parent=self.scrollAreaWidgetContents)
+        self.tableWidget_6.setGeometry(QtCore.QRect(100, 1370, 1131, 501))
+        self.tableWidget_6.setObjectName("tableWidget_6")
+        self.tableWidget_6.setColumnCount(0)
+        self.tableWidget_6.setRowCount(0)
         self.scrollArea.setWidget(self.scrollAreaWidgetContents)
 
-        self.retranslateUi(Naswail_Anlaysis)
-        QtCore.QMetaObject.connectSlotsByName(Naswail_Anlaysis)
+        self.retranslateUi(Naswail_Tool)
+        QtCore.QMetaObject.connectSlotsByName(Naswail_Tool)
 
-    def retranslateUi(self, Naswail_Anlaysis):
+    def retranslateUi(self, Naswail_Tool):
         _translate = QtCore.QCoreApplication.translate
-        Naswail_Anlaysis.setWindowTitle(_translate("Naswail_Anlaysis", "Form"))
-        self.pushButton_4.setText(_translate("Naswail_Anlaysis", "Home"))
-        self.pushButton_3.setText(_translate("Naswail_Anlaysis", "Tools"))
-        self.pushButton_2.setText(_translate("Naswail_Anlaysis", "Analysis"))
-        self.label_4.setText(_translate("Naswail_Anlaysis", "Naswail"))
-        self.pushButton_9.setText(_translate("Naswail_Anlaysis", "PushButton"))
-        self.label_9.setText(_translate("Naswail_Anlaysis", "                                                    time series"))
-        self.label_13.setText(_translate("Naswail_Anlaysis", "filter on:"))
-        self.label_8.setText(_translate("Naswail_Anlaysis", "filter on"))
-        self.comboBox_6.setItemText(0, _translate("Naswail_Anlaysis", "Protocols"))
-        self.comboBox_6.setItemText(1, _translate("Naswail_Anlaysis", "Sensors"))
-        self.comboBox_6.setItemText(2, _translate("Naswail_Anlaysis", "Bandwidth"))
-        self.comboBox_2.setItemText(0, _translate("Naswail_Anlaysis", "Protocols"))
-        self.comboBox_2.setItemText(1, _translate("Naswail_Anlaysis", "Sensors"))
-        self.comboBox_2.setItemText(2, _translate("Naswail_Anlaysis", "inside/outside"))
-        self.comboBox_4.setItemText(0, _translate("Naswail_Anlaysis", "Protocols"))
-        self.comboBox_4.setItemText(1, _translate("Naswail_Anlaysis", "inside/outside"))
-        self.comboBox_4.setItemText(2, _translate("Naswail_Anlaysis", "Sensors"))
-        self.comboBox_4.setItemText(3, _translate("Naswail_Anlaysis", "Bandwidth"))
-        self.pushButton_7.setText(_translate("Naswail_Anlaysis", "PushButton"))
-        self.comboBox_5.setItemText(0, _translate("Naswail_Anlaysis", "Protocols"))
-        self.comboBox_5.setItemText(1, _translate("Naswail_Anlaysis", "Sensors"))
-        self.comboBox_5.setItemText(2, _translate("Naswail_Anlaysis", "Bandwidth"))
-        self.label_2.setText(_translate("Naswail_Anlaysis", "                                                                                 Pie Chart"))
-        self.label_5.setText(_translate("Naswail_Anlaysis", "filter on:"))
-        self.pushButton_8.setText(_translate("Naswail_Anlaysis", "PushButton"))
-        self.label_14.setText(_translate("Naswail_Anlaysis", "filter on:"))
-        self.label_10.setText(_translate("Naswail_Anlaysis", "                                                          Heatmap"))
-        self.label_7.setText(_translate("Naswail_Anlaysis", "                                                             Graph"))
-        self.pushButton_5.setText(_translate("Naswail_Anlaysis", "PushButton"))
-        self.label_3.setText(_translate("Naswail_Anlaysis", "                                                          Hstogram"))
-        self.comboBox_3.setItemText(0, _translate("Naswail_Anlaysis", "Protocols"))
-        self.comboBox_3.setItemText(1, _translate("Naswail_Anlaysis", "inside/outside"))
-        self.comboBox_3.setItemText(2, _translate("Naswail_Anlaysis", "Sensors"))
-        self.label_6.setText(_translate("Naswail_Anlaysis", "filter on:"))
-        self.pushButton_6.setText(_translate("Naswail_Anlaysis", "PushButton"))
+        Naswail_Tool.setWindowTitle(_translate("Naswail_Tool", "Form"))
+        self.pushButton_4.setText(_translate("Naswail_Tool", "Home"))
+        self.pushButton_3.setText(_translate("Naswail_Tool", "Tools"))
+        self.pushButton_2.setText(_translate("Naswail_Tool", "Analysis"))
+        self.label_4.setText(_translate("Naswail_Tool", "Naswail"))
+        self.label_2.setText(_translate("Naswail_Tool", "                                                                                Suspicious Packets Analyzer"))
+        self.label_15.setText(_translate("Naswail_Tool", "                                                                             Predict Future Traffic"))
+        self.label_18.setText(_translate("Naswail_Tool", "                                                                             Corrupted Packets"))
