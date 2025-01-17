@@ -146,77 +146,6 @@ class Ui_Naswail_Tool(object):
 "    background-color: #18465d;\n"
 "}\n"
 "\n"
-"QCheckBox {\n"
-"    spacing: 5px;\n"
-"    outline: none;\n"
-"    color: #eff0f1;\n"
-"    margin-bottom: 2px;\n"
-"}\n"
-"\n"
-"QCheckBox:disabled {\n"
-"    color: #76797C;\n"
-"}\n"
-"\n"
-"QCheckBox::indicator,\n"
-"QGroupBox::indicator {\n"
-"    width: 18px;\n"
-"    height: 18px;\n"
-"}\n"
-"\n"
-"QGroupBox::indicator {\n"
-"    margin-left: 2px;\n"
-"}\n"
-"\n"
-"QCheckBox::indicator:unchecked,\n"
-"QGroupBox::indicator:unchecked {\n"
-"    image: url(:/qss_icons/rc/checkbox_unchecked.png);\n"
-"}\n"
-"\n"
-"QCheckBox::indicator:unchecked:hover,\n"
-"QCheckBox::indicator:unchecked:focus,\n"
-"QCheckBox::indicator:unchecked:pressed,\n"
-"QGroupBox::indicator:unchecked:hover,\n"
-"QGroupBox::indicator:unchecked:focus,\n"
-"QGroupBox::indicator:unchecked:pressed {\n"
-"    border: none;\n"
-"    image: url(:/qss_icons/rc/checkbox_unchecked_focus.png);\n"
-"}\n"
-"\n"
-"QCheckBox::indicator:checked,\n"
-"QGroupBox::indicator:checked {\n"
-"    image: url(:/qss_icons/rc/checkbox_checked.png);\n"
-"}\n"
-"\n"
-"QCheckBox::indicator:checked:hover,\n"
-"QCheckBox::indicator:checked:focus,\n"
-"QCheckBox::indicator:checked:pressed,\n"
-"QGroupBox::indicator:checked:hover,\n"
-"QGroupBox::indicator:checked:focus,\n"
-"QGroupBox::indicator:checked:pressed {\n"
-"    border: none;\n"
-"    image: url(:/qss_icons/rc/checkbox_checked_focus.png);\n"
-"}\n"
-"\n"
-"QCheckBox::indicator:indeterminate {\n"
-"    image: url(:/qss_icons/rc/checkbox_indeterminate.png);\n"
-"}\n"
-"\n"
-"QCheckBox::indicator:indeterminate:focus,\n"
-"QCheckBox::indicator:indeterminate:hover,\n"
-"QCheckBox::indicator:indeterminate:pressed {\n"
-"    image: url(:/qss_icons/rc/checkbox_indeterminate_focus.png);\n"
-"}\n"
-"\n"
-"QCheckBox::indicator:checked:disabled,\n"
-"QGroupBox::indicator:checked:disabled {\n"
-"    image: url(:/qss_icons/rc/checkbox_checked_disabled.png);\n"
-"}\n"
-"\n"
-"QCheckBox::indicator:unchecked:disabled,\n"
-"QGroupBox::indicator:unchecked:disabled {\n"
-"    image: url(:/qss_icons/rc/checkbox_unchecked_disabled.png);\n"
-"}\n"
-"\n"
 "QRadioButton {\n"
 "    spacing: 5px;\n"
 "    outline: none;\n"
@@ -1547,109 +1476,8 @@ class Ui_Naswail_Tool(object):
 "        background-color: #263238;\n"
 "}\n"
 "\n"
-"QStatusBar {\n"
-"        background-color: #263238;\n"
-"}\n"
-"\n"
-"QLabel {\n"
-"        color: #546E7A;        /* Text at the bottom right corner of the screen */\n"
-"}\n"
-"\n"
-"QToolButton {    /* I don\'t like how the items depress */\n"
-"        color: #546E7A;\n"
-"}\n"
-"\n"
-"QToolButton:hover, QToolButton:pressed, QToolButton:checked {\n"
-"        background-color: #263238;\n"
-"}\n"
-"\n"
-"QToolButton:hover {\n"
-"        color: #AFBDC4;\n"
-"\n"
-"}\n"
-"\n"
-"QToolButton:checked, QToolButton:pressed {\n"
-"        color: #FFFFFF;\n"
-"}\n"
-"\n"
-"\n"
-"QToolButton {\n"
-"        border: 1px solid transparent;\n"
-"        margin: 1px;\n"
-"}\n"
-"\n"
-"QToolButton:hover {\n"
-"        background-color: transparent;                /* I don\'t like how the down arrows in the top menu bar move down when clicked */\n"
-"        border: 1px solid transparent;\n"
-"}\n"
-"\n"
-"QToolButton[popupMode=\"1\"] { /* only for MenuButtonPopup */\n"
-"        padding-right: 20px; /* make way for the popup button */\n"
-"}\n"
-"\n"
-"QToolButton::menu-button {\n"
-"        border-left: 1px solid transparent;\n"
-"        background: transparent;\n"
-"    width: 16px;\n"
-"}\n"
-"\n"
-"QToolButton::menu-button:hover {\n"
-"        border-left: 1px solid transparent;\n"
-"        background: transparent;\n"
-"    width: 16px;\n"
-"}\n"
-"\n"
-"QStatusBar::item {\n"
-"        color: #546E7A;\n"
-"        background-color: #263238;\n"
-"}\n"
-"\n"
-"QAbstractScrollArea  {    /* Borders around the code editor and debug window */\n"
-"        border: 0;\n"
-"}\n"
-"\n"
-"/*****************************************************************************\n"
-"Play around with these settings\n"
-"*****************************************************************************/\n"
-"\n"
-"/* Force the dialog\'s buttons to follow the Windows guidelines. */\n"
-"QDialogButtonBox {\n"
-"    button-layout: 0;\n"
-"}\n"
-"\n"
-"QTabWidget::tab-bar {\n"
-"        left: 0px; /* Test this out on OS X, it will affect the tabs in the Options Dialog, on OS X they are centered */\n"
-"}\n"
-"\n"
-"\n"
-"/**Added by Ansif**/\n"
-"\n"
-"QTableWidget {\n"
-"    gridline-color: #fffff8;\n"
-"\n"
-"}\n"
-"\n"
-"QTableWidget QTableCornerButton::section {\n"
-"    background-color: #646464;\n"
-"    border: 1px solid #fffff8;\n"
-"}\n"
-"\n"
-"QHeaderView::section {\n"
-"    background-color: #646464;\n"
-"    padding: 4px;\n"
-"    border: 0px;\n"
-"    font-size: 14pt;\n"
-"}\n"
-"\n"
-"QHeaderView::section:horizontal\n"
-"{\n"
-"    border-top: 1px solid #fffff8;\n"
-"}\n"
-"\n"
-"QHeaderView::section:vertical\n"
-"{\n"
-"    border-left: 1px solid #fffff8;\n"
-"}")
+
+"")
         self.horizontalLayoutWidget = QtWidgets.QWidget(parent=Naswail_Tool)
         self.horizontalLayoutWidget.setGeometry(QtCore.QRect(240, 20, 1031, 41))
         self.horizontalLayoutWidget.setObjectName("horizontalLayoutWidget")
@@ -1677,9 +1505,6 @@ class Ui_Naswail_Tool(object):
         self.graphicsView = QtWidgets.QGraphicsView(parent=Naswail_Tool)
         self.graphicsView.setGeometry(QtCore.QRect(10, 20, 71, 61))
         self.graphicsView.setObjectName("graphicsView")
-        self.graphicsView_2 = QtWidgets.QGraphicsView(parent=Naswail_Tool)
-        self.graphicsView_2.setGeometry(QtCore.QRect(10, 10, 81, 51))
-        self.graphicsView_2.setObjectName("graphicsView_2")
         self.scrollArea = QtWidgets.QScrollArea(parent=Naswail_Tool)
         self.scrollArea.setGeometry(QtCore.QRect(20, 80, 1511, 3381))
         self.scrollArea.setMinimumSize(QtCore.QSize(1000, 0))
@@ -1691,11 +1516,11 @@ class Ui_Naswail_Tool(object):
         self.scrollArea.setAlignment(QtCore.Qt.AlignmentFlag.AlignLeading|QtCore.Qt.AlignmentFlag.AlignLeft|QtCore.Qt.AlignmentFlag.AlignTop)
         self.scrollArea.setObjectName("scrollArea")
         self.scrollAreaWidgetContents = QtWidgets.QWidget()
-        self.scrollAreaWidgetContents.setGeometry(QtCore.QRect(0, 0, 1501, 13291))
+        self.scrollAreaWidgetContents.setGeometry(QtCore.QRect(0, 0, 1499, 13291))
         self.scrollAreaWidgetContents.setMinimumSize(QtCore.QSize(1291, 13291))
         self.scrollAreaWidgetContents.setObjectName("scrollAreaWidgetContents")
         self.label_2 = QtWidgets.QLabel(parent=self.scrollAreaWidgetContents)
-        self.label_2.setGeometry(QtCore.QRect(40, 630, 1101, 31))
+        self.label_2.setGeometry(QtCore.QRect(40, 760, 1101, 31))
         font = QtGui.QFont()
         font.setFamily("Yu Gothic UI Semibold")
         font.setPointSize(14)
@@ -1708,7 +1533,7 @@ class Ui_Naswail_Tool(object):
 "")
         self.label_2.setObjectName("label_2")
         self.tableWidget = QtWidgets.QTableWidget(parent=self.scrollAreaWidgetContents)
-        self.tableWidget.setGeometry(QtCore.QRect(80, 700, 1131, 501))
+        self.tableWidget.setGeometry(QtCore.QRect(80, 830, 1131, 501))
         self.tableWidget.setObjectName("tableWidget")
         self.tableWidget.setColumnCount(0)
         self.tableWidget.setRowCount(0)
@@ -1731,7 +1556,7 @@ class Ui_Naswail_Tool(object):
         self.tableWidget_3.setColumnCount(0)
         self.tableWidget_3.setRowCount(0)
         self.label_18 = QtWidgets.QLabel(parent=self.scrollAreaWidgetContents)
-        self.label_18.setGeometry(QtCore.QRect(60, 1300, 1101, 31))
+        self.label_18.setGeometry(QtCore.QRect(60, 1700, 1101, 31))
         font = QtGui.QFont()
         font.setFamily("Yu Gothic UI Semibold")
         font.setPointSize(14)
@@ -1744,13 +1569,261 @@ class Ui_Naswail_Tool(object):
 "")
         self.label_18.setObjectName("label_18")
         self.tableWidget_6 = QtWidgets.QTableWidget(parent=self.scrollAreaWidgetContents)
-        self.tableWidget_6.setGeometry(QtCore.QRect(100, 1370, 1131, 501))
+        self.tableWidget_6.setGeometry(QtCore.QRect(100, 1770, 1131, 501))
         self.tableWidget_6.setObjectName("tableWidget_6")
-        self.tableWidget_6.setColumnCount(0)
+        self.tableWidget_6.setColumnCount(11)
         self.tableWidget_6.setRowCount(0)
+        self.tableWidget.setHorizontalHeaderLabels(["Timestamp", "Source", "Destination", "Protocol","layer","macsrc","macdst","srcport","dstport","length","IP version"])
+
+        self.tabWidget = QtWidgets.QTabWidget(parent=self.scrollAreaWidgetContents)
+        self.tabWidget.setGeometry(QtCore.QRect(220, 2280, 871, 311))
+        self.tabWidget.setObjectName("tabWidget")
+        self.tab = QtWidgets.QWidget()
+        self.tab.setObjectName("tab")
+        self.label_7 = QtWidgets.QLabel(parent=self.tab)
+        self.label_7.setGeometry(QtCore.QRect(10, 0, 161, 21))
+        self.label_7.setStyleSheet("QLabel {\n"
+"    color: white;\n"
+"}\n"
+"")
+        self.label_7.setObjectName("label_7")
+        self.dateTimeEdit_2 = QtWidgets.QDateTimeEdit(parent=self.tab)
+        self.dateTimeEdit_2.setGeometry(QtCore.QRect(0, 110, 194, 38))
+        self.dateTimeEdit_2.setObjectName("dateTimeEdit_2")
+        self.label_8 = QtWidgets.QLabel(parent=self.tab)
+        self.label_8.setGeometry(QtCore.QRect(10, 80, 161, 21))
+        self.label_8.setStyleSheet("QLabel {\n"
+"    color: white;\n"
+"}\n"
+"")
+        self.label_8.setObjectName("label_8")
+        self.dateTimeEdit = QtWidgets.QDateTimeEdit(parent=self.tab)
+        self.dateTimeEdit.setGeometry(QtCore.QRect(0, 30, 194, 38))
+        self.dateTimeEdit.setObjectName("dateTimeEdit")
+        self.formLayoutWidget = QtWidgets.QWidget(parent=self.tab)
+        self.formLayoutWidget.setGeometry(QtCore.QRect(240, 40, 187, 220))
+        self.formLayoutWidget.setObjectName("formLayoutWidget")
+        self.formLayout = QtWidgets.QFormLayout(self.formLayoutWidget)
+        self.formLayout.setContentsMargins(0, 0, 0, 0)
+        self.formLayout.setObjectName("formLayout")
+        self.checkBox = QtWidgets.QCheckBox(parent=self.formLayoutWidget)
+        self.checkBox.setChecked(False)
+        self.checkBox.setObjectName("checkBox")
+        self.formLayout.setWidget(0, QtWidgets.QFormLayout.ItemRole.LabelRole, self.checkBox)
+        self.checkBox_2 = QtWidgets.QCheckBox(parent=self.formLayoutWidget)
+        self.checkBox_2.setObjectName("checkBox_2")
+        self.formLayout.setWidget(1, QtWidgets.QFormLayout.ItemRole.LabelRole, self.checkBox_2)
+        self.checkBox_3 = QtWidgets.QCheckBox(parent=self.formLayoutWidget)
+        self.checkBox_3.setObjectName("checkBox_3")
+        self.formLayout.setWidget(2, QtWidgets.QFormLayout.ItemRole.LabelRole, self.checkBox_3)
+        self.checkBox_4 = QtWidgets.QCheckBox(parent=self.formLayoutWidget)
+        self.checkBox_4.setObjectName("checkBox_4")
+        self.formLayout.setWidget(3, QtWidgets.QFormLayout.ItemRole.LabelRole, self.checkBox_4)
+        self.checkBox_5 = QtWidgets.QCheckBox(parent=self.formLayoutWidget)
+        self.checkBox_5.setObjectName("checkBox_5")
+        self.formLayout.setWidget(0, QtWidgets.QFormLayout.ItemRole.FieldRole, self.checkBox_5)
+        self.checkBox_6 = QtWidgets.QCheckBox(parent=self.formLayoutWidget)
+        self.checkBox_6.setObjectName("checkBox_6")
+        self.formLayout.setWidget(1, QtWidgets.QFormLayout.ItemRole.FieldRole, self.checkBox_6)
+        self.checkBox_8 = QtWidgets.QCheckBox(parent=self.formLayoutWidget)
+        self.checkBox_8.setObjectName("checkBox_8")
+        self.formLayout.setWidget(3, QtWidgets.QFormLayout.ItemRole.FieldRole, self.checkBox_8)
+        self.checkBox_9 = QtWidgets.QCheckBox(parent=self.formLayoutWidget)
+        self.checkBox_9.setObjectName("checkBox_9")
+        self.formLayout.setWidget(4, QtWidgets.QFormLayout.ItemRole.LabelRole, self.checkBox_9)
+        self.checkBox_10 = QtWidgets.QCheckBox(parent=self.formLayoutWidget)
+        self.checkBox_10.setObjectName("checkBox_10")
+        self.formLayout.setWidget(4, QtWidgets.QFormLayout.ItemRole.FieldRole, self.checkBox_10)
+        self.checkBox_7 = QtWidgets.QCheckBox(parent=self.formLayoutWidget)
+        self.checkBox_7.setObjectName("checkBox_7")
+        self.formLayout.setWidget(2, QtWidgets.QFormLayout.ItemRole.FieldRole, self.checkBox_7)
+        self.label = QtWidgets.QLabel(parent=self.tab)
+        self.label.setGeometry(QtCore.QRect(250, 10, 171, 20))
+        self.label.setStyleSheet("QLabel {\n"
+"    color: white;\n"
+"}\n"
+"")
+        self.label.setObjectName("label")
+        self.lineEdit_2 = QtWidgets.QLineEdit(parent=self.tab)
+        self.lineEdit_2.setGeometry(QtCore.QRect(460, 40, 142, 38))
+        self.lineEdit_2.setObjectName("lineEdit_2")
+        self.label_10 = QtWidgets.QLabel(parent=self.tab)
+        self.label_10.setGeometry(QtCore.QRect(460, 20, 151, 20))
+        self.label_10.setStyleSheet("QLabel {\n"
+"    color: white;\n"
+"}\n"
+"")
+        self.label_10.setObjectName("label_10")
+        self.label_16 = QtWidgets.QLabel(parent=self.tab)
+        self.label_16.setGeometry(QtCore.QRect(460, 80, 151, 20))
+        self.label_16.setStyleSheet("QLabel {\n"
+"    color: white;\n"
+"}\n"
+"")
+        self.label_16.setObjectName("label_16")
+        self.lineEdit_5 = QtWidgets.QLineEdit(parent=self.tab)
+        self.lineEdit_5.setGeometry(QtCore.QRect(460, 100, 142, 38))
+        self.lineEdit_5.setObjectName("lineEdit_5")
+        self.comboBox = QtWidgets.QComboBox(parent=self.tab)
+        self.comboBox.setGeometry(QtCore.QRect(460, 150, 150, 38))
+        self.comboBox.setObjectName("comboBox")
+        self.comboBox.addItem("")
+        self.comboBox.addItem("")
+        self.comboBox.addItem("")
+        self.label_3 = QtWidgets.QLabel(parent=self.tab)
+        self.label_3.setGeometry(QtCore.QRect(460, 130, 151, 20))
+        self.label_3.setStyleSheet("QLabel {\n"
+"    color: white;\n"
+"}\n"
+"")
+        self.label_3.setObjectName("label_3")
+        self.pushButton_9 = QtWidgets.QPushButton(parent=self.tab)
+        self.pushButton_9.setGeometry(QtCore.QRect(470, 210, 126, 41))
+        self.pushButton_9.setObjectName("pushButton_9")
+        self.tabWidget.addTab(self.tab, "")
+        self.tab_2 = QtWidgets.QWidget()
+        self.tab_2.setObjectName("tab_2")
+        self.listView = QtWidgets.QListView(parent=self.tab_2)
+        self.listView.setGeometry(QtCore.QRect(0, 0, 851, 261))
+        self.listView.setObjectName("listView")
+        self.tabWidget.addTab(self.tab_2, "")
+        self.tabWidget_3 = QtWidgets.QTabWidget(parent=self.scrollAreaWidgetContents)
+        self.tabWidget_3.setGeometry(QtCore.QRect(210, 1340, 871, 311))
+        self.tabWidget_3.setObjectName("tabWidget_3")
+        self.tab_5 = QtWidgets.QWidget()
+        self.tab_5.setObjectName("tab_5")
+        self.label_22 = QtWidgets.QLabel(parent=self.tab_5)
+        self.label_22.setGeometry(QtCore.QRect(10, 0, 161, 21))
+        self.label_22.setStyleSheet("QLabel {\n"
+"    color: white;\n"
+"}\n"
+"")
+        self.label_22.setObjectName("label_22")
+        self.dateTimeEdit_5 = QtWidgets.QDateTimeEdit(parent=self.tab_5)
+        self.dateTimeEdit_5.setGeometry(QtCore.QRect(0, 110, 194, 38))
+        self.dateTimeEdit_5.setObjectName("dateTimeEdit_5")
+        self.label_23 = QtWidgets.QLabel(parent=self.tab_5)
+        self.label_23.setGeometry(QtCore.QRect(10, 80, 161, 21))
+        self.label_23.setStyleSheet("QLabel {\n"
+"    color: white;\n"
+"}\n"
+"")
+        self.label_23.setObjectName("label_23")
+        self.dateTimeEdit_6 = QtWidgets.QDateTimeEdit(parent=self.tab_5)
+        self.dateTimeEdit_6.setGeometry(QtCore.QRect(0, 30, 194, 38))
+        self.dateTimeEdit_6.setObjectName("dateTimeEdit_6")
+        self.formLayoutWidget_3 = QtWidgets.QWidget(parent=self.tab_5)
+        self.formLayoutWidget_3.setGeometry(QtCore.QRect(240, 40, 187, 220))
+        self.formLayoutWidget_3.setObjectName("formLayoutWidget_3")
+        self.formLayout_3 = QtWidgets.QFormLayout(self.formLayoutWidget_3)
+        self.formLayout_3.setContentsMargins(0, 0, 0, 0)
+        self.formLayout_3.setObjectName("formLayout_3")
+        self.checkBox_21 = QtWidgets.QCheckBox(parent=self.formLayoutWidget_3)
+        self.checkBox_21.setChecked(False)
+        self.checkBox_21.setObjectName("checkBox_21")
+        self.formLayout_3.setWidget(0, QtWidgets.QFormLayout.ItemRole.LabelRole, self.checkBox_21)
+        self.checkBox_22 = QtWidgets.QCheckBox(parent=self.formLayoutWidget_3)
+        self.checkBox_22.setObjectName("checkBox_22")
+        self.formLayout_3.setWidget(1, QtWidgets.QFormLayout.ItemRole.LabelRole, self.checkBox_22)
+        self.checkBox_23 = QtWidgets.QCheckBox(parent=self.formLayoutWidget_3)
+        self.checkBox_23.setObjectName("checkBox_23")
+        self.formLayout_3.setWidget(2, QtWidgets.QFormLayout.ItemRole.LabelRole, self.checkBox_23)
+        self.checkBox_24 = QtWidgets.QCheckBox(parent=self.formLayoutWidget_3)
+        self.checkBox_24.setObjectName("checkBox_24")
+        self.formLayout_3.setWidget(3, QtWidgets.QFormLayout.ItemRole.LabelRole, self.checkBox_24)
+        self.checkBox_25 = QtWidgets.QCheckBox(parent=self.formLayoutWidget_3)
+        self.checkBox_25.setObjectName("checkBox_25")
+        self.formLayout_3.setWidget(0, QtWidgets.QFormLayout.ItemRole.FieldRole, self.checkBox_25)
+        self.checkBox_26 = QtWidgets.QCheckBox(parent=self.formLayoutWidget_3)
+        self.checkBox_26.setObjectName("checkBox_26")
+        self.formLayout_3.setWidget(1, QtWidgets.QFormLayout.ItemRole.FieldRole, self.checkBox_26)
+        self.checkBox_27 = QtWidgets.QCheckBox(parent=self.formLayoutWidget_3)
+        self.checkBox_27.setObjectName("checkBox_27")
+        self.formLayout_3.setWidget(3, QtWidgets.QFormLayout.ItemRole.FieldRole, self.checkBox_27)
+        self.checkBox_28 = QtWidgets.QCheckBox(parent=self.formLayoutWidget_3)
+        self.checkBox_28.setObjectName("checkBox_28")
+        self.formLayout_3.setWidget(4, QtWidgets.QFormLayout.ItemRole.LabelRole, self.checkBox_28)
+        self.checkBox_29 = QtWidgets.QCheckBox(parent=self.formLayoutWidget_3)
+        self.checkBox_29.setObjectName("checkBox_29")
+        self.formLayout_3.setWidget(4, QtWidgets.QFormLayout.ItemRole.FieldRole, self.checkBox_29)
+        self.checkBox_30 = QtWidgets.QCheckBox(parent=self.formLayoutWidget_3)
+        self.checkBox_30.setObjectName("checkBox_30")
+        self.formLayout_3.setWidget(2, QtWidgets.QFormLayout.ItemRole.FieldRole, self.checkBox_30)
+        self.label_25 = QtWidgets.QLabel(parent=self.tab_5)
+        self.label_25.setGeometry(QtCore.QRect(250, 10, 171, 20))
+        self.label_25.setStyleSheet("QLabel {\n"
+"    color: white;\n"
+"}\n"
+"")
+        self.label_25.setObjectName("label_25")
+        self.lineEdit_8 = QtWidgets.QLineEdit(parent=self.tab_5)
+        self.lineEdit_8.setGeometry(QtCore.QRect(460, 40, 142, 38))
+        self.lineEdit_8.setObjectName("lineEdit_8")
+        self.label_26 = QtWidgets.QLabel(parent=self.tab_5)
+        self.label_26.setGeometry(QtCore.QRect(460, 20, 151, 20))
+        self.label_26.setStyleSheet("QLabel {\n"
+"    color: white;\n"
+"}\n"
+"")
+        self.label_26.setObjectName("label_26")
+        self.label_27 = QtWidgets.QLabel(parent=self.tab_5)
+        self.label_27.setGeometry(QtCore.QRect(460, 80, 151, 20))
+        self.label_27.setStyleSheet("QLabel {\n"
+"    color: white;\n"
+"}\n"
+"")
+        self.label_27.setObjectName("label_27")
+        self.lineEdit_9 = QtWidgets.QLineEdit(parent=self.tab_5)
+        self.lineEdit_9.setGeometry(QtCore.QRect(460, 100, 142, 38))
+        self.lineEdit_9.setObjectName("lineEdit_9")
+        self.comboBox_3 = QtWidgets.QComboBox(parent=self.tab_5)
+        self.comboBox_3.setGeometry(QtCore.QRect(460, 150, 150, 38))
+        self.comboBox_3.setObjectName("comboBox_3")
+        self.comboBox_3.addItem("")
+        self.comboBox_3.addItem("")
+        self.comboBox_3.addItem("")
+        self.label_28 = QtWidgets.QLabel(parent=self.tab_5)
+        self.label_28.setGeometry(QtCore.QRect(460, 130, 151, 20))
+        self.label_28.setStyleSheet("QLabel {\n"
+"    color: white;\n"
+"}\n"
+"")
+        self.label_28.setObjectName("label_28")
+        self.pushButton_6 = QtWidgets.QPushButton(parent=self.tab_5)
+        self.pushButton_6.setGeometry(QtCore.QRect(660, 80, 126, 41))
+        self.pushButton_6.setObjectName("pushButton_6")
+        self.pushButton_11 = QtWidgets.QPushButton(parent=self.tab_5)
+        self.pushButton_11.setGeometry(QtCore.QRect(470, 210, 126, 41))
+        self.pushButton_11.setObjectName("pushButton_11")
+        self.tabWidget_3.addTab(self.tab_5, "")
+        self.tab_7 = QtWidgets.QWidget()
+        self.tab_7.setObjectName("tab_7")
+        self.listView_4 = QtWidgets.QListView(parent=self.tab_7)
+        self.listView_4.setGeometry(QtCore.QRect(0, 0, 861, 271))
+        self.listView_4.setObjectName("listView_4")
+        self.tabWidget_3.addTab(self.tab_7, "")
+        self.tab_6 = QtWidgets.QWidget()
+        self.tab_6.setObjectName("tab_6")
+        self.listView_3 = QtWidgets.QListView(parent=self.tab_6)
+        self.listView_3.setGeometry(QtCore.QRect(0, 0, 861, 271))
+        self.listView_3.setObjectName("listView_3")
+        self.tabWidget_3.addTab(self.tab_6, "")
+        self.comboBox_4 = QtWidgets.QComboBox(parent=self.scrollAreaWidgetContents)
+        self.comboBox_4.setGeometry(QtCore.QRect(346, 640, 511, 41))
+        self.comboBox_4.setObjectName("comboBox_4")
+        self.comboBox_4.addItem("")
+        self.comboBox_4.addItem("")
+        self.pushButton_7 = QtWidgets.QPushButton(parent=self.scrollAreaWidgetContents)
+        self.pushButton_7.setGeometry(QtCore.QRect(550, 710, 93, 28))
+        self.pushButton_7.setObjectName("pushButton_7")
+        self.label_29 = QtWidgets.QLabel(parent=self.scrollAreaWidgetContents)
+        self.label_29.setGeometry(QtCore.QRect(464, 610, 291, 20))
+        self.label_29.setObjectName("label_29")
         self.scrollArea.setWidget(self.scrollAreaWidgetContents)
 
         self.retranslateUi(Naswail_Tool)
+        self.tabWidget.setCurrentIndex(0)
+        self.tabWidget_3.setCurrentIndex(1)
         QtCore.QMetaObject.connectSlotsByName(Naswail_Tool)
 
     def retranslateUi(self, Naswail_Tool):
@@ -1763,3 +1836,63 @@ class Ui_Naswail_Tool(object):
         self.label_2.setText(_translate("Naswail_Tool", "                                                                                Suspicious Packets Analyzer"))
         self.label_15.setText(_translate("Naswail_Tool", "                                                                             Predict Future Traffic"))
         self.label_18.setText(_translate("Naswail_Tool", "                                                                             Corrupted Packets"))
+        self.label_7.setText(_translate("Naswail_Tool", "Start Time"))
+        self.label_8.setText(_translate("Naswail_Tool", "End Time"))
+        self.checkBox.setText(_translate("Naswail_Tool", "UDP"))
+        self.checkBox_2.setText(_translate("Naswail_Tool", "TCP"))
+        self.checkBox_3.setText(_translate("Naswail_Tool", "ICMP"))
+        self.checkBox_4.setText(_translate("Naswail_Tool", "DNS"))
+        self.checkBox_5.setText(_translate("Naswail_Tool", "HTTP"))
+        self.checkBox_6.setText(_translate("Naswail_Tool", "HTTPS"))
+        self.checkBox_8.setText(_translate("Naswail_Tool", "FTP"))
+        self.checkBox_9.setText(_translate("Naswail_Tool", "DHCP"))
+        self.checkBox_10.setText(_translate("Naswail_Tool", "Other"))
+        self.checkBox_7.setText(_translate("Naswail_Tool", "TELNET"))
+        self.label.setText(_translate("Naswail_Tool", "  Filter by Protocol"))
+        self.label_10.setText(_translate("Naswail_Tool", "Filter by source IP"))
+        self.label_16.setText(_translate("Naswail_Tool", "Filter by Destination IP"))
+        self.comboBox.setItemText(0, _translate("Naswail_Tool", "All"))
+        self.comboBox.setItemText(1, _translate("Naswail_Tool", "Inside Traffic"))
+        self.comboBox.setItemText(2, _translate("Naswail_Tool", "Outside Traffic"))
+        self.label_3.setText(_translate("Naswail_Tool", "Type Of Traffic"))
+        self.pushButton_9.setText(_translate("Naswail_Tool", "Apply"))
+        self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab), _translate("Naswail_Tool", "Packet Filter"))
+        self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_2), _translate("Naswail_Tool", "Packet Details"))
+        self.label_22.setText(_translate("Naswail_Tool", "Start Time"))
+        self.label_23.setText(_translate("Naswail_Tool", "End Time"))
+        self.checkBox_21.setText(_translate("Naswail_Tool", "UDP"))
+        self.checkBox_22.setText(_translate("Naswail_Tool", "TCP"))
+        self.checkBox_23.setText(_translate("Naswail_Tool", "ICMP"))
+        self.checkBox_24.setText(_translate("Naswail_Tool", "DNS"))
+        self.checkBox_25.setText(_translate("Naswail_Tool", "HTTP"))
+        self.checkBox_26.setText(_translate("Naswail_Tool", "HTTPS"))
+        self.checkBox_27.setText(_translate("Naswail_Tool", "FTP"))
+        self.checkBox_28.setText(_translate("Naswail_Tool", "DHCP"))
+        self.checkBox_29.setText(_translate("Naswail_Tool", "Other"))
+        self.checkBox_30.setText(_translate("Naswail_Tool", "TELNET"))
+        self.label_25.setText(_translate("Naswail_Tool", "  Filter by Protocol"))
+        self.label_26.setText(_translate("Naswail_Tool", "Filter by source IP"))
+        self.label_27.setText(_translate("Naswail_Tool", "Filter by Destination IP"))
+        self.comboBox_3.setItemText(0, _translate("Naswail_Tool", "All"))
+        self.comboBox_3.setItemText(1, _translate("Naswail_Tool", "Inside Traffic"))
+        self.comboBox_3.setItemText(2, _translate("Naswail_Tool", "Outside Traffic"))
+        self.label_28.setText(_translate("Naswail_Tool", "Type Of Traffic"))
+        self.pushButton_6.setText(_translate("Naswail_Tool", "Reset"))
+        self.pushButton_11.setText(_translate("Naswail_Tool", "Apply"))
+        self.tabWidget_3.setTabText(self.tabWidget_3.indexOf(self.tab_5), _translate("Naswail_Tool", "Packet Filter"))
+        self.tabWidget_3.setTabText(self.tabWidget_3.indexOf(self.tab_7), _translate("Naswail_Tool", "Decode"))
+        self.tabWidget_3.setTabText(self.tabWidget_3.indexOf(self.tab_6), _translate("Naswail_Tool", "Packet Details"))
+        self.comboBox_4.setItemText(0, _translate("Naswail_Tool", "Packet"))
+        self.comboBox_4.setItemText(1, _translate("Naswail_Tool", "Bandwidth"))
+        self.pushButton_7.setText(_translate("Naswail_Tool", "Apply"))
+        self.label_29.setText(_translate("Naswail_Tool", "                        Predict By:"))
+
+
+if __name__ == "__main__":
+    import sys
+    app = QtWidgets.QApplication(sys.argv)
+    Naswail_Tool = QtWidgets.QWidget()
+    ui = Ui_Naswail_Tool()
+    ui.setupUi(Naswail_Tool)
+    Naswail_Tool.show()
+    sys.exit(app.exec())
