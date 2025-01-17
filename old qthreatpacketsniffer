@@ -1,0 +1,31 @@
+class PacketSnifferThread(QThread):
+    packet_captured = pyqtSignal(object)
+    readPackets = []
+
+    def run(self):
+        global packetInput, packetFile, packetIndex
+        print(packetInput)
+        print("GOOGOO")
+        window.packets.clear()
+        window.tableWidget.setRowCount(0)
+        match packetInput:
+            case 0:
+                sniff(prn=self.emit_packet, store=False, stop_filter=lambda _: packetInput != 0)
+            case 1:
+                try:
+                    packets = rdpcap(packetFile)
+                    for packet in packets:
+                        
+                        self.packet_captured.emit(packet)
+                except Exception as e:
+                    print(f"Error reading pcap file: {e}")
+            case 2:
+                try:
+                    self.readPackets = pd.read_csv(packetFile)
+                    for _, row in self.readPackets.iterrows():
+                        self.packet_captured.emit(row)
+                except Exception as e:
+                    print(f"Error reading CSV file: {e}")
+
+    def emit_packet(self, packet):
+        self.packet_captured.emit(packet)
