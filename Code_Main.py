@@ -1007,7 +1007,7 @@ class Naswail(QMainWindow, Ui_MainWindow):
 
     def export_packets(self):
         try:
-            wrpcap("captured_packets.pcap", self.PacketSystemobj.packets)
+            wrpcap("captured_packets.pcap", self.PacketSystemobj.captured_packets)
             print("Packets exported successfully.")
         except Exception as e:
             print(f"Error exporting packets: {e}")
