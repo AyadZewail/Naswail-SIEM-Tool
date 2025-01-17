@@ -363,11 +363,11 @@ class PacketSystem:
                 recalculated_checksum = ip_layer.chksum
 
                 if original_checksum != recalculated_checksum:
-                    #print("IP checksum is invalid.")
+                    print("IP checksum is invalid.")
                     self.corrupted_packet.append(packet)
                 else:
-                    pass
-                    #print("IP checksum is valid.")
+                    
+                    print("IP checksum is valid.")
 
             # Check TCP layer checksum
             if TCP in packet:
@@ -377,11 +377,11 @@ class PacketSystem:
                 recalculated_checksum = tcp_layer.chksum
 
                 if original_checksum != recalculated_checksum:
-                    #print("TCP checksum is invalid.")
+                    print("TCP checksum is invalid.")
                     self.corrupted_packet.append(packet)
                 else:
-                    #print("TCP checksum is valid.")
-                    pass
+                    print("TCP checksum is valid.")
+                    
 
             # Check UDP layer checksum
             if UDP in packet:
@@ -391,11 +391,11 @@ class PacketSystem:
                 recalculated_checksum = udp_layer.chksum
 
                 if original_checksum != recalculated_checksum:
-                    #print("UDP checksum is invalid.")
+                    print("UDP checksum is invalid.")
                     self.corrupted_packet.append(packet)
                 else:
-                    pass
-                    #print("UDP checksum is valid.")
+                    
+                    print("UDP checksum is valid.")
 
         except Exception as e:
             print(f"Error during checksum validation: {e}")
@@ -421,7 +421,7 @@ class PacketSystem:
             if packetInput == 1:
                 packet = self.pcap_packets[self.pcap_process_packet_index]
                 self.pcap_process_packet_index+=1
-            print(packetInput)
+            
             self.packets.append(packet)
             timestamp = float(packet.time)
             readable_time = datetime.fromtimestamp(timestamp).strftime("%I:%M:%S %p")
@@ -611,6 +611,21 @@ class PacketSystem:
             "ftp": self.ui.checkBox_9.isChecked(),
             "other": self.ui.checkBox_10.isChecked(),
         }
+        
+
+        # Check if all protocol filters are unchecked and both src and dst filters are empty
+        src_filter = self.ui.lineEdit_2.text().strip()
+        dst_filter = self.ui.lineEdit_5.text().strip()
+
+            # Check if all protocol filters are unchecked and both src and dst filters are empty
+        if not any(protocol_filters.values()) and not src_filter and not dst_filter:
+                print("No protocols selected, and both source and destination filters are empty.")
+                self.filterapplied=False
+                self.ui.tableWidget.setRowCount(0)
+                self.process_packet_index=0
+                self.pcap_process_packet_index=0
+                return  # Or handle this case appropriately
+            #
         self.filterapplied = True
 
         # Determine which protocols to filter
@@ -632,6 +647,7 @@ class PacketSystem:
             x = self.packets
         else:
             x = self.sensor_obj.sensor_packet
+        
         for packet in x:
             src_ip = packet["IP"].src if packet.haslayer("IP") else "N/A"
             dst_ip = packet["IP"].dst if packet.haslayer("IP") else "N/A"
@@ -688,8 +704,9 @@ class PacketSystem:
                 elif packet.haslayer("UDP"):
                     sport = packet["UDP"].sport
                     dport = packet["UDP"].dport
-
+                
                 row_position = self.ui.tableWidget.rowCount()
+                
                 self.ui.tableWidget.insertRow(row_position)
                 self.ui.tableWidget.setItem(row_position, 0, QTableWidgetItem(datetime.fromtimestamp(float(packet.time)).strftime("%I:%M:%S %p")))
                 self.ui.tableWidget.setItem(row_position, 1, QTableWidgetItem(src_ip))
@@ -953,6 +970,7 @@ class Naswail(QMainWindow, Ui_MainWindow):
             self.hide()
             self.secondary_widget.show()
     def resetfilter(self):
+        self.tableWidget.setRowCount(0)
         self.PacketSystemobj.filterapplied=False
         self.SensorSystemobj.senFlag = -1 
         self.SensorSystemobj.singleSenFlag = -1
@@ -990,6 +1008,8 @@ class Naswail(QMainWindow, Ui_MainWindow):
         self.PacketSystemobj.capture*=-1
 
     def import_file(self):
+        
+
         global packetFile, packetInput
         packetFile, _ = QFileDialog.getOpenFileName(self, "Open File", "", "All Files ();;PCAP Files (.pcap);;CSV Files (*.csv)")
 
@@ -998,6 +1018,10 @@ class Naswail(QMainWindow, Ui_MainWindow):
             ext = os.path.splitext(packetFile)[1].lower()
             if ext == '.pcap':
                 packetInput = 1
+                self.PacketSystemobj.packets.clear()
+                self.PacketSystemobj.process_packet_index=0
+                self.PacketSystemobj.pcap_process_packet_index=0
+                
                 
             elif ext == '.csv':
                 packetInput = 2
