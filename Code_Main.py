@@ -318,8 +318,13 @@ class PacketSystem:
     def __init__(self, ui_main_window):
         self.ui = ui_main_window
         self.packets = []
+        self.process_packet_index=0
         self.bandwidth_data = []
         self.captured_packets = []
+        self.qued_packets = []
+        self.pcap_packets = []
+        self.pcap_process_packet_index = 0
+        self.corrupted_packet = []
         self.filtered_packets = []
         self.packet_features = []
         self.new_packet_features = []
@@ -348,9 +353,76 @@ class PacketSystem:
     def set_sensor_system(self, sensor_obj):
         """Set the sensor system after both are initialized."""
         self.sensor_obj = sensor_obj
-
-    def process_packet(self, packet):
+    def check_corrupted_packet(self, packet):
         try:
+            # Check IP layer checksum
+            if IP in packet:
+                ip_layer = packet[IP]
+                original_checksum = ip_layer.chksum
+                packet.show2(dump=True)  # Recalculate checksums
+                recalculated_checksum = ip_layer.chksum
+
+                if original_checksum != recalculated_checksum:
+                    #print("IP checksum is invalid.")
+                    self.corrupted_packet.append(packet)
+                else:
+                    pass
+                    #print("IP checksum is valid.")
+
+            # Check TCP layer checksum
+            if TCP in packet:
+                tcp_layer = packet[TCP]
+                original_checksum = tcp_layer.chksum
+                packet.show2(dump=True)  # Recalculate checksums
+                recalculated_checksum = tcp_layer.chksum
+
+                if original_checksum != recalculated_checksum:
+                    #print("TCP checksum is invalid.")
+                    self.corrupted_packet.append(packet)
+                else:
+                    #print("TCP checksum is valid.")
+                    pass
+
+            # Check UDP layer checksum
+            if UDP in packet:
+                udp_layer = packet[UDP]
+                original_checksum = udp_layer.chksum
+                packet.show2(dump=True)  # Recalculate checksums
+                recalculated_checksum = udp_layer.chksum
+
+                if original_checksum != recalculated_checksum:
+                    #print("UDP checksum is invalid.")
+                    self.corrupted_packet.append(packet)
+                else:
+                    pass
+                    #print("UDP checksum is valid.")
+
+        except Exception as e:
+            print(f"Error during checksum validation: {e}")
+    def put_packet_in_queue(self, packet):
+        try:
+            global packetInput
+            if packetInput == 0:
+                self.qued_packets.append(packet)
+            if packetInput == 1:
+                self.pcap_packets.append(packet)
+                
+
+            
+            
+        except Exception as e:
+            print(f"Error putting packet in queue: {e}")
+    def process_packet(self):
+        try:
+            global packetInput
+            if packetInput == 0:
+                packet = self.qued_packets[self.process_packet_index]
+                self.process_packet_index+=1
+            if packetInput == 1:
+                packet = self.pcap_packets[self.pcap_process_packet_index]
+                self.pcap_process_packet_index+=1
+            print(packetInput)
+            self.packets.append(packet)
             timestamp = float(packet.time)
             readable_time = datetime.fromtimestamp(timestamp).strftime("%I:%M:%S %p")
             src_ip = packet["IP"].src if packet.haslayer("IP") else "N/A"
@@ -397,6 +469,7 @@ class PacketSystem:
             elif self.sensor_obj.senFlag == 1 or self.sensor_obj.singleSenFlag == 1:
                 pass
             else:
+                self.check_corrupted_packet(packet)
                 self.packets.append(packet)
                 if self.capture == 1:
                     self.captured_packets.append(packet)
@@ -429,6 +502,7 @@ class PacketSystem:
                 self.ui.tableWidget.setItem(row_position, 8, QTableWidgetItem(str(dport) if dport else "N/A"))
                 self.ui.tableWidget.setItem(row_position, 9, QTableWidgetItem(str(packet_length)))
                 self.ui.tableWidget.setItem(row_position, 10, QTableWidgetItem(ip_version))
+                
                 
             time_series[timestamp] = len(self.packets)
 
@@ -748,6 +822,7 @@ class PacketSnifferThread(QThread):
             case 1:
                 try:
                     packets = rdpcap(packetFile)
+                    
                     for packet in packets:
                         
                         self.packet_captured.emit(packet)
@@ -834,11 +909,13 @@ class Naswail(QMainWindow, Ui_MainWindow):
         self.checkBox_10.stateChanged.connect(self.PacketSystemobj.apply_filter)   # Other
         self.pushButton_9.clicked.connect(self.PacketSystemobj.apply_filter)
         self.sniffer_thread = PacketSnifferThread()
-        self.sniffer_thread.packet_captured.connect(self.PacketSystemobj.process_packet)
+        self.sniffer_thread.packet_captured.connect(self.PacketSystemobj.put_packet_in_queue)
         self.sniffer_thread.start()
         self.stats_timer = QTimer()
         self.stats_timer.timeout.connect(self.tick)
-        self.stats_timer.start(1000)
+        self.num=100
+      
+        self.stats_timer.start(1)
         self.ct = 0
         self.pushButton_2.clicked.connect(self.open_analysis)
         self.pushButton_3.clicked.connect(self.open_tool)
@@ -902,6 +979,11 @@ class Naswail(QMainWindow, Ui_MainWindow):
         seconds = elapsed_seconds % 60
         self.elapsedTime = f"{hours:02}:{minutes:02}:{seconds:02}"
         self.label_6.setText(str(self.elapsedTime))
+        global packetInput, packetFile, packetIndex
+       
+        self.PacketSystemobj.process_packet()
+
+        
     def toggleCapture(self):
       
         self.capture *= -1
