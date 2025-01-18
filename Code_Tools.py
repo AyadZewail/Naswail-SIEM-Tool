@@ -34,52 +34,48 @@ class ErrorPacketSystem:
         
 
         def display(self):
-                self.ui.tableWidget_6.setRowCount(0)
-                #
-              #tableWidget_6
-              
-                for packet in self.packetobj.corrupted_packet:
+                try:
+                    self.ui.tableWidget_6.setRowCount(0)
+                    for packet in self.packetobj.corrupted_packet:
 
-                        print("in error packet")
-                        src_ip = packet["IP"].src if packet.haslayer("IP") else "N/A"
-                        dst_ip = packet["IP"].dst if packet.haslayer("IP") else "N/A"
-                        protocol = self.packetobj.get_protocol(packet)
-                        layer = "UDP" if packet.haslayer("UDP") else "TCP" if packet.haslayer("TCP") else "Other"
-                        packet_time = datetime.fromtimestamp(float(packet.time))
-                        macsrc = packet["Ethernet"].src if packet.haslayer("Ethernet") else "N/A"
-                        macdst = packet["Ethernet"].dst if packet.haslayer("Ethernet") else "N/A"
-                        # Extract packet length
-                        packet_length = int(len(packet))
-
-                        # Extract IP version
-                        ip_version = "IPv6" if packet.haslayer("IPv6") else "IPv4" if packet.haslayer("IP") else "N/A"
-                        layer = "udp" if packet.haslayer("UDP") else "tcp" if packet.haslayer("TCP") else "Other"
-                        # Extract port information for TCP/UDP
-                        sport = None
-                        dport = None
-                        if packet.haslayer("TCP"):
-                                sport = packet["TCP"].sport
-                                dport = packet["TCP"].dport
-                        elif packet.haslayer("UDP"):
-                                sport = packet["UDP"].sport
-                                dport = packet["UDP"].dport
-                        
-                        
-
-                        row_position = self.ui.tableWidget_6.rowCount()
-                        self.ui.tableWidget_6.insertRow(row_position)
-                        self.ui.tableWidget_6.setItem(row_position, 0, QTableWidgetItem(datetime.fromtimestamp(float(packet.time)).strftime("%I:%M:%S %p")))
-                        self.ui.tableWidget_6.setItem(row_position, 1, QTableWidgetItem(src_ip))
-                        self.ui.tableWidget_6.setItem(row_position, 2, QTableWidgetItem(dst_ip))
-                        self.ui.tableWidget_6.setItem(row_position, 3, QTableWidgetItem(protocol))
-                        self.ui.tableWidget_6.setItem(row_position, 4, QTableWidgetItem(layer))
-                                # Add MAC addresses and port info to the table
-                        self.ui.tableWidget_6.setItem(row_position, 5, QTableWidgetItem(macsrc))
-                        self.ui.tableWidget_6.setItem(row_position, 6, QTableWidgetItem(macdst))
-                        self.ui.tableWidget_6.setItem(row_position, 7, QTableWidgetItem(str(sport) if sport else "N/A"))
-                        self.ui.tableWidget_6.setItem(row_position, 8, QTableWidgetItem(str(dport) if dport else "N/A"))
-                        self.ui.tableWidget_6.setItem(row_position, 9, QTableWidgetItem(str(packet_length)))
-                        self.ui.tableWidget_6.setItem(row_position, 10, QTableWidgetItem(ip_version))
+                            print("in error packet")
+                            src_ip = packet["IP"].src if packet.haslayer("IP") else "N/A"
+                            dst_ip = packet["IP"].dst if packet.haslayer("IP") else "N/A"
+                            protocol = self.packetobj.get_protocol(packet)
+                            layer = "UDP" if packet.haslayer("UDP") else "TCP" if packet.haslayer("TCP") else "Other"
+                            packet_time = datetime.fromtimestamp(float(packet.time))
+                            macsrc = packet["Ethernet"].src if packet.haslayer("Ethernet") else "N/A"
+                            macdst = packet["Ethernet"].dst if packet.haslayer("Ethernet") else "N/A"
+                            # Extract packet length
+                            packet_length = int(len(packet))
+                            # Extract IP version
+                            ip_version = "IPv6" if packet.haslayer("IPv6") else "IPv4" if packet.haslayer("IP") else "N/A"
+                            layer = "udp" if packet.haslayer("UDP") else "tcp" if packet.haslayer("TCP") else "Other"
+                            # Extract port information for TCP/UDP
+                            sport = None
+                            dport = None
+                            if packet.haslayer("TCP"):
+                                    sport = packet["TCP"].sport
+                                    dport = packet["TCP"].dport
+                            elif packet.haslayer("UDP"):
+                                    sport = packet["UDP"].sport
+                                    dport = packet["UDP"].dport
+                            row_position = self.ui.tableWidget_6.rowCount()
+                            self.ui.tableWidget_6.insertRow(row_position)
+                            self.ui.tableWidget_6.setItem(row_position, 0, QTableWidgetItem(datetime.fromtimestamp(float(packet.time)).strftime("%I:%M:%S %p")))
+                            self.ui.tableWidget_6.setItem(row_position, 1, QTableWidgetItem(src_ip))
+                            self.ui.tableWidget_6.setItem(row_position, 2, QTableWidgetItem(dst_ip))
+                            self.ui.tableWidget_6.setItem(row_position, 3, QTableWidgetItem(protocol))
+                            self.ui.tableWidget_6.setItem(row_position, 4, QTableWidgetItem(layer))
+                                    # Add MAC addresses and port info to the table
+                            self.ui.tableWidget_6.setItem(row_position, 5, QTableWidgetItem(macsrc))
+                            self.ui.tableWidget_6.setItem(row_position, 6, QTableWidgetItem(macdst))
+                            self.ui.tableWidget_6.setItem(row_position, 7, QTableWidgetItem(str(sport) if sport else "N/A"))
+                            self.ui.tableWidget_6.setItem(row_position, 8, QTableWidgetItem(str(dport) if dport else "N/A"))
+                            self.ui.tableWidget_6.setItem(row_position, 9, QTableWidgetItem(str(packet_length)))
+                            self.ui.tableWidget_6.setItem(row_position, 10, QTableWidgetItem(ip_version))
+                except Exception as e:
+                    print(f"Error in display function: {e}")
            
 class Window_Tools(QWidget, Ui_Naswail_Tool):
     def __init__(self, main_window):
