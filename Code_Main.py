@@ -560,10 +560,9 @@ class PacketSystem:
                     return False
                 else:
                     self.corrupted_packet.append(packet)
-                  
                     return True
             else:
-                return True
+                return False
                
                
         except Exception as e:
