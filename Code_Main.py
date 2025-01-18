@@ -160,7 +160,6 @@ class SensorSystem:
             if(self.singleSenFlag == 1):
                 sensor_mac = self.ui.tableWidget_2.item(row, col).text()
                 self.ui.tableWidget.setRowCount(0)
-
                 for packet in self.packet_obj.packets:
 
                     src_mac = packet["Ether"].src if packet.haslayer("Ether") else "N/A"
@@ -297,6 +296,9 @@ class SensorSystem:
                     # Extract port information for TCP/UDP
                     sport = None
                     dport = None
+                    timestamp = float(packet.time)
+                    readable_time = datetime.fromtimestamp(timestamp).strftime("%I:%M:%S %p")
+                    time="N/A"
                     if packet.haslayer("TCP"):
                         sport = packet["TCP"].sport
                         dport = packet["TCP"].dport
@@ -304,7 +306,7 @@ class SensorSystem:
                         sport = packet["UDP"].sport
                         dport = packet["UDP"].dport
 
-                    packet_length = int(len(packet))
+                    
 
                     for sensor_name, sensor_mac in self.sensors.items():
                         if sensor_mac.lower() in src_mac.lower() or sensor_mac.lower() in dst_mac.lower():
@@ -315,9 +317,10 @@ class SensorSystem:
                                 
                                 
                             row_position = self.ui.tableWidget.rowCount()
-                            self.ui.tableWidget.insertRow(row_position)
-                            
-                            self.ui.tableWidget.setItem(row_position, 0, QTableWidgetItem(datetime.fromtimestamp(packet.time).strftime("%I:%M:%S %p")))
+                            self.ui.tableWidget.insertRow(row_position)  
+
+                            #self.ui.tableWidget.setItem(row_position, 0, QTableWidgetItem(datetime.fromtimestamp(packet.time).strftime("%I:%M:%S %p")))
+                            self.ui.tableWidget.setItem(row_position, 0, QTableWidgetItem(readable_time))
                             self.ui.tableWidget.setItem(row_position, 1, QTableWidgetItem(ip_src))
                             self.ui.tableWidget.setItem(row_position, 2, QTableWidgetItem(ip_dst))
                             self.ui.tableWidget.setItem(row_position, 3, QTableWidgetItem(protocol))
@@ -431,7 +434,7 @@ class PacketSystem:
                 
             
             self.packets.append(packet)
-            self.verify_packet_checksum(packet)
+            
             timestamp = float(packet.time)
             readable_time = datetime.fromtimestamp(timestamp).strftime("%I:%M:%S %p")
             src_ip = packet["IP"].src if packet.haslayer("IP") else "N/A"
@@ -554,15 +557,15 @@ class PacketSystem:
                 recalculated_checksum = recalculated_packet.chksum
                 if original_checksum == recalculated_checksum:
                    
-                    return True
+                    return False
                 else:
                     self.corrupted_packet.append(packet)
                   
-                    return False
+                    return True
             else:
-                self.corrupted_packet.append(packet)
+                return True
                
-                return None
+               
         except Exception as e:
             print(f"Error verifying checksum: {e}")
             return None
@@ -1001,7 +1004,7 @@ class Naswail(QMainWindow, Ui_MainWindow):
         self.stats_timer.timeout.connect(self.tick)
         self.num=100
       
-        self.stats_timer.start(100)
+        self.stats_timer.start(10)
         self.ct = 0
         self.pushButton_2.clicked.connect(self.open_analysis)
         self.pushButton_3.clicked.connect(self.open_tool)
