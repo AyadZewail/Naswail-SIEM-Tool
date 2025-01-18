@@ -192,80 +192,89 @@ class SensorSystem:
                         self.ui.tableWidget.setItem(row_position, 8, QTableWidgetItem(str(dport) if dport else "N/A"))
                         self.ui.tableWidget.setItem(row_position, 9, QTableWidgetItem(str(packet_length)))
                         self.ui.tableWidget.setItem(row_position, 10, QTableWidgetItem(ip_version))
-        except:
-            print("error in filter sensor function")
+        except Exception as e:
+            print(f"error in filter sensor function:{e}")
 
     #end of filter
     def updateSensor(self, a):
-        senName = self.ui.lineEdit_3.text().strip()
-        senMAC = self.ui.lineEdit_4.text().strip()
-       
-        if(a == 1):
-            self.sen_info.append(senName)
-            self.sen_info.append(0)
-            self.sensors[senName] = senMAC
+        try:
+            senName = self.ui.lineEdit_3.text().strip()
+            senMAC = self.ui.lineEdit_4.text().strip()
+        
+            if(a == 1):
+                self.sen_info.append(senName)
+                self.sen_info.append(0)
+                self.sensors[senName] = senMAC
+                
             
-         
 
-        else:
-            self.sensors.pop(senName)
-           
-        self.sensors_name.append(senName)
-      
-        #print(self.sensors)
-        plt.close()
-        self.show_donut_chart()
-        self.displaySensorTable()
-
+            else:
+                self.sensors.pop(senName)
+            
+            self.sensors_name.append(senName)
+        
+            #print(self.sensors)
+            plt.close()
+            self.show_donut_chart()
+            self.displaySensorTable()
+        except:
+            print("error in update sensor function")
     def displaySensorTable(self):
-        self.show_donut_chart
-        self.ui.tableWidget_2.setRowCount(0)
-        for name, mac in self.sensors.items():
-            row_position = self.ui.tableWidget_2.rowCount()
-            self.ui.tableWidget_2.insertRow(row_position)
-            self.ui.tableWidget_2.setItem(row_position, 0, QTableWidgetItem(str(name)))
-            self.ui.tableWidget_2.setItem(row_position, 1, QTableWidgetItem(str(mac)))
+        try:
+            self.show_donut_chart
+            self.ui.tableWidget_2.setRowCount(0)
+            for name, mac in self.sensors.items():
+                row_position = self.ui.tableWidget_2.rowCount()
+                self.ui.tableWidget_2.insertRow(row_position)
+                self.ui.tableWidget_2.setItem(row_position, 0, QTableWidgetItem(str(name)))
+                self.ui.tableWidget_2.setItem(row_position, 1, QTableWidgetItem(str(mac)))
+        except:
+            print("error in display sensor table function")
+        
     def show_donut_chart(self):
-        # Data for the chart
-        sizes = [1]  # Percentages
-        labels = ['']  # Empty labels to hide text
-        s=0
-        for s in range(len(self.sensors)):
-            sizes.append(s)
-            labels.append('')
-        #end of for
-        colors = ['#ff4d4d', '#3399ff', '#33ff33']  # Custom colors
-        
-        # Create the figure and axes
-        fig, ax = plt.subplots(figsize=(6, 6))  # Set size of the figure
-        
-        # Draw the donut chart
-        wedges, texts = ax.pie(
-            sizes,
-            labels=labels,
-            startangle=90,
-            colors=colors,
-            wedgeprops=dict(width=0.3)  # Create the "donut" effect
-        )
-        
-        # Set aspect ratio to be equal
-        ax.axis('equal')
-        ax.set_title('Sensors')
-        
-        # Ensure transparency
-        fig.patch.set_visible(False)  # Completely hide the figure background
-        ax.patch.set_alpha(0)         # Transparent axes background
-        
-        # Render the figure to a Qt widget
-        canvas = FigureCanvas(fig)
-        canvas.setStyleSheet("background: transparent;")  # Ensure no background for the canvas
-        canvas.setGeometry(0, 0, self.ui.graphicsView_2.width(), self.ui.graphicsView_2.height())
-        
-        # Set up a transparent scene for QGraphicsView
-        scene = QGraphicsScene()
-        scene.setBackgroundBrush(Qt.GlobalColor.transparent)  # Ensure the scene background is transparent
-        scene.addWidget(canvas)
-        self.ui.graphicsView_2.setScene(scene)
+        try:
+            # Data for the chart
+            sizes = [1]  # Percentages
+            labels = ['']  # Empty labels to hide text
+            s=0
+            for s in range(len(self.sensors)):
+                sizes.append(s)
+                labels.append('')
+            #end of for
+            colors = ['#ff4d4d', '#3399ff', '#33ff33']  # Custom colors
+            
+            # Create the figure and axes
+            fig, ax = plt.subplots(figsize=(6, 6))  # Set size of the figure
+            
+            # Draw the donut chart
+            wedges, texts = ax.pie(
+                sizes,
+                labels=labels,
+                startangle=90,
+                colors=colors,
+                wedgeprops=dict(width=0.3)  # Create the "donut" effect
+            )
+            
+            # Set aspect ratio to be equal
+            ax.axis('equal')
+            ax.set_title('Sensors')
+            
+            # Ensure transparency
+            fig.patch.set_visible(False)  # Completely hide the figure background
+            ax.patch.set_alpha(0)         # Transparent axes background
+            
+            # Render the figure to a Qt widget
+            canvas = FigureCanvas(fig)
+            canvas.setStyleSheet("background: transparent;")  # Ensure no background for the canvas
+            canvas.setGeometry(0, 0, self.ui.graphicsView_2.width(), self.ui.graphicsView_2.height())
+            
+            # Set up a transparent scene for QGraphicsView
+            scene = QGraphicsScene()
+            scene.setBackgroundBrush(Qt.GlobalColor.transparent)  # Ensure the scene background is transparent
+            scene.addWidget(canvas)
+            self.ui.graphicsView_2.setScene(scene)
+        except:
+            print("error in show donut chart function")
     def toggleSenFlag(self):
         try:
             self.senFlag *= -1
@@ -320,8 +329,8 @@ class SensorSystem:
                             self.ui.tableWidget.setItem(row_position, 9, QTableWidgetItem(str(sport)))
                             self.ui.tableWidget.setItem(row_position, 10, QTableWidgetItem(str(dport)))
                 self.ct_sensor_packet.append(self.sen_ct)
-        except:
-            print("nuh uh no sensor filtering for some reason intoggle senseflag function")   
+        except Exception as e:
+            print(f"nuh uh no sensor filtering for some reason intoggle senseflag function:{e}")   
 class PacketSystem:
      
     def __init__(self, ui_main_window):
@@ -370,7 +379,7 @@ class PacketSystem:
             if packetInput == 0:
                 self.qued_packets.append(packet)
             if packetInput == 1:
-                self.pcap_packets.append(packet)
+                self.qued_packets.append(packet)
                 
 
             
@@ -418,7 +427,7 @@ class PacketSystem:
                 packet = self.qued_packets[self.process_packet_index]
                 
             if packetInput == 1:
-                packet = self.pcap_packets[self.pcap_process_packet_index]
+                packet = self.qued_packets[self.pcap_process_packet_index]
                 
             
             self.packets.append(packet)
@@ -506,12 +515,14 @@ class PacketSystem:
                 self.ui.tableWidget.setItem(row_position, 9, QTableWidgetItem(str(packet_length)))
                 self.ui.tableWidget.setItem(row_position, 10, QTableWidgetItem(ip_version))
                 if packetInput == 0:
-                
-                    self.process_packet_index+=1
+                    if self.process_packet_index < len(self.qued_packets) :
+                        
+                        self.process_packet_index+=1
             if packetInput == 1:
                     
-                
-                    self.pcap_process_packet_index+=1
+                    if self.pcap_process_packet_index < len(self.qued_packets) :
+
+                        self.pcap_process_packet_index+=1
                 
             time_series[timestamp] = len(self.packets)
 
@@ -527,56 +538,60 @@ class PacketSystem:
             print(tb)
 
     def get_protocol(self, packet):
-        # Define common ports for protocols
-        http_ports = [80, 8080, 8000, 8888,443]  # Common HTTP ports
-        https_ports = [443, 8443, 9443,80]  # Common HTTPS ports
+        try:
+            # Define common ports for protocols
+            http_ports = [80, 8080, 8000, 8888,443]  # Common HTTP ports
+            https_ports = [443, 8443, 9443,80]  # Common HTTPS ports
 
-        # General checks for HTTP and HTTPS based on ports
-        if hasattr(packet, 'sport') and hasattr(packet, 'dport'):  # Check if ports are available
-            sport = packet.sport
-            dport = packet.dport
-            if dport in http_ports or sport in http_ports:
-                return "http"
-            elif dport in https_ports or sport in https_ports:
-                return "https"
+            # General checks for HTTP and HTTPS based on ports
+            if hasattr(packet, 'sport') and hasattr(packet, 'dport'):  # Check if ports are available
+                sport = packet.sport
+                dport = packet.dport
+                if dport in http_ports or sport in http_ports:
+                    return "http"
+                elif dport in https_ports or sport in https_ports:
+                    return "https"
 
-        if packet.haslayer("IP"):
-            ip_proto = packet["IP"].proto
-            if ip_proto == 17:  # UDP protocol
-                if packet.haslayer("UDP"):
-                    sport = packet["UDP"].sport
-                    dport = packet["UDP"].dport
-                    if dport == 53 or sport == 53:
-                        return "dns"
-                    elif dport in [67, 68] or sport in [67, 68]:
-                        return "dhcp"
-                    else:
-                        return "udp"
-            elif ip_proto == 6:  # TCP protocol
-                if packet.haslayer("TCP"):
-                    sport = packet["TCP"].sport
-                    dport = packet["TCP"].dport
-                    if dport == 20 or sport == 20:
-                        return "ftp"
-                    elif dport == 23 or sport == 23:
-                        return "telnet"
-                    else:
-                        return "tcp"
-            elif ip_proto == 1:  # ICMP protocol
-                return "icmp"
+            if packet.haslayer("IP"):
+                ip_proto = packet["IP"].proto
+                if ip_proto == 17:  # UDP protocol
+                    if packet.haslayer("UDP"):
+                        sport = packet["UDP"].sport
+                        dport = packet["UDP"].dport
+                        if dport == 53 or sport == 53:
+                            return "dns"
+                        elif dport in [67, 68] or sport in [67, 68]:
+                            return "dhcp"
+                        else:
+                            return "udp"
+                elif ip_proto == 6:  # TCP protocol
+                    if packet.haslayer("TCP"):
+                        sport = packet["TCP"].sport
+                        dport = packet["TCP"].dport
+                        if dport == 20 or sport == 20:
+                            return "ftp"
+                        elif dport == 23 or sport == 23:
+                            return "telnet"
+                        else:
+                            return "tcp"
+                elif ip_proto == 1:  # ICMP protocol
+                    return "icmp"
+                else:
+                    return "Other"
+            elif packet.haslayer("UDP"):  # Check UDP layers for DNS/DHCP outside IP layer
+                dport = packet["UDP"].dport
+                sport = packet["UDP"].sport
+                if dport == 53 or sport == 53:
+                    return "dns"
+                elif dport in [67, 68] or sport in [67, 68]:
+                    return "dhcp"
+                else:
+                    return "udp"
             else:
-                return "Other"
-        elif packet.haslayer("UDP"):  # Check UDP layers for DNS/DHCP outside IP layer
-            dport = packet["UDP"].dport
-            sport = packet["UDP"].sport
-            if dport == 53 or sport == 53:
-                return "dns"
-            elif dport in [67, 68] or sport in [67, 68]:
-                return "dhcp"
-            else:
-                return "udp"
-        else:
-            return "Other"
+                return "Other"  
+        except Exception as e:
+            print(f"Error getting protocol: {e}")
+            return "N/A"
 
 
     def display_packet_details(self, row, column):
@@ -606,261 +621,276 @@ class PacketSystem:
         except ValueError:
             return False  # Handle invalid IP addresses gracefully
     def apply_filter(self):
-        """Filter packets based on selected protocols, source/destination IPs, and ComboBox selection."""
-        # Map checkbox states to protocol names
-        protocol_filters = {
-            "udp": self.ui.checkBox.isChecked(),
-            "tcp": self.ui.checkBox_2.isChecked(),
-            "icmp": self.ui.checkBox_3.isChecked(),
-            "dns": self.ui.checkBox_4.isChecked(),
-            "dhcp": self.ui.checkBox_5.isChecked(),
-            "http": self.ui.checkBox_6.isChecked(),
-            "https": self.ui.checkBox_7.isChecked(),
-            "telnet": self.ui.checkBox_8.isChecked(),
-            "ftp": self.ui.checkBox_9.isChecked(),
-            "other": self.ui.checkBox_10.isChecked(),
-        }
-        
-
-        # Check if all protocol filters are unchecked and both src and dst filters are empty
-        src_filter = self.ui.lineEdit_2.text().strip()
-        dst_filter = self.ui.lineEdit_5.text().strip()
-
-            # Check if all protocol filters are unchecked and both src and dst filters are empty
-        if not any(protocol_filters.values()) and not src_filter and not dst_filter:
-                print("No protocols selected, and both source and destination filters are empty.")
-                self.filterapplied=False
-                self.ui.tableWidget.setRowCount(0)
-                self.process_packet_index=0
-                self.pcap_process_packet_index=0
-                return  # Or handle this case appropriately
-            #
-        self.filterapplied = True
-
-        # Determine which protocols to filter
-        selected_protocols = [protocol for protocol, checked in protocol_filters.items() if checked]
-
-        # Get the source and destination IP filters
-        src_filter = self.ui.lineEdit_2.text().strip()
-        dst_filter = self.ui.lineEdit_5.text().strip()
-
-        # Get ComboBox selection
-        combo_selection = self.ui.comboBox.currentText()  # 'Inside' or 'Outside'
-
-        # Clear the table before adding filtered packets
-        self.ui.tableWidget.setRowCount(0)
-
-        # Filter packets
-        self.filtered_packets = []
-        if(self.sensor_obj.senFlag == -1):
-            x = self.packets
-        else:
-            x = self.sensor_obj.sensor_packet
-        
-        for packet in x:
-            src_ip = packet["IP"].src if packet.haslayer("IP") else "N/A"
-            dst_ip = packet["IP"].dst if packet.haslayer("IP") else "N/A"
-            protocol = self.get_protocol(packet)
-
-            # Determine if source/destination IPs are local
-            src_is_local = self.is_local_ip(src_ip)
-            dst_is_local = self.is_local_ip(dst_ip)
-
-            # Check if the packet matches the selected protocols
-            layer = "UDP" if packet.haslayer("UDP") else "TCP" if packet.haslayer("TCP") else "Other"
-            protocol_match = protocol in selected_protocols if selected_protocols else True
-            if "udp" in selected_protocols and layer == "UDP":
-             protocol_match = True
-            elif "tcp" in selected_protocols and layer == "TCP":
-             protocol_match = True
-            elif "other" in selected_protocols and layer=="Other":
-                protocol_match=True
-             
-
-            # Check source and destination filters
-            packet_time = datetime.fromtimestamp(float(packet.time))
+        try:
+            """Filter packets based on selected protocols, source/destination IPs, and ComboBox selection."""
+            # Map checkbox states to protocol names
+            protocol_filters = {
+                "udp": self.ui.checkBox.isChecked(),
+                "tcp": self.ui.checkBox_2.isChecked(),
+                "icmp": self.ui.checkBox_3.isChecked(),
+                "dns": self.ui.checkBox_4.isChecked(),
+                "dhcp": self.ui.checkBox_5.isChecked(),
+                "http": self.ui.checkBox_6.isChecked(),
+                "https": self.ui.checkBox_7.isChecked(),
+                "telnet": self.ui.checkBox_8.isChecked(),
+                "ftp": self.ui.checkBox_9.isChecked(),
+                "other": self.ui.checkBox_10.isChecked(),
+            }
             
 
-            src_match = src_filter in src_ip if src_filter else True
-            dst_match = dst_filter in dst_ip if dst_filter else True
+            # Check if all protocol filters are unchecked and both src and dst filters are empty
+            src_filter = self.ui.lineEdit_2.text().strip()
+            dst_filter = self.ui.lineEdit_5.text().strip()
 
-            # Check ComboBox selection
-            if combo_selection == "Inside":
-                ip_match = src_is_local and dst_is_local
-            elif combo_selection == "Outside":
-                ip_match = not src_is_local or not dst_is_local
+                # Check if all protocol filters are unchecked and both src and dst filters are empty
+            if not any(protocol_filters.values()) and not src_filter and not dst_filter:
+                    print("No protocols selected, and both source and destination filters are empty.")
+                    self.filterapplied=False
+                    self.ui.tableWidget.setRowCount(0)
+                    self.process_packet_index=0
+                    self.pcap_process_packet_index=0
+                    return  # Or handle this case appropriately
+                #
+            self.filterapplied = True
+
+            # Determine which protocols to filter
+            selected_protocols = [protocol for protocol, checked in protocol_filters.items() if checked]
+
+            # Get the source and destination IP filters
+            src_filter = self.ui.lineEdit_2.text().strip()
+            dst_filter = self.ui.lineEdit_5.text().strip()
+
+            # Get ComboBox selection
+            combo_selection = self.ui.comboBox.currentText()  # 'Inside' or 'Outside'
+
+            # Clear the table before adding filtered packets
+            self.ui.tableWidget.setRowCount(0)
+
+            # Filter packets
+            self.filtered_packets = []
+            if(self.sensor_obj.senFlag == -1):
+                x = self.packets
             else:
-                ip_match = True  # Default: no filter based on inside/outside
+                x = self.sensor_obj.sensor_packet
+            
+            for packet in x:
+                src_ip = packet["IP"].src if packet.haslayer("IP") else "N/A"
+                dst_ip = packet["IP"].dst if packet.haslayer("IP") else "N/A"
+                protocol = self.get_protocol(packet)
 
-            # Include packet if it matches all criteria
-            if protocol_match and src_match and dst_match and ip_match:
+                # Determine if source/destination IPs are local
+                src_is_local = self.is_local_ip(src_ip)
+                dst_is_local = self.is_local_ip(dst_ip)
 
-                self.filtered_packets.append(packet)
-                macsrc = packet["Ethernet"].src if packet.haslayer("Ethernet") else "N/A"
-                macdst = packet["Ethernet"].dst if packet.haslayer("Ethernet") else "N/A"
-                # Extract packet length
-                packet_length = int(len(packet))
-
-            # Extract IP version
-                ip_version = "IPv6" if packet.haslayer("IPv6") else "IPv4" if packet.haslayer("IP") else "N/A"
-                layer = "udp" if packet.haslayer("UDP") else "tcp" if packet.haslayer("TCP") else "Other"
-                # Extract port information for TCP/UDP
-                sport = None
-                dport = None
-                if packet.haslayer("TCP"):
-                    sport = packet["TCP"].sport
-                    dport = packet["TCP"].dport
-                elif packet.haslayer("UDP"):
-                    sport = packet["UDP"].sport
-                    dport = packet["UDP"].dport
+                # Check if the packet matches the selected protocols
+                layer = "UDP" if packet.haslayer("UDP") else "TCP" if packet.haslayer("TCP") else "Other"
+                protocol_match = protocol in selected_protocols if selected_protocols else True
+                if "udp" in selected_protocols and layer == "UDP":
+                 
+                 protocol_match = True
+                elif "tcp" in selected_protocols and layer == "TCP":
+                    protocol_match = True
+                elif "other" in selected_protocols and layer=="Other":
+                    protocol_match=True
                 
-                row_position = self.ui.tableWidget.rowCount()
+
+                # Check source and destination filters
+                packet_time = datetime.fromtimestamp(float(packet.time))
                 
-                self.ui.tableWidget.insertRow(row_position)
-                self.ui.tableWidget.setItem(row_position, 0, QTableWidgetItem(datetime.fromtimestamp(float(packet.time)).strftime("%I:%M:%S %p")))
-                self.ui.tableWidget.setItem(row_position, 1, QTableWidgetItem(src_ip))
-                self.ui.tableWidget.setItem(row_position, 2, QTableWidgetItem(dst_ip))
-                self.ui.tableWidget.setItem(row_position, 3, QTableWidgetItem(protocol))
-                self.ui.tableWidget.setItem(row_position, 4, QTableWidgetItem(layer))
-                   # Add MAC addresses and port info to the table
-                self.ui.tableWidget.setItem(row_position, 5, QTableWidgetItem(macsrc))
-                self.ui.tableWidget.setItem(row_position, 6, QTableWidgetItem(macdst))
-                self.ui.tableWidget.setItem(row_position, 7, QTableWidgetItem(str(sport) if sport else "N/A"))
-                self.ui.tableWidget.setItem(row_position, 8, QTableWidgetItem(str(dport) if dport else "N/A"))
-                self.ui.tableWidget.setItem(row_position, 9, QTableWidgetItem(str(packet_length)))
-                self.ui.tableWidget.setItem(row_position, 10, QTableWidgetItem(ip_version))
-        self.apply_filter=False
-    
+
+                src_match = src_filter in src_ip if src_filter else True
+                dst_match = dst_filter in dst_ip if dst_filter else True
+
+                # Check ComboBox selection
+                if combo_selection == "Inside":
+                    ip_match = src_is_local and dst_is_local
+                elif combo_selection == "Outside":
+                    ip_match = not src_is_local or not dst_is_local
+                else:
+                    ip_match = True  # Default: no filter based on inside/outside
+
+                # Include packet if it matches all criteria
+                if protocol_match and src_match and dst_match and ip_match:
+
+                    self.filtered_packets.append(packet)
+                    macsrc = packet["Ethernet"].src if packet.haslayer("Ethernet") else "N/A"
+                    macdst = packet["Ethernet"].dst if packet.haslayer("Ethernet") else "N/A"
+                    # Extract packet length
+                    packet_length = int(len(packet))
+
+                # Extract IP version
+                    ip_version = "IPv6" if packet.haslayer("IPv6") else "IPv4" if packet.haslayer("IP") else "N/A"
+                    layer = "udp" if packet.haslayer("UDP") else "tcp" if packet.haslayer("TCP") else "Other"
+                    # Extract port information for TCP/UDP
+                    sport = None
+                    dport = None
+                    if packet.haslayer("TCP"):
+                        sport = packet["TCP"].sport
+                        dport = packet["TCP"].dport
+                    elif packet.haslayer("UDP"):
+                        sport = packet["UDP"].sport
+                        dport = packet["UDP"].dport
+                    
+                    row_position = self.ui.tableWidget.rowCount()
+                    
+                    self.ui.tableWidget.insertRow(row_position)
+                    self.ui.tableWidget.setItem(row_position, 0, QTableWidgetItem(datetime.fromtimestamp(float(packet.time)).strftime("%I:%M:%S %p")))
+                    self.ui.tableWidget.setItem(row_position, 1, QTableWidgetItem(src_ip))
+                    self.ui.tableWidget.setItem(row_position, 2, QTableWidgetItem(dst_ip))
+                    self.ui.tableWidget.setItem(row_position, 3, QTableWidgetItem(protocol))
+                    self.ui.tableWidget.setItem(row_position, 4, QTableWidgetItem(layer))
+                    # Add MAC addresses and port info to the table
+                    self.ui.tableWidget.setItem(row_position, 5, QTableWidgetItem(macsrc))
+                    self.ui.tableWidget.setItem(row_position, 6, QTableWidgetItem(macdst))
+                    self.ui.tableWidget.setItem(row_position, 7, QTableWidgetItem(str(sport) if sport else "N/A"))
+                    self.ui.tableWidget.setItem(row_position, 8, QTableWidgetItem(str(dport) if dport else "N/A"))
+                    self.ui.tableWidget.setItem(row_position, 9, QTableWidgetItem(str(packet_length)))
+                    self.ui.tableWidget.setItem(row_position, 10, QTableWidgetItem(ip_version))
+            self.apply_filter=False
+        except Exception as e:
+            print(f"Error processing packet: {e}")    
     #end of filter
     
     def packet_to_dataframe(self, packet, columns):
+        try:
         
-        data = {col: '<unknown>' for col in columns}  # Initialize all columns with 'unknown'
-        #print(columns)
-        #data = pd.DataFrame
-        # Map values from packet to DataFrame
-        #print(packet)
-        if Raw in packet:
-            data['frame.len'] = packet.len
-            #data['frame.time_epoch'] = packet.time
-        if IP in packet:
-            data['ip.len'] = packet[IP].len
-            data['ip.ttl'] = packet[IP].ttl
-            data['ip.proto'] = packet[IP].proto
-            data['ip.version'] = packet[IP].version
-        if TCP in packet:
-            data['tcp.srcport'] = packet[TCP].sport
-            data['tcp.dstport'] = packet[TCP].dport
-            data['tcp.len'] = len(packet[TCP].payload)
-            data['tcp.seq'] = packet[TCP].seq
-            data['tcp.flags.ack'] = 1 if packet[TCP].flags.A else 0
-            data['tcp.flags.fin'] = 1 if packet[TCP].flags.F else 0
-            data['tcp.flags.reset'] = 1 if packet[TCP].flags.R else 0
-            data['tcp.window_size'] = packet[TCP].window
-            #data['tcp.stream'] = packet[TCP].options if packet[TCP].options else '<unknown>'
-        if UDP in packet:
-            data['udp.srcport'] = packet[UDP].sport
-            data['udp.dstport'] = packet[UDP].dport
-            data['udp.length'] = packet[UDP].len
-        if DNS in packet:  # Use DNS class directly, not a string
-            if packet[DNS].qd:  # Access the DNS layer directly
-                data['dns.qry.type'] = packet[DNS].qd.qtype
-            data['dns.flags.response'] = 1 if packet[DNS].qr else 0
-            data['dns.flags.recdesired'] = 1 if packet[DNS].rd else 0
-        
-        #print(data)
+            data = {col: '<unknown>' for col in columns}  # Initialize all columns with 'unknown'
+            #print(columns)
+            #data = pd.DataFrame
+            # Map values from packet to DataFrame
+            #print(packet)
+            if Raw in packet:
+                data['frame.len'] = packet.len
+                #data['frame.time_epoch'] = packet.time
+            if IP in packet:
+                data['ip.len'] = packet[IP].len
+                data['ip.ttl'] = packet[IP].ttl
+                data['ip.proto'] = packet[IP].proto
+                data['ip.version'] = packet[IP].version
+            if TCP in packet:
+                data['tcp.srcport'] = packet[TCP].sport
+                data['tcp.dstport'] = packet[TCP].dport
+                data['tcp.len'] = len(packet[TCP].payload)
+                data['tcp.seq'] = packet[TCP].seq
+                data['tcp.flags.ack'] = 1 if packet[TCP].flags.A else 0
+                data['tcp.flags.fin'] = 1 if packet[TCP].flags.F else 0
+                data['tcp.flags.reset'] = 1 if packet[TCP].flags.R else 0
+                data['tcp.window_size'] = packet[TCP].window
+                #data['tcp.stream'] = packet[TCP].options if packet[TCP].options else '<unknown>'
+            if UDP in packet:
+                data['udp.srcport'] = packet[UDP].sport
+                data['udp.dstport'] = packet[UDP].dport
+                data['udp.length'] = packet[UDP].len
+            if DNS in packet:  # Use DNS class directly, not a string
+                if packet[DNS].qd:  # Access the DNS layer directly
+                    data['dns.qry.type'] = packet[DNS].qd.qtype
+                data['dns.flags.response'] = 1 if packet[DNS].qr else 0
+                data['dns.flags.recdesired'] = 1 if packet[DNS].rd else 0
+            
+            #print(data)
 
-        # Return as a DataFrame
-        return pd.DataFrame([data])
+            # Return as a DataFrame
+            return pd.DataFrame([data])
+        except Exception as e:
+            print(f"Error processing packet to dataframe function: {e}")
     
     def encodePacket(self, data):
-        for col in data.select_dtypes(include=['object']).columns:
-            #unique_count = data[col].nunique()
-            #print(f"Processing column: {col} | Unique values: {unique_count} im in encodePacket")
+        try:
+            for col in data.select_dtypes(include=['object']).columns:
+                #unique_count = data[col].nunique()
+                #print(f"Processing column: {col} | Unique values: {unique_count} im in encodePacket")
 
-            # For high-cardinality columns, use Label Encoding
-            #print(data[col])
-            data[col] = self.le.transform(data[col].astype(str))
-        
-        return data
+                # For high-cardinality columns, use Label Encoding
+                #print(data[col])
+                data[col] = self.le.transform(data[col].astype(str))
+            
+            return data
+        except Exception as e:
+            print(f"Error encodePacket function: {e}")
     
     def encode(self, data):
-        # Programmatically identify all checksum columns and set up irrelevant columns for dropping
-        drop_columns = ['frame.time_epoch', 'tcp.stream']
+        try:
+            # Programmatically identify all checksum columns and set up irrelevant columns for dropping
+            drop_columns = ['frame.time_epoch', 'tcp.stream']
 
-        # Fill missing values with placeholders
-        data = data.fillna('<unknown>')
+            # Fill missing values with placeholders
+            data = data.fillna('<unknown>')
 
-        # Drop irrelevant columns
-        data = data.drop(columns=[col for col in drop_columns if col in data.columns], axis=1)
+            # Drop irrelevant columns
+            data = data.drop(columns=[col for col in drop_columns if col in data.columns], axis=1)
 
-        # Split into features (X) and target (y)
-        X = data.drop(columns=['alert'], axis=1, errors='ignore')
-        y = data['alert']
+            # Split into features (X) and target (y)
+            X = data.drop(columns=['alert'], axis=1, errors='ignore')
+            y = data['alert']
 
-        # Split into training and testing sets
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+            # Split into training and testing sets
+            X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
-        # Fit and encode the train data
-        for col in X_train.select_dtypes(include=['object']).columns:
-            #unique_count = data[col].nunique()
-            #print(f"Processing column: {col} | Unique values: {unique_count} im in encode")
+            # Fit and encode the train data
+            for col in X_train.select_dtypes(include=['object']).columns:
+                #unique_count = data[col].nunique()
+                #print(f"Processing column: {col} | Unique values: {unique_count} im in encode")
 
-            # For high-cardinality columns, use Label Encoding
-            X_train[col] = self.le.fit_transform(X_train[col].astype(str))
+                # For high-cardinality columns, use Label Encoding
+                X_train[col] = self.le.fit_transform(X_train[col].astype(str))
+                #print(self.le.classes_)
+            y_train = self.le.fit_transform(y_train.astype(str))
             #print(self.le.classes_)
-        y_train = self.le.fit_transform(y_train.astype(str))
-        #print(self.le.classes_)
 
-        #map unknown data
-        for col in X_test.select_dtypes(include=['object']).columns:
-            X_test[col] = X_test[col].map(lambda s: '<unknown>' if s not in self.le.classes_ else s)
-        y_test = y_test.map(lambda s: '<unknown>' if s not in self.le.classes_ else s)
-        
-        self.le.classes_ = np.append(self.le.classes_, '<unknown>')
-        #labelHeaders = list(self.le.classes_)
-        #print(labelHeaders)
+            #map unknown data
+            for col in X_test.select_dtypes(include=['object']).columns:
+                X_test[col] = X_test[col].map(lambda s: '<unknown>' if s not in self.le.classes_ else s)
+            y_test = y_test.map(lambda s: '<unknown>' if s not in self.le.classes_ else s)
+            
+            self.le.classes_ = np.append(self.le.classes_, '<unknown>')
+            #labelHeaders = list(self.le.classes_)
+            #print(labelHeaders)
 
-        #encode test data according to fitted label encoder
-        for col in X_test.select_dtypes(include=['object']).columns:
-            #unique_count = data[col].nunique()
-            #print(f"Processing column: {col} | Unique values: {unique_count}")
-            X_test[col] = self.le.transform(X_test[col].astype(str))
-        print(y_test)
-        y_test = self.le.transform(y_test.astype(str))
+            #encode test data according to fitted label encoder
+            for col in X_test.select_dtypes(include=['object']).columns:
+                #unique_count = data[col].nunique()
+                #print(f"Processing column: {col} | Unique values: {unique_count}")
+                X_test[col] = self.le.transform(X_test[col].astype(str))
+            print(y_test)
+            y_test = self.le.transform(y_test.astype(str))
 
 
-        return X_train, y_train, X_test, y_test
+            return X_train, y_train, X_test, y_test
+        except Exception as e:
+            print(f"Error encode function: {e}")
     
 class PacketSnifferThread(QThread):
     packet_captured = pyqtSignal(object)
     readPackets = []
 
     def run(self):
-        global packetInput, packetFile, packetIndex
-        print(packetInput)
-        print("GOOGOO")
-        window.packets.clear()
-        window.tableWidget.setRowCount(0)
-        match packetInput:
-            case 0:
-                sniff(prn=self.emit_packet, store=False, stop_filter=lambda _: packetInput != 0)
-            case 1:
-                try:
-                    packets = rdpcap(packetFile)
-                    
-                    for packet in packets:
+        try:
+            global packetInput, packetFile, packetIndex
+            print(packetInput)
+            print("GOOGOO")
+            window.packets.clear()
+            window.tableWidget.setRowCount(0)
+            match packetInput:
+                case 0:
+                    sniff(prn=self.emit_packet, store=False, stop_filter=lambda _: packetInput != 0)
+                case 1:
+                    try:
+                        packets = rdpcap(packetFile)
                         
-                        self.packet_captured.emit(packet)
-                except Exception as e:
-                    print(f"Error reading pcap file: {e}")
-            case 2:
-                try:
-                    self.readPackets = pd.read_csv(packetFile)
-                    for _, row in self.readPackets.iterrows():
-                        self.packet_captured.emit(row)
-                except Exception as e:
-                    print(f"Error reading CSV file: {e}")
+                        for packet in packets:
+                            
+                            self.packet_captured.emit(packet)
+                    except Exception as e:
+                        print(f"Error reading pcap file: {e}")
+                case 2:
+                    try:
+                        self.readPackets = pd.read_csv(packetFile)
+                        for _, row in self.readPackets.iterrows():
+                            self.packet_captured.emit(row)
+                    except Exception as e:
+                        print(f"Error reading CSV file: {e}")
+        except Exception as e:
+            print(f"Error in run function: {e}")
 
     def emit_packet(self, packet):
         self.packet_captured.emit(packet)
@@ -942,7 +972,7 @@ class Naswail(QMainWindow, Ui_MainWindow):
         self.stats_timer.timeout.connect(self.tick)
         self.num=100
       
-        self.stats_timer.start(100)
+        self.stats_timer.start(10)
         self.ct = 0
         self.pushButton_2.clicked.connect(self.open_analysis)
         self.pushButton_3.clicked.connect(self.open_tool)
@@ -972,47 +1002,61 @@ class Naswail(QMainWindow, Ui_MainWindow):
             }
         """)
     def open_tool(self):
-        self.secondary_widget2 = Window_Tools(self)
-        self.hide()
-        self.secondary_widget2.show()
-    def open_analysis(self):
-            self.secondary_widget = Window_Analysis(self)  # Pass reference to the main window
+        try:
+            self.secondary_widget2 = Window_Tools(self)
             self.hide()
-            self.secondary_widget.show()
+            self.secondary_widget2.show()
+        except Exception as e:
+            print(f"Error in open_tool function: {e}")
+    def open_analysis(self):
+            try:
+
+                self.secondary_widget = Window_Analysis(self)  # Pass reference to the main window
+                self.hide()
+                self.secondary_widget.show()
+            except Exception as e:
+                print(f"Error in open_analysis function: {e}")
     def resetfilter(self):
-        self.PacketSystemobj.process_packet_index=0
-        self.PacketSystemobj.pcap_process_packet_index=0
-        self.tableWidget.setRowCount(0)
-        self.PacketSystemobj.filterapplied=False
-        self.PacketSystemobj.application_filter_flag=False
-        self.SensorSystemobj.senFlag = -1 
-        self.SensorSystemobj.singleSenFlag = -1
-        checkboxes = [
-            self.checkBox,
-            self.checkBox_2,
-            self.checkBox_3,
-            self.checkBox_4,
-            self.checkBox_5,
-            self.checkBox_6,
-            self.checkBox_7,
-            self.checkBox_8,
-            self.checkBox_9,
-            self.checkBox_10
-        ]
-        for checkbox in checkboxes:
-            checkbox.setCheckState(Qt.CheckState.Unchecked)
-        self.PacketSystemobj.filterapplied = False
+        try:
+            self.PacketSystemobj.process_packet_index=0
+            self.PacketSystemobj.pcap_process_packet_index=0
+            self.tableWidget.setRowCount(0)
+            self.PacketSystemobj.filterapplied=False
+            self.PacketSystemobj.application_filter_flag=False
+            self.SensorSystemobj.senFlag = -1 
+            self.SensorSystemobj.singleSenFlag = -1
+            checkboxes = [
+                self.checkBox,
+                self.checkBox_2,
+                self.checkBox_3,
+                self.checkBox_4,
+                self.checkBox_5,
+                self.checkBox_6,
+                self.checkBox_7,
+                self.checkBox_8,
+                self.checkBox_9,
+                self.checkBox_10
+            ]
+            for checkbox in checkboxes:
+                checkbox.setCheckState(Qt.CheckState.Unchecked)
+            self.PacketSystemobj.filterapplied = False
+        except Exception as e:
+            print(f"Error in resetfilter function: {e}")
     def tick(self):
-        current_time = QTime.currentTime()
-        elapsed_seconds = self.start_time.secsTo(current_time)
-        hours = elapsed_seconds // 3600
-        minutes = (elapsed_seconds % 3600) // 60
-        seconds = elapsed_seconds % 60
-        self.elapsedTime = f"{hours:02}:{minutes:02}:{seconds:02}"
-        self.label_6.setText(str(self.elapsedTime))
-        global packetInput, packetFile, packetIndex
-       
-        self.PacketSystemobj.process_packet()
+        try:
+            current_time = QTime.currentTime()
+            elapsed_seconds = self.start_time.secsTo(current_time)
+            hours = elapsed_seconds // 3600
+            minutes = (elapsed_seconds % 3600) // 60
+            seconds = elapsed_seconds % 60
+            self.elapsedTime = f"{hours:02}:{minutes:02}:{seconds:02}"
+            self.label_6.setText(str(self.elapsedTime))
+            global packetInput, packetFile, packetIndex
+            if self.PacketSystemobj.process_packet_index<len(self.PacketSystemobj.qued_packets)and self.PacketSystemobj.pcap_process_packet_index<len(self.PacketSystemobj.qued_packets):
+
+                self.PacketSystemobj.process_packet()
+        except Exception as e:
+            print(f"Error in tick function: {e}")
 
         
     def toggleCapture(self):
@@ -1022,27 +1066,29 @@ class Naswail(QMainWindow, Ui_MainWindow):
 
     def import_file(self):
         
+        try:
+            global packetFile, packetInput
 
-        global packetFile, packetInput
+            packetFile, _ = QFileDialog.getOpenFileName(self, "Open File", "", "All Files ();;PCAP Files (.pcap);;CSV Files (*.csv)")
 
-        packetFile, _ = QFileDialog.getOpenFileName(self, "Open File", "", "All Files ();;PCAP Files (.pcap);;CSV Files (*.csv)")
-
-        if packetFile:
-            print(f"Selected file: {packetFile}")
-            ext = os.path.splitext(packetFile)[1].lower()
-            if ext == '.pcap':
-                packetInput = 1
-                self.PacketSystemobj.packets.clear()
-                self.PacketSystemobj.qued_packets.clear()
-                self.PacketSystemobj.process_packet_index=0
-                self.PacketSystemobj.pcap_process_packet_index=0
-                
-                
-            elif ext == '.csv':
-                packetInput = 2
-            PacketSnifferThread.run(self.sniffer_thread)
-        else:
-            print("No file selected")
+            if packetFile:
+                print(f"Selected file: {packetFile}")
+                ext = os.path.splitext(packetFile)[1].lower()
+                if ext == '.pcap':
+                    packetInput = 1
+                    self.PacketSystemobj.packets.clear()
+                    self.PacketSystemobj.qued_packets.clear()
+                    self.PacketSystemobj.process_packet_index=0
+                    self.PacketSystemobj.pcap_process_packet_index=0
+                    
+                    
+                elif ext == '.csv':
+                    packetInput = 2
+                PacketSnifferThread.run(self.sniffer_thread)
+            else:
+                print("No file selected")
+        except Exception as e:
+            print(f"Error in import_file function: {e}")
 
     def export_packets(self):
         try:
@@ -1052,12 +1098,15 @@ class Naswail(QMainWindow, Ui_MainWindow):
             print(f"Error exporting packets: {e}")
 
     def resetInput(self):
-        global packetIndex, packetInput, packetFile
-        packetInput = 0
-        packetFile = ""
-        self.sniffer_thread.quit()  # Stops the current thread
-        self.sniffer_thread.wait()  # Wait for the thread to finish
-        self.sniffer_thread.start()  # Start a new thread
+        try:
+            global packetIndex, packetInput, packetFile
+            packetInput = 0
+            packetFile = ""
+            self.sniffer_thread.quit()  # Stops the current thread
+            self.sniffer_thread.wait()  # Wait for the thread to finish
+            self.sniffer_thread.start()  # Start a new thread
+        except Exception as e:
+            print(f"Error in resetInput function: {e}")
  
 if __name__ == "__main__":
     app = QApplication(sys.argv)
