@@ -689,13 +689,10 @@ class Window_Analysis(QWidget, Ui_Naswail_Anlaysis):
         self.ui.comboBox_5.currentIndexChanged.connect(self.on_combobox_change)
         self.ui.comboBox_6.currentIndexChanged.connect(self.on_combobox_change)
         # Connect PushButton_5 click to display pie chart
-        self.ui.pushButton_5.clicked.connect(self.Visualizationobj.display_pie_chart)
+        
         self.ui.pushButton_4.clicked.connect(self.show_main_window)
         self.ui.pushButton_3.clicked.connect(self.show_tools_window)
-        self.ui.pushButton_6.clicked.connect(self.Visualizationobj.display_histogram)
-        self.ui.pushButton_7.clicked.connect(self.Visualizationobj.display_graph)
-        self.ui.pushButton_9.clicked.connect(self.Visualizationobj.display_time_series)
-        self.ui.pushButton_8.clicked.connect(self.Visualizationobj.display_heatmap)
+       
      
         # Initialize a placeholder for selected option
         self.selected_option = "Protocols"
