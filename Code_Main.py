@@ -31,7 +31,7 @@ from Code_Tools import Window_Tools
 time_series = {}
 packetInput = 0
 packetFile = None
-clearRead = 0
+clearRead = 0 
 packetIndex = 0
 class ApplicationsSystem:
     def __init__(self, ui_main_window):
@@ -431,6 +431,7 @@ class PacketSystem:
                 
             
             self.packets.append(packet)
+            self.verify_packet_checksum(packet)
             timestamp = float(packet.time)
             readable_time = datetime.fromtimestamp(timestamp).strftime("%I:%M:%S %p")
             src_ip = packet["IP"].src if packet.haslayer("IP") else "N/A"
@@ -536,7 +537,35 @@ class PacketSystem:
             tb = traceback.format_exc()
             print("Traceback details:")
             print(tb)
-
+    def verify_packet_checksum(self,packet):
+        try:
+            # Check if the packet has a checksum field
+            if hasattr(packet, 'chksum'):
+                # Extract the original checksum from the packet
+                original_checksum = packet.chksum
+                
+                # Recalculate the checksum
+                # Use `None` to force Scapy to recalculate the checksum
+                packet.chksum = None
+                recalculated_checksum = raw(packet)  # Access raw data to trigger checksum calculation
+                recalculated_packet = packet.__class__(recalculated_checksum)
+                
+                # Compare the checksums
+                recalculated_checksum = recalculated_packet.chksum
+                if original_checksum == recalculated_checksum:
+                   
+                    return True
+                else:
+                    self.corrupted_packet.append(packet)
+                  
+                    return False
+            else:
+                self.corrupted_packet.append(packet)
+               
+                return None
+        except Exception as e:
+            print(f"Error verifying checksum: {e}")
+            return None
     def get_protocol(self, packet):
         try:
             # Define common ports for protocols
@@ -972,7 +1001,7 @@ class Naswail(QMainWindow, Ui_MainWindow):
         self.stats_timer.timeout.connect(self.tick)
         self.num=100
       
-        self.stats_timer.start(10)
+        self.stats_timer.start(100)
         self.ct = 0
         self.pushButton_2.clicked.connect(self.open_analysis)
         self.pushButton_3.clicked.connect(self.open_tool)
