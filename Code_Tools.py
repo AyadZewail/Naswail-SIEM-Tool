@@ -36,8 +36,10 @@ class ErrorPacketSystem:
         def display(self):
                 try:
                     self.ui.tableWidget_6.setRowCount(0)
-                    for packet in self.packetobj.corrupted_packet:
-
+                    for packet in self.packetobj.packets:
+                            isinvalid=self.packetobj.verify_packet_checksum(packet)
+                            if(isinvalid==False):
+                                  return
                             print("in error packet")
                             src_ip = packet["IP"].src if packet.haslayer("IP") else "N/A"
                             dst_ip = packet["IP"].dst if packet.haslayer("IP") else "N/A"
