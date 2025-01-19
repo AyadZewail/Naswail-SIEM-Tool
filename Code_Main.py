@@ -382,11 +382,7 @@ class PacketSystem:
             if packetInput == 0:
                 self.qued_packets.append(packet)
             if packetInput == 1:
-                self.qued_packets.append(packet)
-                
-
-            
-            
+                self.qued_packets.append(packet)            
         except Exception as e:
             print(f"Error putting packet in queue: {e}")
     
@@ -422,6 +418,48 @@ class PacketSystem:
                 self.ui.listView_2.setModel(model)
         except Exception as e:
             print(f"Error displaying packet content with ASCII: {e}")
+    def Packet_Statistics(self):
+
+        try:
+            # Calculate packet statistics
+            total_packets = len(self.packets)
+            tcp_packets = len([pkt for pkt in self.packets if pkt["IP"].proto == 6])  # TCP (protocol 6)
+            udp_packets = len([pkt for pkt in self.packets if pkt["IP"].proto == 17])  # UDP (protocol 17)
+            icmp_packets = len([pkt for pkt in self.packets if pkt["IP"].proto == 1])  # ICMP (protocol 1)
+
+            # Store statistics in a dictionary
+            self.packet_statics = {
+                "total": total_packets,
+                "tcp": tcp_packets,
+                "udp": udp_packets,
+                "icmp": icmp_packets,
+            }
+            packet_values = [tcp_packets, udp_packets, icmp_packets]
+            packet_mean = mean(packet_values)
+            packet_range = max(packet_values) - min(packet_values)
+            packet_mode = mode(packet_values) if len(set(packet_values)) > 1 else "No Mode"  # Handle single-value case
+            packet_stdev = stdev(packet_values) if len(packet_values) > 1 else 0
+            # Format the statistics for display
+            formatted_content = [
+                f"Total Packets: {self.packet_statics['total']}",
+                f"TCP Packets: {self.packet_statics['tcp']}",
+                f"UDP Packets: {self.packet_statics['udp']}",
+                f"ICMP Packets: {self.packet_statics['icmp']}",
+                "Statistical Metrics:",
+            f"Mean: {packet_mean:.2f}",
+            f"Range: {packet_range}",
+            f"Mode: {packet_mode}",
+            f"Standard Deviation: {packet_stdev:.2f}",
+            ]
+
+            # Update the list view with the formatted statistics
+            model = QStringListModel()
+            model.setStringList(formatted_content)
+            self.ui.listView_3.setModel(model)
+
+        except Exception as e:
+            print(f"Error in Packet_Statistics function: {e}")
+
 
     def process_packet(self):
         try:
@@ -964,6 +1002,7 @@ class Naswail(QMainWindow, Ui_MainWindow):
         self.tableWidget.cellClicked.connect(self.PacketSystemobj.display_packet_details)
         self.tableWidget.cellClicked.connect(self.PacketSystemobj.decode_packet)
         self.tabWidget.currentChanged.connect(lambda index: self.Appsystemobj.get_applications_with_ports() if index == 3 else None)
+        self.tabWidget.currentChanged.connect(lambda index: self.PacketSystemobj.Packet_Statistics() if index == 5 else None)
         self.tableWidget_2.setColumnCount(2)
         self.tableWidget_2.setHorizontalHeaderLabels(["Name", "IP"])
         self.tableWidget_2.cellClicked.connect(self.SensorSystemobj.filter_sensors)
