@@ -660,11 +660,11 @@ class PacketSystem:
                 "tcp": self.ui.checkBox_2.isChecked(),
                 "icmp": self.ui.checkBox_3.isChecked(),
                 "dns": self.ui.checkBox_4.isChecked(),
-                "dhcp": self.ui.checkBox_5.isChecked(),
-                "http": self.ui.checkBox_6.isChecked(),
-                "https": self.ui.checkBox_7.isChecked(),
-                "telnet": self.ui.checkBox_8.isChecked(),
-                "ftp": self.ui.checkBox_9.isChecked(),
+                "dhcp": self.ui.checkBox_9.isChecked(),
+                "http": self.ui.checkBox_5.isChecked(),
+                "https": self.ui.checkBox_6.isChecked(),
+                "telnet": self.ui.checkBox_7.isChecked(),
+                "ftp": self.ui.checkBox_8.isChecked(),
                 "other": self.ui.checkBox_10.isChecked(),
             }
             
@@ -686,14 +686,11 @@ class PacketSystem:
 
             # Determine which protocols to filter
             selected_protocols = [protocol for protocol, checked in protocol_filters.items() if checked]
-
             # Get the source and destination IP filters
             src_filter = self.ui.lineEdit_2.text().strip()
             dst_filter = self.ui.lineEdit_5.text().strip()
-
             # Get ComboBox selection
             combo_selection = self.ui.comboBox.currentText()  # 'Inside' or 'Outside'
-
             # Clear the table before adding filtered packets
             self.ui.tableWidget.setRowCount(0)
 
@@ -1003,7 +1000,7 @@ class Naswail(QMainWindow, Ui_MainWindow):
         self.stats_timer.timeout.connect(self.tick)
         self.num=100
       
-        self.stats_timer.start(10)
+        self.stats_timer.start(100 )
         self.ct = 0
         self.pushButton_2.clicked.connect(self.open_analysis)
         self.pushButton_3.clicked.connect(self.open_tool)
