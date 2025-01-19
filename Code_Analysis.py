@@ -39,23 +39,19 @@ class visualization:
         try:
             """Display a histogram based on the selected option."""
             if self.ui.comboBox_3.currentText()=="inside/outside":
-                if self.selected_option=="inside/outside":
-
-                    total_inisde=self.main_window.PacketSystemobj.total_inside_packets
-                    total_outside=self.main_window.PacketSystemobj.total_outside_packets
-                    labels=["inside","Outside"]
-                    counts=[]
-                    counts.append(total_inisde)
-                    counts.append(total_outside)
-                    colors = ['#ff9999', '#66b3ff']
-                    figure = Figure(figsize=(4, 4))
-                    canvas = FigureCanvas(figure)
-                    ax = figure.add_subplot(111)
-                    ax.bar(labels, counts, color=['#ff9999', '#66b3ff'])
-                    ax.set_title("Inside/Outside Histogram")
-                    ax.set_xlabel("Inside/Outside")
-                    ax.set_ylabel("Count")
-                    canvas.draw()
+                total_inside=self.main_window.PacketSystemobj.total_inside_packets
+                total_outside=self.main_window.PacketSystemobj.total_outside_packets
+                labels=["Inside","Outside"]
+                counts = [total_inside, total_outside]
+                colors = ['#ff9999', '#66b3ff']
+                figure = Figure(figsize=(4, 4))
+                canvas = FigureCanvas(figure)
+                ax = figure.add_subplot(111)
+                ax.bar(labels, counts, color=['#ff9999', '#66b3ff'])
+                ax.set_title("Inside/Outside Histogram")
+                ax.set_xlabel("Inside/Outside")
+                ax.set_ylabel("Count")
+                canvas.draw()
 
                 
             if self.ui.comboBox_3.currentText() == "Sensors":
@@ -292,12 +288,13 @@ class visualization:
                                 child.deleteLater()
 
                     layout.addWidget(canvas)
-                if self.ui.comboBox_6.currentText() == "Sensors":
+                
+            if self.ui.comboBox_6.currentText() == "Sensors":
                     # Access sensor statistics from the main window
-                    sensors = self.main_window.SensorSystemobj.sen_info  # This is a list of tuples (sensor_name, packet_count)
+                    sensors = self.main_window.SensorSystemobj.sen_info
 
-                    # Extract the times of the packets (assuming you need the times from packet_stats, adjust as needed)
-                    packet_stats = self.main_window.PacketSystemobj.packets  # Replace with your actual list of packets
+                   
+                    packet_stats = self.main_window.PacketSystemobj.packets 
                     packet_times = [packet.time for packet in packet_stats]
 
                     # Define the time range for the graph
@@ -343,6 +340,7 @@ class visualization:
                     # Add legend
                     ax.legend()
                     #Clear the previous canvas in widget_5
+                        # Clear the previous canvas in widget_5
                     if self.ui.widget_5.layout() is None:
                         layout = QVBoxLayout(self.ui.widget_5)
                         self.ui.widget_5.setLayout(layout)
@@ -355,7 +353,6 @@ class visualization:
                                 child.deleteLater()
 
                     layout.addWidget(canvas)
-
             if self.ui.comboBox_6.currentText() == "Protocols":
                         
                                 # Access packet statistics from the main window
@@ -429,27 +426,43 @@ class visualization:
                         bandwidth = bandwidth.reshape(1, -1)  # Reshape into 2D array (1 row, n columns)
                         # Optional: Add more rows for better visualization
                         bandwidth = np.tile(bandwidth, (5, 1))  # Repeat row 5 times for better visual effect
+                        
                         # Create the figure and canvas
-                        figure = Figure(figsize=(6, 4))
+                        figure = Figure(figsize=(6, 6))  # Larger figure size for better readability
                         canvas = FigureCanvas(figure)
                         ax = figure.add_subplot(111)
+                        
                         # Plot the heatmap
-                        cax = ax.matshow(bandwidth, cmap='coolwarm')
+                        cax = ax.matshow(bandwidth, cmap='coolwarm', aspect='auto')  # 'aspect=auto' for better scaling
+                        
                         # Add colorbar for the heatmap
                         figure.colorbar(cax)
+                        
                         # Set tick labels for time (X-axis)
                         ax.set_xticks(range(len(times)))
-                        ax.set_xticklabels(times, rotation=45, ha='right')  # Rotate for readability
+                        
+                        # Limit the number of time labels to avoid overlap
+                        label_step = max(1, len(times) // 10)  # Show at most 10 labels
+                        ax.set_xticks(range(0, len(times), label_step))
+                        
+                        # Use only every nth time interval label
+                        ax.set_xticklabels(times[::label_step], rotation=45, ha='right')  # Rotate for readability
+                        
                         # Set tick labels for Y-axis (Bandwidth rows)
                         ax.set_yticks(range(bandwidth.shape[0]))  # Number of rows in bandwidth
-                        ax.set_yticklabels([f"Row {i+1}" for i in range(bandwidth.shape[0])])
+                        row_sums = np.sum(bandwidth, axis=1)  # Sum each row to get the total bandwidth for that row
+                        ax.set_yticklabels([f" {int(row_sum)}" for row_sum in row_sums])  # D
+                        
                         # Align Y-axis tick labels horizontally
                         for tick in ax.get_yticklabels():
                             tick.set_rotation(0)  # Ensure horizontal alignment
+                        
                         # Set title for the heatmap
                         ax.set_title("Bandwidth Heatmap")
+                        
                         # Draw the canvas to render the heatmap
                         canvas.draw()
+                        
                         # Update layout in widget_4
                         if self.ui.widget_4.layout() is None:
                             layout = QVBoxLayout(self.ui.widget_4)
@@ -461,6 +474,55 @@ class visualization:
                                 if child.widget():
                                     child.widget().deleteLater()
                         layout.addWidget(canvas)
+                if self.ui.comboBox_5.currentText() == "Sensors":
+
+                    sensors = self.main_window.SensorSystemobj.sen_info
+
+                    counts = []
+                    labels = []
+                    for s in range(0, len(self.main_window.SensorSystemobj.sen_info) - 1, 2):
+                        labels.append(sensors[s])
+                        counts.append(sensors[s + 1])
+                    counts = np.array(counts).reshape(1, -1)  # Reshape into a 2D array (1 row, n columns)
+                        
+                    # Create the figure and canvas
+                    figure = Figure(figsize=(2, 2))  # Larger figure size for better readability
+                    canvas = FigureCanvas(figure)
+                    ax = figure.add_subplot(111)
+                    
+                    # Plot the heatmap
+                    cax = ax.matshow(counts, cmap='coolwarm', aspect='auto')  # 'aspect=auto' for better scaling
+                    
+                    # Add colorbar for the heatmap
+                    figure.colorbar(cax)
+                    
+                    # Set tick labels for the x-axis (sensor names)
+                    ax.set_xticks(range(len(labels)))
+                    ax.set_xticklabels(labels, rotation=45, ha='right')  # Rotate for readability
+                    
+                    # Set tick labels for the y-axis (since it's just one row, we'll show "Packets")
+                    ax.set_yticks([0])  # Only one row in the heatmap
+                    ax.set_yticklabels(["Sensor Packet Counts"])
+                    
+                    # Set title for the heatmap
+                    ax.set_title("Sensor Packet Count Heatmap")
+                    
+                    # Draw the canvas to render the heatmap
+                    canvas.draw()
+                    
+                    # Update layout in widget_4
+                    if self.ui.widget_4.layout() is None:
+                        layout = QVBoxLayout(self.ui.widget_4)
+                        self.ui.widget_4.setLayout(layout)
+                    else:
+                        layout = self.ui.widget_4.layout()
+                        while layout.count():
+                            child = layout.takeAt(0)
+                            if child.widget():
+                                child.widget().deleteLater()
+                    
+                    layout.addWidget(canvas)
+                    
                 if self.ui.comboBox_5.currentText() == "Protocols":
                         # Access packet statistics from the main window
                     packet_stats = self.main_window.PacketSystemobj.packets  # Replace with your actual packet stats
