@@ -394,8 +394,10 @@ class PacketSystem:
             ip = self.ui.lineEdit_6.text().strip()
             if(f == 1):
                 self.blacklist.append(ip)
+                self.apply_filter()
             else:
                 self.blacklist.remove(ip)
+                self.apply_filter()
 
             model = QStringListModel()
             model.setStringList(self.blacklist)
@@ -581,7 +583,8 @@ class PacketSystem:
                     self.ui.tableWidget.setItem(row_position, 8, QTableWidgetItem(str(dport) if dport else "N/A"))
                     self.ui.tableWidget.setItem(row_position, 9, QTableWidgetItem(str(packet_length)))
                     self.ui.tableWidget.setItem(row_position, 10, QTableWidgetItem(ip_version))
-                if packetInput == 0:
+            if packetInput == 0:
+                    
                     if self.process_packet_index < len(self.qued_packets) :
                         
                         self.process_packet_index+=1
