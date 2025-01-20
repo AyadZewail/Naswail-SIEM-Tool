@@ -545,9 +545,8 @@ class PacketSystem:
                     self.packet_stats["icmp"] += 1
                 
                 # Add to table
-                row_position = self.ui.tableWidget.rowCount()
+                
                 if self.filterapplied:
-                    
                     self.apply_filter()
                 elif self.sensor_obj.senFlag == 1 or self.sensor_obj.singleSenFlag == 1:
                     pass
@@ -561,7 +560,6 @@ class PacketSystem:
                     formattedPacket2 = self.encodePacket(formattedPacket)
                     anomalyCheck = self.anmodel.predict(formattedPacket2)
                     if(anomalyCheck.item()):
-                        pass
                         self.anomalies.append(packet)
                         row_position = self.ui.tableWidget_4.rowCount()
                         self.ui.tableWidget_4.insertRow(row_position)
@@ -569,7 +567,7 @@ class PacketSystem:
                         self.ui.tableWidget_4.setItem(row_position, 1, QTableWidgetItem(src_ip))
                         self.ui.tableWidget_4.setItem(row_position, 2, QTableWidgetItem(dst_ip))
                         self.ui.tableWidget_4.setItem(row_position, 3, QTableWidgetItem(protocol))
-                    
+                    row_position = self.ui.tableWidget.rowCount()
                     self.ui.tableWidget.insertRow(row_position)
                     self.ui.tableWidget.setItem(row_position, 0, QTableWidgetItem(readable_time))
                     self.ui.tableWidget.setItem(row_position, 1, QTableWidgetItem(src_ip))
