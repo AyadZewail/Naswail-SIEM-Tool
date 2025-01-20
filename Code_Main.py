@@ -42,55 +42,61 @@ class MachineLearningModels:
         with open('selected_features.pkl', 'rb') as f:
             self.A_APIFeatures = pickle.load(f)
 
-    def packet_to_dataframe(self, packet):    
-        # Initialize all columns with '<unknown>'
-        columns = self.A_APIFeatures
+    def packet_to_dataframe(self, packet): 
+        try:   
+            # Initialize all columns with '<unknown>'
+            columns = self.A_APIFeatures
 
-        data = {col: 0 for col in columns}
-        #print(self.A_APIFeatures)
+            data = {col: 0 for col in columns}
+            #print(self.A_APIFeatures)
 
-        # Frame-level fields
-        if Raw in packet:
-            #data['frame.len'] = packet.len  # frame.len
-            data['frame.time_epoch'] = getattr(packet, 'time_epoch', None)
+            # Frame-level fields
+            if Raw in packet:
+                #data['frame.len'] = packet.len  # frame.len
+                data['frame.time_epoch'] = getattr(packet, 'time_epoch', None)
 
-        # IP layer fields
-        if IP in packet:
-            #data['ip.len'] = packet["IP"].len  # ip.len
-            data['ip.ttl'] = packet["IP"].ttl  # ip.ttl
-            #data['ip.proto'] = packet["IP"].proto  # ip.proto
-            #data['ip.version'] = packet["IP"].version  # ip.version
+            # IP layer fields
+            if IP in packet:
+                #data['ip.len'] = packet["IP"].len  # ip.len
+                data['ip.ttl'] = packet["IP"].ttl  # ip.ttl
+                #data['ip.proto'] = packet["IP"].proto  # ip.proto
+                #data['ip.version'] = packet["IP"].version  # ip.version
 
-        # TCP layer fields
-        if TCP in packet:
-            data['tcp.srcport'] = packet["TCP"].sport  # tcp.srcport
-            data['tcp.dstport'] = packet["TCP"].dport  # tcp.dstport
-            #data['tcp.len'] = len(packet) - len(packet["IP"])
-            #data['tcp.seq'] = packet["TCP"].seq  # tcp.seq
-            #data['tcp.flags.ack'] = 1 if packet["TCP"].flags & 0x10 else 0  # tcp.flags.ack
-            #data['tcp.flags.fin'] = 1 if packet["TCP"].flags & 0x01 else 0  # tcp.flags.fin
-            #data['tcp.flags.reset'] = 1 if packet["TCP"].flags & 0x04 else 0  # tcp.flags.reset
-            #data['tcp.window_size'] = packet["TCP"].window  # tcp.window_size
-            data['tcp.stream'] = getattr(packet["TCP"], 'stream', None)  # tcp.stream
+            # TCP layer fields
+            if TCP in packet:
+                data['tcp.srcport'] = packet["TCP"].sport  # tcp.srcport
+                data['tcp.dstport'] = packet["TCP"].dport  # tcp.dstport
+                #data['tcp.len'] = len(packet) - len(packet["IP"])
+                #data['tcp.seq'] = packet["TCP"].seq  # tcp.seq
+                #data['tcp.flags.ack'] = 1 if packet["TCP"].flags & 0x10 else 0  # tcp.flags.ack
+                #data['tcp.flags.fin'] = 1 if packet["TCP"].flags & 0x01 else 0  # tcp.flags.fin
+                #data['tcp.flags.reset'] = 1 if packet["TCP"].flags & 0x04 else 0  # tcp.flags.reset
+                #data['tcp.window_size'] = packet["TCP"].window  # tcp.window_size
+                data['tcp.stream'] = getattr(packet["TCP"], 'stream', None)  # tcp.stream
 
-        # UDP layer fields
-        if UDP in packet:
-            #data['udp.srcport'] = packet["UDP"].sport  # udp.srcport
-            #data['udp.dstport'] = packet["UDP"].dport  # udp.dstport
-            #data['udp.length'] = packet["UDP"].len  # udp.length
+            # UDP layer fields
+            if UDP in packet:
+                #data['udp.srcport'] = packet["UDP"].sport  # udp.srcport
+                #data['udp.dstport'] = packet["UDP"].dport  # udp.dstport
+                #data['udp.length'] = packet["UDP"].len  # udp.length
+                pass
+
+            # DNS layer fields
+            if "DNS" in packet:
+                #data['dns.qry.type'] = packet["DNS"].qd.qtype if hasattr(packet["DNS"].qd, 'qtype') else '<unknown>'  # dns.qry.type
+                #data['dns.flags.response'] = packet["DNS"].flags.response if hasattr(packet["DNS"], 'flags') else '<unknown>'  # dns.flags.response
+                #data['dns.flags.recdesired'] = packet["DNS"].flags.recdesired if hasattr(packet["DNS"], 'flags') else '<unknown>'  # dns.flags.recdesired
+                pass
+            
+            df = pd.DataFrame([data])
+            df = df.infer_objects(copy=False) 
+            pd.set_option('future.no_silent_downcasting', True)
+            df = df.fillna(0)  # Replace NaN values with 0
+            
+            # Return as a DataFrame
+            return df
+        except Exception as e:
             pass
-
-        # DNS layer fields
-        if "DNS" in packet:
-            #data['dns.qry.type'] = packet["DNS"].qd.qtype if hasattr(packet["DNS"].qd, 'qtype') else '<unknown>'  # dns.qry.type
-            #data['dns.flags.response'] = packet["DNS"].flags.response if hasattr(packet["DNS"], 'flags') else '<unknown>'  # dns.flags.response
-            #data['dns.flags.recdesired'] = packet["DNS"].flags.recdesired if hasattr(packet["DNS"], 'flags') else '<unknown>'  # dns.flags.recdesired
-            pass
-        
-        df = pd.DataFrame([data])
-        df = df.fillna(0)  # Replace NaN values with 0
-        # Return as a DataFrame
-        return df
 
 class ApplicationsSystem:
     def __init__(self, ui_main_window):
@@ -485,7 +491,47 @@ class PacketSystem:
                 self.ui.listView_2.setModel(model)
         except Exception as e:
             print(f"Error displaying packet content with ASCII: {e}")
+    def Packet_Statistics(self):
 
+        try:
+            # Calculate packet statistics
+            total_packets = len(self.packets)
+            tcp_packets = len([pkt for pkt in self.packets if pkt["IP"].proto == 6])  # TCP (protocol 6)
+            udp_packets = len([pkt for pkt in self.packets if pkt["IP"].proto == 17])  # UDP (protocol 17)
+            icmp_packets = len([pkt for pkt in self.packets if pkt["IP"].proto == 1])  # ICMP (protocol 1)
+
+            # Store statistics in a dictionary
+            self.packet_statics = {
+                "total": total_packets,
+                "tcp": tcp_packets,
+                "udp": udp_packets,
+                "icmp": icmp_packets,
+            }
+            packet_values = [tcp_packets, udp_packets, icmp_packets]
+            packet_mean = mean(packet_values)
+            packet_range = max(packet_values) - min(packet_values)
+            packet_mode = mode(packet_values) if len(set(packet_values)) > 1 else "No Mode"  # Handle single-value case
+            packet_stdev = stdev(packet_values) if len(packet_values) > 1 else 0
+            # Format the statistics for display
+            formatted_content = [
+                f"Total Packets: {self.packet_statics['total']}",
+                f"TCP Packets: {self.packet_statics['tcp']}",
+                f"UDP Packets: {self.packet_statics['udp']}",
+                f"ICMP Packets: {self.packet_statics['icmp']}",
+                "Statistical Metrics:",
+            f"Mean: {packet_mean:.2f}",
+            f"Range: {packet_range}",
+            f"Mode: {packet_mode}",
+            f"Standard Deviation: {packet_stdev:.2f}",
+            ]
+
+            # Update the list view with the formatted statistics
+            model = QStringListModel()
+            model.setStringList(formatted_content)
+            self.ui.listView_3.setModel(model)
+
+        except Exception as e:
+            print(f"Error in Packet_Statistics function: {e}")
     def process_packet(self):
         try:
             global packetInput
@@ -934,6 +980,7 @@ class Naswail(QMainWindow, Ui_MainWindow):
         self.tableWidget.cellClicked.connect(self.PacketSystemobj.display_packet_details)
         self.tableWidget.cellClicked.connect(self.PacketSystemobj.decode_packet)
         self.tabWidget.currentChanged.connect(lambda index: self.Appsystemobj.get_applications_with_ports() if index == 3 else None)
+        self.tabWidget.currentChanged.connect(lambda index: self.PacketSystemobj.Packet_Statistics() if index == 5 else None)
         self.tableWidget_2.setColumnCount(2)
         self.tableWidget_2.setHorizontalHeaderLabels(["Name", "IP"])
         self.tableWidget_2.cellClicked.connect(self.SensorSystemobj.filter_sensors)
