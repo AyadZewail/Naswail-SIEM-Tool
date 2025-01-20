@@ -28,76 +28,11 @@ from UI_Main import Ui_MainWindow
 from Code_Analysis import Window_Analysis
 from Code_Tools import Window_Tools
 
+time_series = {}
 packetInput = 0
 packetFile = None
 clearRead = 0 
 packetIndex = 0
-
-class MachineLearningModels:
-    def __init__(self, ui_main_window):
-        self.ui = ui_main_window
-        #self.AnomalyAPI = joblib.load('pipeline.pkl')
-        with open('model.pkl', 'rb') as f:
-            self.AnomalyAPI = pickle.load(f)
-        with open('selected_features.pkl', 'rb') as f:
-            self.A_APIFeatures = pickle.load(f)
-
-    def packet_to_dataframe(self, packet): 
-        try:   
-            # Initialize all columns with '<unknown>'
-            columns = self.A_APIFeatures
-
-            data = {col: 0 for col in columns}
-            #print(self.A_APIFeatures)
-
-            # Frame-level fields
-            if Raw in packet:
-                #data['frame.len'] = packet.len  # frame.len
-                data['frame.time_epoch'] = getattr(packet, 'time_epoch', None)
-
-            # IP layer fields
-            if IP in packet:
-                #data['ip.len'] = packet["IP"].len  # ip.len
-                data['ip.ttl'] = packet["IP"].ttl  # ip.ttl
-                #data['ip.proto'] = packet["IP"].proto  # ip.proto
-                #data['ip.version'] = packet["IP"].version  # ip.version
-
-            # TCP layer fields
-            if TCP in packet:
-                data['tcp.srcport'] = packet["TCP"].sport  # tcp.srcport
-                data['tcp.dstport'] = packet["TCP"].dport  # tcp.dstport
-                #data['tcp.len'] = len(packet) - len(packet["IP"])
-                #data['tcp.seq'] = packet["TCP"].seq  # tcp.seq
-                #data['tcp.flags.ack'] = 1 if packet["TCP"].flags & 0x10 else 0  # tcp.flags.ack
-                #data['tcp.flags.fin'] = 1 if packet["TCP"].flags & 0x01 else 0  # tcp.flags.fin
-                #data['tcp.flags.reset'] = 1 if packet["TCP"].flags & 0x04 else 0  # tcp.flags.reset
-                #data['tcp.window_size'] = packet["TCP"].window  # tcp.window_size
-                data['tcp.stream'] = getattr(packet["TCP"], 'stream', None)  # tcp.stream
-
-            # UDP layer fields
-            if UDP in packet:
-                #data['udp.srcport'] = packet["UDP"].sport  # udp.srcport
-                #data['udp.dstport'] = packet["UDP"].dport  # udp.dstport
-                #data['udp.length'] = packet["UDP"].len  # udp.length
-                pass
-
-            # DNS layer fields
-            if "DNS" in packet:
-                #data['dns.qry.type'] = packet["DNS"].qd.qtype if hasattr(packet["DNS"].qd, 'qtype') else '<unknown>'  # dns.qry.type
-                #data['dns.flags.response'] = packet["DNS"].flags.response if hasattr(packet["DNS"], 'flags') else '<unknown>'  # dns.flags.response
-                #data['dns.flags.recdesired'] = packet["DNS"].flags.recdesired if hasattr(packet["DNS"], 'flags') else '<unknown>'  # dns.flags.recdesired
-                pass
-            
-            df = pd.DataFrame([data])
-            df = df.infer_objects(copy=False) 
-            pd.set_option('future.no_silent_downcasting', True)
-            df = df.fillna(0)  # Replace NaN values with 0
-            
-            # Return as a DataFrame
-            return df
-        except Exception as e:
-            pass
-
 class ApplicationsSystem:
     def __init__(self, ui_main_window):
         self.ui = ui_main_window
@@ -269,6 +204,9 @@ class SensorSystem:
                 self.sen_info.append(senName)
                 self.sen_info.append(0)
                 self.sensors[senName] = senMAC
+                
+            
+
             else:
                 self.sensors.pop(senName)
             
@@ -411,7 +349,6 @@ class PacketSystem:
         self.filtered_packets = []
         self.packet_features = []
         self.new_packet_features = []
-        self.blacklist = []
         self.total_inside_packets = 0
         self.total_outside_packets = 0
         self.inside_packets = 0
@@ -422,14 +359,26 @@ class PacketSystem:
         self.packet_stats = {"total": 0, "tcp": 0, "udp": 0, "icmp": 0}
         self.anomalies = []
         self.sensor_obj = None
-        self.MLM_Obj = None
         self.capture = 1
+        self.blacklist = []
+        self.tot_tcp_packets = 0
+        self. tot_udp_packets = 0
+        self.tot_icmp_packets = 0
+        #machine learning stuff
+        self.le = LabelEncoder()
+        self.train = pd.read_csv('TrainATest2.csv', low_memory=False)
+       # self.test = pd.read_csv('Simulation.csv', low_memory=False)
+        self.X_train, self.y_train, self.X_test, self.y_test = self.encode(self.train)
+        self.classes = self.train.columns[:-1].to_numpy()
+        self.anmodel = RandomForestClassifier()
+        self.anmodel.fit(self.X_train, self.y_train)
+        self.train_predictions = self.anmodel.predict(self.X_test)
+        acc = accuracy_score(self.y_test, self.train_predictions)
+        print("Accuracy: {:.4%}".format(acc))
+        ##############
     def set_sensor_system(self, sensor_obj):
         """Set the sensor system after both are initialized."""
         self.sensor_obj = sensor_obj
-
-    def set_mlm_system(self, mlm_obj):
-        self.MLM_Obj = mlm_obj
     
     def put_packet_in_queue(self, packet):
         try:
@@ -437,14 +386,9 @@ class PacketSystem:
             if packetInput == 0:
                 self.qued_packets.append(packet)
             if packetInput == 1:
-                self.qued_packets.append(packet)
-                
-
-            
-            
+                self.qued_packets.append(packet)            
         except Exception as e:
             print(f"Error putting packet in queue: {e}")
-    
     def updateBlacklist(self, f):
         try:
             ip = self.ui.lineEdit_6.text().strip()
@@ -455,10 +399,9 @@ class PacketSystem:
 
             model = QStringListModel()
             model.setStringList(self.blacklist)
-            self.ui.listView_3.setModel(model)
+            self.ui.listView_4.setModel(model)
         except Exception as e:
             print(f"Error updating blacklist: {e}")
-    
     def decode_packet(self, row, column):
          
         try:
@@ -496,18 +439,17 @@ class PacketSystem:
         try:
             # Calculate packet statistics
             total_packets = len(self.packets)
-            tcp_packets = len([pkt for pkt in self.packets if pkt["IP"].proto == 6])  # TCP (protocol 6)
-            udp_packets = len([pkt for pkt in self.packets if pkt["IP"].proto == 17])  # UDP (protocol 17)
-            icmp_packets = len([pkt for pkt in self.packets if pkt["IP"].proto == 1])  # ICMP (protocol 1)
+            
 
             # Store statistics in a dictionary
             self.packet_statics = {
                 "total": total_packets,
-                "tcp": tcp_packets,
-                "udp": udp_packets,
-                "icmp": icmp_packets,
+                "tcp": self.tot_tcp_packets,
+                "udp": self.tot_udp_packets,
+                "icmp": self.tot_icmp_packets,
             }
-            packet_values = [tcp_packets, udp_packets, icmp_packets]
+            
+            packet_values = [self.tot_tcp_packets, self.tot_udp_packets, self.tot_icmp_packets]
             packet_mean = mean(packet_values)
             packet_range = max(packet_values) - min(packet_values)
             packet_mode = mode(packet_values) if len(set(packet_values)) > 1 else "No Mode"  # Handle single-value case
@@ -532,15 +474,15 @@ class PacketSystem:
 
         except Exception as e:
             print(f"Error in Packet_Statistics function: {e}")
+
+
     def process_packet(self):
         try:
             global packetInput
             if packetInput == 0:
-                packet = self.qued_packets[self.process_packet_index]
-                
+                packet = self.qued_packets[self.process_packet_index] 
             if packetInput == 1:
                 packet = self.qued_packets[self.pcap_process_packet_index]
-            
             timestamp = float(packet.time)
             readable_time = datetime.fromtimestamp(timestamp).strftime("%I:%M:%S %p")
             src_ip = packet["IP"].src if packet.haslayer("IP") else "N/A"
@@ -562,6 +504,8 @@ class PacketSystem:
             else:
                 self.packets.append(packet)
                 protocol = self.get_protocol(packet)
+                if protocol == "icmp":
+                    self.tot_icmp_packets += 1
                 islocal=False
                 islocal=self. is_local_ip(src_ip)
                 if islocal==True:
@@ -580,9 +524,11 @@ class PacketSystem:
                 sport = None
                 dport = None
                 if packet.haslayer("TCP"):
+                    self.tot_tcp_packets += 1
                     sport = packet["TCP"].sport
                     dport = packet["TCP"].dport
                 elif packet.haslayer("UDP"):
+                    self.tot_udp_packets += 1
                     sport = packet["UDP"].sport
                     dport = packet["UDP"].dport
 
@@ -609,17 +555,13 @@ class PacketSystem:
                     if self.capture == 1:
                         self.captured_packets.append(packet)
                     self.new_packet_features.append([packet_length, timestamp, protocol])
-                    formattedPacket = self.MLM_Obj.packet_to_dataframe(packet)
-                    formattedPacket = formattedPacket[self.MLM_Obj.A_APIFeatures]
-                    #print(formattedPacket)
-                    anomalyCheck = self.MLM_Obj.AnomalyAPI.predict(formattedPacket)
-                    #print(anomalyCheck)
-                    if(anomalyCheck == -1):
-                        #print("Anomaly")
+                    formattedPacket = self.packet_to_dataframe(packet, self.classes)
+                    formattedPacket2 = self.encodePacket(formattedPacket)
+                    anomalyCheck = self.anmodel.predict(formattedPacket2)
+                    if(anomalyCheck.item()):
+                        pass
                         self.anomalies.append(packet)
-                    
                         row_position = self.ui.tableWidget_4.rowCount()
-                        
                         self.ui.tableWidget_4.insertRow(row_position)
                         self.ui.tableWidget_4.setItem(row_position, 0, QTableWidgetItem(readable_time))
                         self.ui.tableWidget_4.setItem(row_position, 1, QTableWidgetItem(src_ip))
@@ -639,17 +581,17 @@ class PacketSystem:
                     self.ui.tableWidget.setItem(row_position, 8, QTableWidgetItem(str(dport) if dport else "N/A"))
                     self.ui.tableWidget.setItem(row_position, 9, QTableWidgetItem(str(packet_length)))
                     self.ui.tableWidget.setItem(row_position, 10, QTableWidgetItem(ip_version))
-            if packetInput == 0:
-                if self.process_packet_index < len(self.qued_packets) :
-                    
-                    self.process_packet_index+=1
+                if packetInput == 0:
+                    if self.process_packet_index < len(self.qued_packets) :
+                        
+                        self.process_packet_index+=1
             if packetInput == 1:
                     
                     if self.pcap_process_packet_index < len(self.qued_packets) :
 
                         self.pcap_process_packet_index+=1
                 
-            window.time_series[timestamp] = len(self.packets)
+            time_series[timestamp] = len(self.packets)
 
             if len(self.bandwidth_data) == 0 or self.bandwidth_data[-1][0] != readable_time:
                 self.bandwidth_data.append((readable_time, len(packet)))
@@ -789,7 +731,7 @@ class PacketSystem:
                 "other": self.ui.checkBox_10.isChecked(),
             }
             
-
+            self.ui.tableWidget.setRowCount(0)
             # Check if all protocol filters are unchecked and both src and dst filters are empty
             src_filter = self.ui.lineEdit_2.text().strip()
             dst_filter = self.ui.lineEdit_5.text().strip()
@@ -897,8 +839,116 @@ class PacketSystem:
                     self.ui.tableWidget.setItem(row_position, 10, QTableWidgetItem(ip_version))
             self.apply_filter=False
         except Exception as e:
-            print(f"Error processing packet: {e}")
+            print(f"Error processing packet: {e}")    
     #end of filter
+    
+    def packet_to_dataframe(self, packet, columns):
+        try:
+        
+            data = {col: '<unknown>' for col in columns}  # Initialize all columns with 'unknown'
+            #print(columns)
+            #data = pd.DataFrame
+            # Map values from packet to DataFrame
+            #print(packet)
+            if Raw in packet:
+                data['frame.len'] = packet.len
+                #data['frame.time_epoch'] = packet.time
+            if IP in packet:
+                data['ip.len'] = packet[IP].len
+                data['ip.ttl'] = packet[IP].ttl
+                data['ip.proto'] = packet[IP].proto
+                data['ip.version'] = packet[IP].version
+            if TCP in packet:
+                data['tcp.srcport'] = packet[TCP].sport
+                data['tcp.dstport'] = packet[TCP].dport
+                data['tcp.len'] = len(packet[TCP].payload)
+                data['tcp.seq'] = packet[TCP].seq
+                data['tcp.flags.ack'] = 1 if packet[TCP].flags.A else 0
+                data['tcp.flags.fin'] = 1 if packet[TCP].flags.F else 0
+                data['tcp.flags.reset'] = 1 if packet[TCP].flags.R else 0
+                data['tcp.window_size'] = packet[TCP].window
+                #data['tcp.stream'] = packet[TCP].options if packet[TCP].options else '<unknown>'
+            if UDP in packet:
+                data['udp.srcport'] = packet[UDP].sport
+                data['udp.dstport'] = packet[UDP].dport
+                data['udp.length'] = packet[UDP].len
+            if DNS in packet:  # Use DNS class directly, not a string
+                if packet[DNS].qd:  # Access the DNS layer directly
+                    data['dns.qry.type'] = packet[DNS].qd.qtype
+                data['dns.flags.response'] = 1 if packet[DNS].qr else 0
+                data['dns.flags.recdesired'] = 1 if packet[DNS].rd else 0
+            
+            #print(data)
+
+            # Return as a DataFrame
+            return pd.DataFrame([data])
+        except Exception as e:
+            print(f"Error processing packet to dataframe function: {e}")
+    
+    def encodePacket(self, data):
+        try:
+            for col in data.select_dtypes(include=['object']).columns:
+                #unique_count = data[col].nunique()
+                #print(f"Processing column: {col} | Unique values: {unique_count} im in encodePacket")
+
+                # For high-cardinality columns, use Label Encoding
+                #print(data[col])
+                data[col] = self.le.transform(data[col].astype(str))
+            
+            return data
+        except Exception as e:
+            print(f"Error encodePacket function: {e}")
+    
+    def encode(self, data):
+        try:
+            # Programmatically identify all checksum columns and set up irrelevant columns for dropping
+            drop_columns = ['frame.time_epoch', 'tcp.stream']
+
+            # Fill missing values with placeholders
+            data = data.fillna('<unknown>')
+
+            # Drop irrelevant columns
+            data = data.drop(columns=[col for col in drop_columns if col in data.columns], axis=1)
+
+            # Split into features (X) and target (y)
+            X = data.drop(columns=['alert'], axis=1, errors='ignore')
+            y = data['alert']
+
+            # Split into training and testing sets
+            X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+            # Fit and encode the train data
+            for col in X_train.select_dtypes(include=['object']).columns:
+                #unique_count = data[col].nunique()
+                #print(f"Processing column: {col} | Unique values: {unique_count} im in encode")
+
+                # For high-cardinality columns, use Label Encoding
+                X_train[col] = self.le.fit_transform(X_train[col].astype(str))
+                #print(self.le.classes_)
+            y_train = self.le.fit_transform(y_train.astype(str))
+            #print(self.le.classes_)
+
+            #map unknown data
+            for col in X_test.select_dtypes(include=['object']).columns:
+                X_test[col] = X_test[col].map(lambda s: '<unknown>' if s not in self.le.classes_ else s)
+            y_test = y_test.map(lambda s: '<unknown>' if s not in self.le.classes_ else s)
+            
+            self.le.classes_ = np.append(self.le.classes_, '<unknown>')
+            #labelHeaders = list(self.le.classes_)
+            #print(labelHeaders)
+
+            #encode test data according to fitted label encoder
+            for col in X_test.select_dtypes(include=['object']).columns:
+                #unique_count = data[col].nunique()
+                #print(f"Processing column: {col} | Unique values: {unique_count}")
+                X_test[col] = self.le.transform(X_test[col].astype(str))
+            print(y_test)
+            y_test = self.le.transform(y_test.astype(str))
+
+
+            return X_train, y_train, X_test, y_test
+        except Exception as e:
+            print(f"Error encode function: {e}")
     
 class PacketSnifferThread(QThread):
     packet_captured = pyqtSignal(object)
@@ -907,7 +957,7 @@ class PacketSnifferThread(QThread):
     def run(self):
         try:
             global packetInput, packetFile, packetIndex
-            #print(packetInput)
+            print(packetInput)
             print("GOOGOO")
             window.packets.clear()
             window.tableWidget.setRowCount(0)
@@ -955,17 +1005,14 @@ class Naswail(QMainWindow, Ui_MainWindow):
         self.scene = QGraphicsScene(self)
         self.total_inside_packets=0
         self.total_outside_packets=0
-        self.time_series = {}
         #objects
        # Initialize PacketSystem and SensorSystem without passing each other directly
         self.PacketSystemobj = PacketSystem(self)
         self.SensorSystemobj = SensorSystem(self)
         self.Appsystemobj = ApplicationsSystem(self)
-        self.MLMobj = MachineLearningModels(self)
         # Now link them after both are created
         self.SensorSystemobj.set_packet_system(self.PacketSystemobj)
         self.PacketSystemobj.set_sensor_system(self.SensorSystemobj)
-        self.PacketSystemobj.set_mlm_system(self.MLMobj)
         self.Appsystemobj.set_packet_system(self.PacketSystemobj)
         #
         #Logo Image
@@ -989,7 +1036,7 @@ class Naswail(QMainWindow, Ui_MainWindow):
         self.tableWidget_3.cellClicked.connect(self.Appsystemobj.analyze_app)
         self.tableWidget_4.setColumnCount(4)
         self.tableWidget_4.setHorizontalHeaderLabels(["Timestamp", "Source", "Destination", "Protocol"])
-        #self.tableWidget_4.cellClicked.connect(self.Appsystemobj.analyze_app)
+        self.tableWidget_4.cellClicked.connect(self.Appsystemobj.analyze_app)
         self.pushButton_5.clicked.connect(self.toggleCapture)
         self.pushButton_6.clicked.connect(self.toggleCapture)
         self.pushButton_7.clicked.connect(self.SensorSystemobj.toggleSenFlag)
@@ -1100,8 +1147,8 @@ class Naswail(QMainWindow, Ui_MainWindow):
             self.label_6.setText(str(self.elapsedTime))
             global packetInput, packetFile, packetIndex
             if self.PacketSystemobj.process_packet_index<len(self.PacketSystemobj.qued_packets)and self.PacketSystemobj.pcap_process_packet_index<len(self.PacketSystemobj.qued_packets):
-
                 self.PacketSystemobj.process_packet()
+                self.PacketSystemobj.Packet_Statistics()
         except Exception as e:
             print(f"Error in tick function: {e}")
 
@@ -1127,7 +1174,9 @@ class Naswail(QMainWindow, Ui_MainWindow):
                     self.PacketSystemobj.qued_packets.clear()
                     self.PacketSystemobj.process_packet_index=0
                     self.PacketSystemobj.pcap_process_packet_index=0
-                    
+                    self.PacketSystemobj.tot_icmp_packets=0
+                    self.PacketSystemobj.tot_tcp_packets=0
+                    self.PacketSystemobj.tot_udp_packets=0
                     
                 elif ext == '.csv':
                     packetInput = 2
@@ -1148,6 +1197,10 @@ class Naswail(QMainWindow, Ui_MainWindow):
         try:
             global packetIndex, packetInput, packetFile
             packetInput = 0
+            self.PacketSystemobj.packets.clear()
+            self.PacketSystemobj.qued_packets.clear()
+            self.PacketSystemobj.process_packet_index=0
+            self.PacketSystemobj.pcap_process_packet_index=0
             packetFile = ""
             self.sniffer_thread.quit()  # Stops the current thread
             self.sniffer_thread.wait()  # Wait for the thread to finish
