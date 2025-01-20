@@ -1,4 +1,4 @@
-# Form implementation generated from reading ui file 'tool.ui'
+# Form implementation generated from reading ui file 'toolup.ui'
 #
 # Created by: PyQt6 UI code generator 6.7.1
 #
@@ -1476,7 +1476,6 @@ class Ui_Naswail_Tool(object):
 "        background-color: #263238;\n"
 "}\n"
 "\n"
-
 "")
         self.horizontalLayoutWidget = QtWidgets.QWidget(parent=Naswail_Tool)
         self.horizontalLayoutWidget.setGeometry(QtCore.QRect(240, 20, 1031, 41))
@@ -1506,7 +1505,7 @@ class Ui_Naswail_Tool(object):
         self.graphicsView.setGeometry(QtCore.QRect(10, 20, 71, 61))
         self.graphicsView.setObjectName("graphicsView")
         self.scrollArea = QtWidgets.QScrollArea(parent=Naswail_Tool)
-        self.scrollArea.setGeometry(QtCore.QRect(20, 80, 1511, 3381))
+        self.scrollArea.setGeometry(QtCore.QRect(30, 90, 1511, 3381))
         self.scrollArea.setMinimumSize(QtCore.QSize(1000, 0))
         self.scrollArea.setLineWidth(1)
         self.scrollArea.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarPolicy.ScrollBarAlwaysOn)
@@ -1551,7 +1550,7 @@ class Ui_Naswail_Tool(object):
 "")
         self.label_15.setObjectName("label_15")
         self.tableWidget_3 = QtWidgets.QTableWidget(parent=self.scrollAreaWidgetContents)
-        self.tableWidget_3.setGeometry(QtCore.QRect(80, 90, 1131, 501))
+        self.tableWidget_3.setGeometry(QtCore.QRect(80, 90, 641, 501))
         self.tableWidget_3.setObjectName("tableWidget_3")
         self.tableWidget_3.setColumnCount(0)
         self.tableWidget_3.setRowCount(0)
@@ -1571,10 +1570,8 @@ class Ui_Naswail_Tool(object):
         self.tableWidget_6 = QtWidgets.QTableWidget(parent=self.scrollAreaWidgetContents)
         self.tableWidget_6.setGeometry(QtCore.QRect(100, 1770, 1131, 501))
         self.tableWidget_6.setObjectName("tableWidget_6")
-        self.tableWidget_6.setColumnCount(11)
+        self.tableWidget_6.setColumnCount(0)
         self.tableWidget_6.setRowCount(0)
-        self.tableWidget.setHorizontalHeaderLabels(["Timestamp", "Source", "Destination", "Protocol","layer","macsrc","macdst","srcport","dstport","length","IP version"])
-
         self.tabWidget = QtWidgets.QTabWidget(parent=self.scrollAreaWidgetContents)
         self.tabWidget.setGeometry(QtCore.QRect(220, 2280, 871, 311))
         self.tabWidget.setObjectName("tabWidget")
@@ -1808,17 +1805,18 @@ class Ui_Naswail_Tool(object):
         self.listView_3.setGeometry(QtCore.QRect(0, 0, 861, 271))
         self.listView_3.setObjectName("listView_3")
         self.tabWidget_3.addTab(self.tab_6, "")
-        self.comboBox_4 = QtWidgets.QComboBox(parent=self.scrollAreaWidgetContents)
-        self.comboBox_4.setGeometry(QtCore.QRect(346, 640, 511, 41))
-        self.comboBox_4.setObjectName("comboBox_4")
-        self.comboBox_4.addItem("")
-        self.comboBox_4.addItem("")
-        self.pushButton_7 = QtWidgets.QPushButton(parent=self.scrollAreaWidgetContents)
-        self.pushButton_7.setGeometry(QtCore.QRect(550, 710, 93, 28))
-        self.pushButton_7.setObjectName("pushButton_7")
-        self.label_29 = QtWidgets.QLabel(parent=self.scrollAreaWidgetContents)
-        self.label_29.setGeometry(QtCore.QRect(464, 610, 291, 20))
-        self.label_29.setObjectName("label_29")
+        self.widget = QtWidgets.QWidget(parent=self.scrollAreaWidgetContents)
+        self.widget.setGeometry(QtCore.QRect(730, 90, 651, 341))
+        self.widget.setObjectName("widget")
+        self.label_5 = QtWidgets.QLabel(parent=self.scrollAreaWidgetContents)
+        self.label_5.setGeometry(QtCore.QRect(750, 440, 131, 21))
+        self.label_5.setObjectName("label_5")
+        self.lineEdit = QtWidgets.QLineEdit(parent=self.scrollAreaWidgetContents)
+        self.lineEdit.setGeometry(QtCore.QRect(750, 470, 113, 21))
+        self.lineEdit.setObjectName("lineEdit")
+        self.pushButton = QtWidgets.QPushButton(parent=self.scrollAreaWidgetContents)
+        self.pushButton.setGeometry(QtCore.QRect(750, 510, 84, 23))
+        self.pushButton.setObjectName("pushButton")
         self.scrollArea.setWidget(self.scrollAreaWidgetContents)
 
         self.retranslateUi(Naswail_Tool)
@@ -1882,10 +1880,8 @@ class Ui_Naswail_Tool(object):
         self.tabWidget_3.setTabText(self.tabWidget_3.indexOf(self.tab_5), _translate("Naswail_Tool", "Packet Filter"))
         self.tabWidget_3.setTabText(self.tabWidget_3.indexOf(self.tab_7), _translate("Naswail_Tool", "Decode"))
         self.tabWidget_3.setTabText(self.tabWidget_3.indexOf(self.tab_6), _translate("Naswail_Tool", "Packet Details"))
-        self.comboBox_4.setItemText(0, _translate("Naswail_Tool", "Packet"))
-        self.comboBox_4.setItemText(1, _translate("Naswail_Tool", "Bandwidth"))
-        self.pushButton_7.setText(_translate("Naswail_Tool", "Apply"))
-        self.label_29.setText(_translate("Naswail_Tool", "                        Predict By:"))
+        self.label_5.setText(_translate("Naswail_Tool", "Enter Number of Hours:"))
+        self.pushButton.setText(_translate("Naswail_Tool", "Predict"))
 
 
 if __name__ == "__main__":
