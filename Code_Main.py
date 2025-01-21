@@ -611,6 +611,7 @@ class PacketSystem:
                 self.ui.tableWidget.setItem(row_position, 10, QTableWidgetItem("Blocked"))
             else:
                 self.packets.append(packet)
+                self.verify_packet_checksum(packet)
                 protocol = self.get_protocol(packet)
                 if protocol == "icmp":
                     self.tot_icmp_packets += 1
