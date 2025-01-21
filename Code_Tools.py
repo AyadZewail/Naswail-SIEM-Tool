@@ -376,10 +376,8 @@ class ErrorPacketSystem:
         def display(self):
                 try:
                     self.ui.tableWidget_6.setRowCount(0)
-                    for packet in self.packetobj.packets:
-                            isinvalid=self.packetobj.verify_packet_checksum(packet)
-                            if(isinvalid==False):
-                                  return
+                    for packet in self.packetobj.corrupted_packet:
+                            
                             #print("in error packet")
                             src_ip = packet["IP"].src if packet.haslayer("IP") else "N/A"
                             dst_ip = packet["IP"].dst if packet.haslayer("IP") else "N/A"
@@ -477,13 +475,13 @@ class Window_Tools(QWidget, Ui_Naswail_Tool):
 
     def ttTime(self):
         """Call the display method of the ErrorPacketSystem every second."""
-        #self.ErrorPacketSystemobj.display()
-        #self.SuAn.display()
+        self.ErrorPacketSystemobj.display()
+        self.SuAn.display()
         if(self.sec % 30 == 0):
-            #self.RegPred.pred_traffic(self.main_window.time_series)
+            self.RegPred.pred_traffic(self.main_window.time_series)
             if(self.RegPred.r2 > 0.50):
-                #self.RegPred.display()
-                #self.RegPred.display_graph()
+                self.RegPred.display()
+                self.RegPred.display_graph()
                 pass
         self.sec += 1
 
