@@ -23,6 +23,9 @@ from sklearn.metrics import mean_squared_error, r2_score, accuracy_score
 from sklearn.preprocessing import LabelEncoder
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
+from matplotlib.patches import Wedge
+from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
+from math import cos, sin, pi
 from datetime import datetime, timedelta
 from UI_Main import Ui_MainWindow
 from Code_Analysis import Window_Analysis
@@ -142,7 +145,7 @@ class SensorSystem:
         self.packet_obj = None  # Delay initialization
         self.ct_sensor_packet=[]    
         self.sensors = {}
-        self.show_donut_chart()
+        
 
     def set_packet_system(self, packet_obj):
         """Set the packet system after both are initialized."""
@@ -220,6 +223,7 @@ class SensorSystem:
             print("error in update sensor function")
     def displaySensorTable(self):
         try:
+            
             self.show_donut_chart
             self.ui.tableWidget_2.setRowCount(0)
             for name, mac in self.sensors.items():
@@ -232,6 +236,9 @@ class SensorSystem:
         
     def show_donut_chart(self):
         try:
+            if  self.packet_obj.typeOFchartToPlot==0:
+                self.ui.graphicsView_2.setScene(None)
+                return
             # Data for the chart
             sizes = [1]  # Percentages
             labels = ['']  # Empty labels to hide text
@@ -272,8 +279,9 @@ class SensorSystem:
             scene.setBackgroundBrush(Qt.GlobalColor.transparent)  # Ensure the scene background is transparent
             scene.addWidget(canvas)
             self.ui.graphicsView_2.setScene(scene)
-        except:
-            print("error in show donut chart function")
+            plt.close(fig)
+        except Exception as e:
+            print(f"error in show donut chart function:{e}")
     def toggleSenFlag(self):
         try:
             self.senFlag *= -1
@@ -364,6 +372,9 @@ class PacketSystem:
         self.tot_tcp_packets = 0
         self. tot_udp_packets = 0
         self.tot_icmp_packets = 0
+        self.rate_of_packets=0
+        self.recently_qued_packets=0
+        self.typeOFchartToPlot=0
         #machine learning stuff
         self.le = LabelEncoder()
         self.train = pd.read_csv('TrainATest2.csv', low_memory=False)
@@ -379,13 +390,103 @@ class PacketSystem:
     def set_sensor_system(self, sensor_obj):
         """Set the sensor system after both are initialized."""
         self.sensor_obj = sensor_obj
-    
+    def draw_gauge(self):
+        if self.sensor_obj.senFlag == 1 or self.sensor_obj.singleSenFlag == 1:
+            self.typeOFchartToPlot=1
+            
+        if self.typeOFchartToPlot == 1:
+            self.ui.graphicsView_2.setScene(None)
+            self.sensor_obj.show_donut_chart()
+            return
+
+        # Clear the existing scene in graphicsView_2
+        view_width = self.ui.graphicsView_2.width()
+        view_height = self.ui.graphicsView_2.height()
+
+        # Calculate the figure size based on the graphics view size (in inches, assuming 100 DPI)
+        dpi = 100
+        fig_width = view_width / dpi
+        fig_height = view_height / dpi
+
+        # Create a Matplotlib figure with the calculated size
+        fig = Figure(figsize=(fig_width, fig_height), dpi=dpi)
+        ax = fig.add_subplot(111, polar=True)
+
+        # Make the background transparent
+        fig.patch.set_alpha(0)  # Transparent figure background
+        ax.set_facecolor("none")  # Transparent axis background
+
+        # Gauge chart settings
+        start_angle = -np.pi / 2  # Start angle (90 degrees counter-clockwise)
+        end_angle = np.pi / 2     # End angle (90 degrees clockwise)
+
+        # Define the range and current value
+        min_value = 0
+        max_value = 1000
+        current_value = max(min(self.rate_of_packets, max_value), min_value)  # Clamp value between 0 and 1000
+
+        # Compute the needle angle
+        angle = start_angle + (current_value / max_value) * (end_angle - start_angle)
+
+        # Draw the gauge sections with colors
+        sections = [
+            (0, 0.1667, 'lightskyblue'),
+    (0.1667, 0.3333, 'deepskyblue'),
+    (0.3333, 0.5, 'dodgerblue'),
+    (0.5, 0.6667, 'blue'),
+    (0.6667, 0.8333, 'mediumblue'),
+    (0.8333, 1, 'darkblue')
+        ]
+        for start, end, color in sections:
+            theta = np.linspace(start_angle + start * (end_angle - start_angle),
+                                start_angle + end * (end_angle - start_angle), 500)
+            r = np.ones_like(theta)
+            ax.fill_between(theta, 0, r, color=color, alpha=0.5)
+
+        # Draw the gauge arc (only the top half)
+        theta = np.linspace(start_angle, end_angle, 500)
+        r = np.ones_like(theta)
+        ax.plot(theta, r, color='black', lw=2)
+
+        # Draw the needle
+        ax.plot([start_angle, angle], [0, 0.9], color='black', lw=3)
+
+        # Add numbers to the gauge
+        for value in range(0, 1100, 100):
+            theta = start_angle + (value / max_value) * (end_angle - start_angle)
+            ax.text(theta, 1.1, str(value), horizontalalignment='center', verticalalignment='center', fontsize=8, color='black')
+
+        # Set the limits for the polar plot to the top half only
+        ax.set_ylim(0, 1)
+        ax.set_xlim(start_angle, end_angle)
+
+        # Remove grid and ticks
+        ax.grid(False)
+        ax.set_yticks([])
+        ax.set_xticks([])
+
+        # Remove polar labels
+        ax.set_theta_zero_location('N')
+        ax.set_theta_direction(-1)
+
+        # Embed Matplotlib figure into QGraphicsView
+        canvas = FigureCanvas(fig)
+        canvas.setStyleSheet("background: transparent;")  # Set transparent background for canvas
+        scene = QGraphicsScene()
+        scene.addWidget(canvas)
+        self.ui.graphicsView_2.setScene(scene)
+        self.ui.graphicsView_2.setStyleSheet("background: transparent;")
+        self.ui.graphicsView_2.show()
+        plt.close(fig)
+
     def put_packet_in_queue(self, packet):
         try:
             global packetInput
             if packetInput == 0:
                 self.qued_packets.append(packet)
+                self.recently_qued_packets+=1
             if packetInput == 1:
+                self.recently_qued_packets+=1
                 self.qued_packets.append(packet)            
         except Exception as e:
             print(f"Error putting packet in queue: {e}")
@@ -477,6 +578,12 @@ class PacketSystem:
         except Exception as e:
             print(f"Error in Packet_Statistics function: {e}")
 
+    def change_chart(self,index):#function for changing beteen guage and donut chart
+        if index==1:
+            self.typeOFchartToPlot=1
+            self.sensor_obj.show_donut_chart()
+        else:
+            self.typeOFchartToPlot=0
 
     def process_packet(self):
         try:
@@ -996,6 +1103,7 @@ class Naswail(QMainWindow, Ui_MainWindow):
         #line edit related bug fix
         self.filterapplied=False
         #
+        self.typeOFchartToPlot=0#0 represents the guage charrt while 1 represents the donut chart
         self.pushButton.clicked.connect(self.resetfilter)
         self.packets = []
         self.times = []
@@ -1016,6 +1124,7 @@ class Naswail(QMainWindow, Ui_MainWindow):
         self.PacketSystemobj.set_sensor_system(self.SensorSystemobj)
         self.Appsystemobj.set_packet_system(self.PacketSystemobj)
         #
+        self.PacketSystemobj.draw_gauge()
         #Logo Image
         pixmap = QPixmap(r"logo.jpg")
         self.pixmap_item = QGraphicsPixmapItem(pixmap)
@@ -1027,6 +1136,7 @@ class Naswail(QMainWindow, Ui_MainWindow):
         self.tableWidget.setHorizontalHeaderLabels(["Timestamp", "Source", "Destination", "Protocol","layer","macsrc","macdst","srcport","dstport","length","IP version"])
         self.tableWidget.cellClicked.connect(self.PacketSystemobj.display_packet_details)
         self.tableWidget.cellClicked.connect(self.PacketSystemobj.decode_packet)
+        self.tabWidget.currentChanged.connect(lambda index: self.PacketSystemobj.change_chart(1) if index == 2 else self.PacketSystemobj.change_chart(0))
         self.tabWidget.currentChanged.connect(lambda index: self.Appsystemobj.get_applications_with_ports() if index == 3 else None)
         self.tabWidget.currentChanged.connect(lambda index: self.PacketSystemobj.Packet_Statistics() if index == 5 else None)
         self.tableWidget_2.setColumnCount(2)
@@ -1065,9 +1175,13 @@ class Naswail(QMainWindow, Ui_MainWindow):
         self.sniffer_thread.start()
         self.stats_timer = QTimer()
         self.stats_timer.timeout.connect(self.tick)
+
         self.num=100
       
         self.stats_timer.start(100 )
+        self.packet_per_seconds_timer = QTimer()
+        self.packet_per_seconds_timer.timeout.connect(self.ppsttick)
+        self.packet_per_seconds_timer.start(1000)
         self.ct = 0
         self.pushButton_2.clicked.connect(self.open_analysis)
         self.pushButton_3.clicked.connect(self.open_tool)
@@ -1113,6 +1227,7 @@ class Naswail(QMainWindow, Ui_MainWindow):
                 print(f"Error in open_analysis function: {e}")
     def resetfilter(self):
         try:
+            self.PacketSystemobj.typeOFchartToPlot=0
             self.PacketSystemobj.process_packet_index=0
             self.PacketSystemobj.pcap_process_packet_index=0
             self.tableWidget.setRowCount(0)
@@ -1120,6 +1235,7 @@ class Naswail(QMainWindow, Ui_MainWindow):
             self.PacketSystemobj.application_filter_flag=False
             self.SensorSystemobj.senFlag = -1 
             self.SensorSystemobj.singleSenFlag = -1
+            self.PacketSystemobj.draw_gauge()
             checkboxes = [
                 self.checkBox,
                 self.checkBox_2,
@@ -1137,6 +1253,13 @@ class Naswail(QMainWindow, Ui_MainWindow):
             self.PacketSystemobj.filterapplied = False
         except Exception as e:
             print(f"Error in resetfilter function: {e}")
+    def ppsttick(self):
+        try:
+            self.PacketSystemobj.rate_of_packets=self.PacketSystemobj.recently_qued_packets/1
+            self.PacketSystemobj.recently_qued_packets=0
+            self.PacketSystemobj.draw_gauge()
+        except Exception as e:
+            print(f"Error in ppsttick function: {e}")
     def tick(self):
         try:
             current_time = QTime.currentTime()
