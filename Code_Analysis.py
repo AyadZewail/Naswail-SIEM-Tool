@@ -17,13 +17,108 @@ from sklearn.linear_model import LinearRegression
 from sklearn.tree import DecisionTreeRegressor
 from sklearn.metrics import mean_squared_error, r2_score
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
+import networkx as nx
 from matplotlib.figure import Figure
 import matplotlib.pyplot as plt
 from datetime import datetime, timedelta
 from UI_Analysis import Ui_Naswail_Anlaysis
 from Code_Tools import Window_Tools
+class Node:
+    def __init__(self):
+        self.mac_address = ""
+        self.edges = set()  # List of connected MAC addresses
 
-class visualization:
+
+class NetworkTopologyVisualizer:
+    def __init__(self,packetobj, ui):
+        self.ui = ui
+        self.list_of_nodes = []
+        self.packetobj=packetobj
+        # Layout for self.ui.widget_6
+        self.layout = QVBoxLayout(self.ui.widget_6)
+
+        # Placeholder for the matplotlib figure
+        self.figure = plt.figure()
+        self.canvas = FigureCanvas(self.figure)
+        self.layout.addWidget(self.canvas)
+
+        self.find_unique_devices_and_edges()
+        self.visualize_network()
+
+    def find_unique_devices_and_edges(self):
+        try:
+            unique_macs = set()
+            for packet in self.packetobj.packets:
+                src_mac = packet["Ethernet"].src if packet.haslayer("Ethernet") else "N/A"
+                dst_mac = packet["Ethernet"].dst if packet.haslayer("Ethernet") else "N/A"
+                
+                # Add the MAC addresses to the set if they exist
+                if src_mac:
+                    unique_macs.add(src_mac)
+                if dst_mac:
+                    unique_macs.add(dst_mac)
+            #end of for loop for finding unique mac
+            for mac in unique_macs:
+                newnode=Node()
+                newnode.mac_address=mac
+                self.list_of_nodes.append(newnode)
+            #end of creating nodes
+            for currentnode in self.list_of_nodes:
+                for packet in self.packetobj.packets:
+                    src_mac = packet["Ethernet"].src if packet.haslayer("Ethernet") else "N/A"
+                    dst_mac = packet["Ethernet"].dst if packet.haslayer("Ethernet") else "N/A"
+                    if src_mac==currentnode.mac_address:
+                        currentnode.edges.add(dst_mac)
+                    if dst_mac==currentnode.mac_address:
+                        currentnode.edges.add(src_mac)
+                #end of packets
+            #end of for loop for finding the connections
+        except Exception as e:
+            print(f"Error in unique mac function: {e}")
+    
+    def visualize_network(self):
+        # Create a graph
+        G = nx.Graph()
+
+        # Add nodes and edges to the graph
+        pos = {}  # Dictionary to store node positions
+        for i, node in enumerate(self.list_of_nodes):
+            G.add_node(node.mac_address)
+            # Assign random 3D positions (or use a specific logic for positions)
+            pos[node.mac_address] = (i, i % 2, i // 2)
+
+            # Add edges based on the node's connections
+            for connected_mac in node.edges:
+                G.add_edge(node.mac_address, connected_mac)
+
+        # Create a 3D plot
+        ax = self.figure.add_subplot(111, projection='3d')
+        self.figure.patch.set_alpha(0.0)  # Set figure background to transparent
+        ax.set_facecolor((0, 0, 0, 0))  # Set axis background to transparent
+
+        # Draw the edges
+        for edge in G.edges():
+            x = [pos[edge[0]][0], pos[edge[1]][0]]
+            y = [pos[edge[0]][1], pos[edge[1]][1]]
+            z = [pos[edge[0]][2], pos[edge[1]][2]]
+            ax.plot(x, y, z, color='black')
+
+        # Draw the nodes
+        for mac_address, (x, y, z) in pos.items():
+            ax.scatter(x, y, z, s=100, label=mac_address)
+
+        # Set labels
+        ax.set_xlabel('X')
+        ax.set_ylabel('Y')
+        ax.set_zlabel('Z')
+
+        # Display legend if nodes exist
+        if self.list_of_nodes:
+            ax.legend()
+
+        # Refresh the canvas
+        self.canvas.draw()
+class visualization:#class for all the charts
     def __init__(self,main_window,ui):
         self.main_window=main_window
         self.ui=ui
@@ -739,7 +834,7 @@ class Window_Analysis(QWidget, Ui_Naswail_Anlaysis):
         self.ui.setupUi(self)  # Set up the UI for this widget
         self.init_ui()
         self.Visualizationobj=visualization(self.main_window,self.ui)
-
+        self.ThreeDVisulizationobj=NetworkTopologyVisualizer(self.main_window.PacketSystemobj,self.ui)
     def init_ui(self):
         self.setWindowTitle("Secondary Widget")
         self.showMaximized()
