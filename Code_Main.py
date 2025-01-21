@@ -31,7 +31,6 @@ from UI_Main import Ui_MainWindow
 from Code_Analysis import Window_Analysis
 from Code_Tools import Window_Tools
 
-time_series = {}
 packetInput = 0
 packetFile = None
 clearRead = 0 
@@ -699,7 +698,7 @@ class PacketSystem:
 
                         self.pcap_process_packet_index+=1
                 
-            time_series[timestamp] = len(self.packets)
+            window.time_series[timestamp] = len(self.packets)
 
             if len(self.bandwidth_data) == 0 or self.bandwidth_data[-1][0] != readable_time:
                 self.bandwidth_data.append((readable_time, len(packet)))
@@ -1114,6 +1113,7 @@ class Naswail(QMainWindow, Ui_MainWindow):
         self.scene = QGraphicsScene(self)
         self.total_inside_packets=0
         self.total_outside_packets=0
+        self.time_series = {}
         #objects
        # Initialize PacketSystem and SensorSystem without passing each other directly
         self.PacketSystemobj = PacketSystem(self)
