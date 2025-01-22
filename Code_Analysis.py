@@ -84,7 +84,7 @@ class NetworkTopologyVisualizer:
         pos = {}  # Dictionary to store node positions
         for i, node in enumerate(self.list_of_nodes):
             G.add_node(node.mac_address)
-            # Assign random 3D positions (or use a specific logic for positions)
+            # Assign random 3D positions
             pos[node.mac_address] = (i, i % 2, i // 2)
 
             # Add edges based on the node's connections
@@ -104,8 +104,15 @@ class NetworkTopologyVisualizer:
             ax.plot(x, y, z, color='black')
 
         # Draw the nodes
+        i=1
         for mac_address, (x, y, z) in pos.items():
-            ax.scatter(x, y, z, s=100, label=mac_address)
+            lab = "device "+i.__str__()+":  "+mac_address
+            i+=1
+            for name,mac in self.packetobj.sensor_obj.sensors.items():
+                if mac == mac_address:
+                    lab = name+": "+mac  # Use the name if it matches
+                    break  # Stop checking once a match is found
+            ax.scatter(x, y, z, s=100, label=lab)
 
         # Set labels
         ax.set_xlabel('X')
@@ -114,10 +121,15 @@ class NetworkTopologyVisualizer:
 
         # Display legend if nodes exist
         if self.list_of_nodes:
-            ax.legend()
+             ax.legend(
+        
+        bbox_to_anchor=(1.45, 1.05),  # Move the legend to the right and slightly higher
+        borderaxespad=0.0  # Padding between the legend and the axes
+    )
 
         # Refresh the canvas
         self.canvas.draw()
+        plt.close()
 class visualization:#class for all the charts
     def __init__(self,main_window,ui):
         self.main_window=main_window
@@ -867,10 +879,14 @@ class Window_Analysis(QWidget, Ui_Naswail_Anlaysis):
         print(f"Selected option: {self.selected_option}")  # Debugging output
     def show_main_window(self):
         """Show the main window and hide this widget."""
+        self.ThreeDVisulizationobj.find_unique_devices_and_edges()
+        self.ThreeDVisulizationobj.visualize_network()
         self.main_window.show()
         self.hide()
     def show_tools_window(self):
         """Show the tools window and hide this widget."""
+        self.ThreeDVisulizationobj.find_unique_devices_and_edges()
+        self.ThreeDVisulizationobj.visualize_network()
         self.secondary_widget2 = Window_Tools(self.main_window)
         self.hide()
         self.secondary_widget2.show()
