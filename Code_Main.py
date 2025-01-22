@@ -25,6 +25,8 @@ from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 from matplotlib.patches import Wedge
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
+
+import networkx as nx
 from math import cos, sin, pi
 from datetime import datetime, timedelta
 from UI_Main import Ui_MainWindow
@@ -86,7 +88,7 @@ class ApplicationsSystem:
         try:
             self.packet_obj.application_filter_flag = True
             target_app = self.apps[row]
-            self.ui.tableWidget.setRowCount(0)
+            self.ui.tableWidget.setRowCount(0) 
 
             self.filtered_packets = []
             for packet in self.packet_obj.packets:
@@ -361,6 +363,7 @@ class PacketSystem:
         self.inside_packets = 0
         self.outside_packets = 0
         self.inside_percentage = 0
+        self.networkLog=""
         self.filterapplied = False
         self.application_filter_flag=False
         self.packet_stats = {"total": 0, "tcp": 0, "udp": 0, "icmp": 0}
@@ -668,6 +671,8 @@ class PacketSystem:
                     anomalyCheck = self.anmodel.predict(formattedPacket2)
                     if(anomalyCheck.item()):
                         self.anomalies.append(packet)
+                        current_time = datetime.now().strftime("%H:%M:%S")
+                        self.networkLog+=current_time+"/  "+"An anomaly occured"+"\n"
                         row_position = self.ui.tableWidget_4.rowCount()
                         self.ui.tableWidget_4.insertRow(row_position)
                         self.ui.tableWidget_4.setItem(row_position, 0, QTableWidgetItem(readable_time))
@@ -795,6 +800,21 @@ class PacketSystem:
             print(f"Error getting protocol: {e}")
             return "N/A"
 
+    def display_log(self):
+        try:
+                detailslist = self.networkLog.split("\n")
+                model = QStringListModel()
+                model.setStringList(detailslist)
+                self.ui.listView_5.setModel(model)
+        except Exception as e:
+            print(f"Error displaying log: {e}")
+    def save_log_to_file(self):
+        try:
+            with open("network_log.txt", "w", encoding="utf-8") as log_file:
+                log_file.write(self.networkLog)
+            print("Log saved successfully to 'network_log.txt'.")
+        except Exception as e:
+            print(f"Error saving log to file: {e}")
 
     def display_packet_details(self, row, column):
         try:
@@ -1140,6 +1160,7 @@ class Naswail(QMainWindow, Ui_MainWindow):
         self.tabWidget.currentChanged.connect(lambda index: self.PacketSystemobj.change_chart(1) if index == 2 else self.PacketSystemobj.change_chart(0))
         self.tabWidget.currentChanged.connect(lambda index: self.Appsystemobj.get_applications_with_ports() if index == 3 else None)
         self.tabWidget.currentChanged.connect(lambda index: self.PacketSystemobj.Packet_Statistics() if index == 5 else None)
+        self.tabWidget.currentChanged.connect(lambda index: self.PacketSystemobj.display_log() if index == 7 else None)
         self.tableWidget_2.setColumnCount(2)
         self.tableWidget_2.setHorizontalHeaderLabels(["Name", "IP"])
         self.tableWidget_2.cellClicked.connect(self.SensorSystemobj.filter_sensors)
@@ -1159,6 +1180,7 @@ class Naswail(QMainWindow, Ui_MainWindow):
         self.buttonBox_2.rejected.connect(lambda _: self.SensorSystemobj.updateSensor(2))
         self.pushButton_10.clicked.connect(lambda _: self.PacketSystemobj.updateBlacklist(1))
         self.pushButton_11.clicked.connect(lambda _: self.PacketSystemobj.updateBlacklist(2))
+        self.pushButton_12.clicked.connect(lambda _:self.PacketSystemobj.save_log_to_file())
         # Connect checkboxes to the apply_filter method
         self.checkBox.stateChanged.connect(self.PacketSystemobj.apply_filter)      # UDP
         self.checkBox_2.stateChanged.connect(self.PacketSystemobj.apply_filter)    # TCP
@@ -1257,6 +1279,15 @@ class Naswail(QMainWindow, Ui_MainWindow):
     def ppsttick(self):
         try:
             self.PacketSystemobj.rate_of_packets=self.PacketSystemobj.recently_qued_packets/1
+            if self.PacketSystemobj.rate_of_packets>=100 and  self.PacketSystemobj.rate_of_packets<=300:
+                current_time = datetime.now().strftime("%H:%M:%S")
+                self.PacketSystemobj.networkLog+=current_time+"/  "+"moderately high increase in packets"+"\n"
+            if self.PacketSystemobj.rate_of_packets>=300 and  self.PacketSystemobj.rate_of_packets<=700:
+                current_time = datetime.now().strftime("%H:%M:%S")
+                self.PacketSystemobj.networkLog+=current_time+"/ "+" high increase in packets"+"\n"
+            if self.PacketSystemobj.rate_of_packets>=700:
+                current_time = datetime.now().strftime("%H:%M:%S")
+                self.PacketSystemobj.networkLog+=current_time+"/  "+" Extremely high increase in packets"+"\n"
             self.PacketSystemobj.recently_qued_packets=0
             self.PacketSystemobj.draw_gauge()
         except Exception as e:
