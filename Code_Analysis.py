@@ -199,8 +199,8 @@ class visualization:#class for all the charts
                     packet_stats.get("telnet", 0),
                     packet_stats.get("dns", 0),
                     packet_stats.get("dhcp", 0),
-                    packet_stats.get("total", 0)
-                    - sum(packet_stats.get(proto, 0) for proto in ["tcp", "udp", "icmp", "http", "https", "ftp", "telnet", "dns", "dhcp"]),
+                    packet_stats.get("other",0)
+                    
                 ]
 
                 # Create the histogram
@@ -751,7 +751,7 @@ class visualization:#class for all the charts
                 udp_count = packet_stats.get("udp", 0)
                 icmp_count = packet_stats.get("icmp", 0)
                 total_count = packet_stats.get("total", 0)
-                other_count = total_count - (tcp_count + udp_count + icmp_count)
+                other_count = packet_stats.get("other",0)
                 # Prepare data for the pie chart
                 labels = ["  TCP  ", "    UDP    ", "   ICMP   ", "  Other   "]
                 sizes = [tcp_count, udp_count, icmp_count, other_count]
