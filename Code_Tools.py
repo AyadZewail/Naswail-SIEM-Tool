@@ -26,14 +26,17 @@ class NetworkActivity:
     def __init__(self,ui):
         self.packetsysobj=None
         self.ui=ui
+        self.filecontent=""
     def set_packetobj(self, packetsysobj):
         self.packetsysobj=packetsysobj
     def display(self):
         try:
+            self.filecontent=""
             formatted_content=[]
             for list_of_activity in self.packetsysobj.list_of_activity:
                     loa=list_of_activity.activity
                     formatted_content.append(loa) 
+                    self.filecontent+=loa+"\n"
 
             model = QStringListModel()
             model.setStringList(formatted_content)
@@ -41,6 +44,12 @@ class NetworkActivity:
             self.ui.listView_2.setStyleSheet("QListView { font-size: 16px; }")
         except Exception as e:
             print(e) 
+    def save_activity(self):
+        try:
+            with open("Activity.txt", "w") as file:
+                file.write(self.filecontent)
+        except Exception as e:
+            print(e)
 class RegressionPrediction:
     def __init__(self,ui, packets):
         self.ui=ui
@@ -483,6 +492,7 @@ class Window_Tools(QWidget, Ui_Naswail_Tool):
         self.ui.checkBox_29.stateChanged.connect(self.SuAn.apply_filter)      # Other
         self.ui.pushButton_11.clicked.connect(self.SuAn.apply_filter)
         self.ui.pushButton_7.clicked.connect(self.networkactobj.display)
+        self.ui.pushButton_5.clicked.connect(self.networkactobj.save_activity)
         # Initialize and start the timer
         self.timer = QTimer(self)
         self.timer.timeout.connect(self.ttTime)
