@@ -972,11 +972,12 @@ class PacketSystem:
             # Check if all protocol filters are unchecked and both src and dst filters are empty
             src_filter = self.ui.lineEdit_2.text().strip()
             dst_filter = self.ui.lineEdit_5.text().strip()
+            port_filter=self.ui.lineEdit.text().strip()
             stime = self.ui.dateTimeEdit.dateTime().toSecsSinceEpoch()
             etime = self.ui.dateTimeEdit_2.dateTime().toSecsSinceEpoch()
 
                 # Check if all protocol filters are unchecked and both src and dst filters are empty
-            if not any(protocol_filters.values()) and not src_filter and not dst_filter and stime == 946677600 and etime == 946677600:
+            if not any(protocol_filters.values()) and not src_filter and not dst_filter and not port_filter and stime == 946677600 and etime == 946677600:
                     print("No protocols selected, and both source and destination filters are empty.")
                     self.ui.tableWidget.setRowCount(0)
                     self.helperboi()
@@ -991,6 +992,7 @@ class PacketSystem:
             # Get the source and destination IP filters
             src_filter = self.ui.lineEdit_2.text().strip()
             dst_filter = self.ui.lineEdit_5.text().strip()
+            port_filter=self.ui.lineEdit.text().strip()
             # Get ComboBox selection
             combo_selection = self.ui.comboBox.currentText()  # 'Inside' or 'Outside'
             # Clear the table before adding filtered packets
@@ -1040,9 +1042,25 @@ class PacketSystem:
                     ip_match = not src_is_local or not dst_is_local
                 else:
                     ip_match = True  # Default: no filter based on inside/outside
-
+                sport = None
+                dport = None
+                port_filter=self.ui.lineEdit.text().strip()
+                if packet.haslayer("TCP"):
+                    sport = packet["TCP"].sport
+                    dport = packet["TCP"].dport
+                elif packet.haslayer("UDP"):
+                    sport = packet["UDP"].sport
+                    dport = packet["UDP"].dport
+                port_match = True  
+                if port_filter!="":
+                    port_filter = int(port_filter)
+                    if sport == port_filter or dport == port_filter:
+                        port_match = True
+                    else:
+                        port_match = False
+                
                 # Include packet if it matches all criteria
-                if protocol_match and src_match and dst_match and ip_match:
+                if protocol_match and src_match and dst_match and ip_match and port_match:
 
                     self.filtered_packets.append(packet)
                     macsrc = packet["Ethernet"].src if packet.haslayer("Ethernet") else "N/A"
@@ -1054,14 +1072,7 @@ class PacketSystem:
                     ip_version = "IPv6" if packet.haslayer("IPv6") else "IPv4" if packet.haslayer("IP") else "N/A"
                     layer = "udp" if packet.haslayer("UDP") else "tcp" if packet.haslayer("TCP") else "Other"
                     # Extract port information for TCP/UDP
-                    sport = None
-                    dport = None
-                    if packet.haslayer("TCP"):
-                        sport = packet["TCP"].sport
-                        dport = packet["TCP"].dport
-                    elif packet.haslayer("UDP"):
-                        sport = packet["UDP"].sport
-                        dport = packet["UDP"].dport
+                    
                     
                     row_position = self.ui.tableWidget.rowCount()
                     
