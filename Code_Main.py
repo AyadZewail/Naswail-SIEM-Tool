@@ -376,7 +376,7 @@ class PacketSystem:
         self.packet_stats = {"total": 0, "tcp": 0, "udp": 0, "icmp": 0, "other": 0,"http":0,"https":0,"dns":0,"dhcp":0}
         self.anomalies = []
         self.sensor_obj = None
-        self.capture = 1
+        self.capture = -1
         self.blacklist = []
         self.tot_tcp_packets = 0
         self. tot_udp_packets = 0
@@ -727,7 +727,13 @@ class PacketSystem:
                     pass
                 else:
                     if self.capture == 1:
+                        self.ui.label_6.setStyleSheet("background-color: Red;")
                         self.captured_packets.append(packet)
+                    else:
+                        self.ui.label_6.setStyleSheet("QLabel {\n"
+                            "    color: white;\n"
+                            "}\n"
+                            "")
                     self.new_packet_features.append([packet_length, timestamp, protocol])
                     formattedPacket = self.packet_to_dataframe(packet, self.classes)
                     formattedPacket2 = self.encodePacket(formattedPacket)
