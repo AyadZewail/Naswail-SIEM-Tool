@@ -25,7 +25,9 @@ from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 from matplotlib.patches import Wedge
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
-
+from scapy.layers.http import HTTPRequest  
+from scapy.layers.inet import IP, TCP, UDP  
+from scapy.layers.dns import DNS  
 import networkx as nx
 from math import cos, sin, pi
 from datetime import datetime, timedelta
@@ -342,8 +344,13 @@ class SensorSystem:
                             self.ui.tableWidget.setItem(row_position, 10, QTableWidgetItem(str(dport)))
                 self.ct_sensor_packet.append(self.sen_ct)
         except Exception as e:
-            print(f"nuh uh no sensor filtering for some reason intoggle senseflag function:{e}")   
+            print(f"nuh uh no sensor filtering for some reason intoggle senseflag function:{e}") 
+class NetworkActivity:
+        def __init__(self):
+            self.mac_of_device = ''
+            self.actvity = ''  
 class PacketSystem:
+    
      
     def __init__(self, ui_main_window):
         self.ui = ui_main_window
@@ -388,7 +395,9 @@ class PacketSystem:
         self.train_predictions = self.anmodel.predict(self.X_test)
         acc = accuracy_score(self.y_test, self.train_predictions)
         print("Accuracy: {:.4%}".format(acc))
+        self.list_of_activity=[]
         ##############
+
     def set_sensor_system(self, sensor_obj):
         """Set the sensor system after both are initialized."""
         self.sensor_obj = sensor_obj
@@ -507,6 +516,40 @@ class PacketSystem:
             self.ui.listView_4.setModel(model)
         except Exception as e:
             print(f"Error updating blacklist: {e}")
+    def Update_Network_Summary(self, packet):
+        try:
+            if packet.haslayer(HTTPRequest):
+                host = packet[HTTPRequest].Host.decode() if packet[HTTPRequest].Host else "Unknown"
+                path = packet[HTTPRequest].Path.decode() if packet[HTTPRequest].Path else "Unknown"
+
+                # Create a new NetworkActivity instance
+                newnetworkactivity = NetworkActivity()
+                
+                # Format the timestamp
+                packet_time = datetime.fromtimestamp(float(packet.time)).strftime("%H:%M:%S")
+
+                newnetworkactivity.activity = f"{packet_time} | HTTP Request: {host}{path}"
+                newnetworkactivity.mac_of_device = packet["Ethernet"].src if packet.haslayer("Ethernet") else "N/A"
+                # Append to the list
+                self.list_of_activity.append(newnetworkactivity)
+
+            elif packet.haslayer(DNS) and packet[DNS].qr == 0:  # Check for DNS queries
+                domain = packet[DNS].qd.qname.decode() if packet[DNS].qd.qname else "Unknown"
+
+                # Create a new NetworkActivity instance
+                newnetworkactivity = NetworkActivity()
+                
+                # Format the timestamp
+                packet_time = datetime.fromtimestamp(float(packet.time)).strftime("%H:%M:%S")
+
+                newnetworkactivity.activity = f"{packet_time} | DNS Query: {domain}"
+                newnetworkactivity.mac_of_device = packet["Ethernet"].src if packet.haslayer("Ethernet") else "N/A"
+                
+                # Append to the list
+                self.list_of_activity.append(newnetworkactivity)
+
+        except Exception as e:
+            print(f"Error updating network summary: {e}")
     def decode_packet(self, row, column):
          
         try:
@@ -615,6 +658,7 @@ class PacketSystem:
             else:
                 self.packets.append(packet)
                 self.verify_packet_checksum(packet)
+                self.Update_Network_Summary(packet)
                 protocol = self.get_protocol(packet)
                 if protocol == "icmp":
                     self.tot_icmp_packets += 1
