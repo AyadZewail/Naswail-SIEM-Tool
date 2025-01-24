@@ -1803,6 +1803,9 @@ class Ui_MainWindow(object):
         self.label_18 = QtWidgets.QLabel(parent=self.tab_9)
         self.label_18.setGeometry(QtCore.QRect(500, 100, 261, 120))
         self.label_18.setObjectName("label_18")
+        self.tab_fabricate_packet = QtWidgets.QWidget()
+
+
 
         # Increase size and set color to white
         self.label_18.setStyleSheet("color: white; font-size: 16px;")  # Set text color to white and font size
@@ -1810,6 +1813,67 @@ class Ui_MainWindow(object):
         self.pushButton_12.setGeometry(QtCore.QRect(500, 180, 84, 23))
         self.pushButton_12.setObjectName("pushButton_12")
         self.tabWidget.addTab(self.tab_9, "Logging")
+        self.tab_fabricate_packet.setObjectName("tab_fabricate_packet")
+
+        # IP Source Label
+                # IP Source Label
+        self.label_ip_source = QtWidgets.QLabel(parent=self.tab_fabricate_packet)
+        self.label_ip_source.setGeometry(QtCore.QRect(10, 20, 100, 20))
+        self.label_ip_source.setObjectName("label_ip_source")
+        self.label_ip_source.setStyleSheet("color: white; font-size: 12px;")  # Set text color to white and font size
+
+        # IP Source LineEdit
+        self.lineEdit_ip_source = QtWidgets.QLineEdit(parent=self.tab_fabricate_packet)
+        self.lineEdit_ip_source.setGeometry(QtCore.QRect(10, 40, 200, 30))
+        self.lineEdit_ip_source.setObjectName("lineEdit_ip_source")
+        self.lineEdit_ip_source.setStyleSheet("""
+        background-color: gray;
+        color: white;
+        """)
+
+        # IP Dst Label
+        self.label_ip_dst = QtWidgets.QLabel(parent=self.tab_fabricate_packet)
+        self.label_ip_dst.setGeometry(QtCore.QRect(10, 80, 100, 20))
+        self.label_ip_dst.setObjectName("label_ip_dst")
+        self.label_ip_dst.setStyleSheet("color: white; font-size: 12px;")
+
+        # IP Dst LineEdit
+        self.lineEdit_ip_dst = QtWidgets.QLineEdit(parent=self.tab_fabricate_packet)
+        self.lineEdit_ip_dst.setGeometry(QtCore.QRect(10, 110, 200, 30))
+        self.lineEdit_ip_dst.setObjectName("lineEdit_ip_dst")
+        self.lineEdit_ip_dst.setStyleSheet("""
+        background-color: gray;
+        color: white;
+        """)
+
+        # Pick a Protocol Label
+        self.label_protocol = QtWidgets.QLabel(parent=self.tab_fabricate_packet)
+        self.label_protocol.setGeometry(QtCore.QRect(240, 10, 120, 20))
+        self.label_protocol.setObjectName("label_protocol")
+        self.label_protocol.setStyleSheet("color: white; font-size: 12px;")
+
+        # Protocol ComboBox
+        self.comboBox_protocol = QtWidgets.QComboBox(parent=self.tab_fabricate_packet)
+        self.comboBox_protocol.setGeometry(QtCore.QRect(240, 40, 150, 30))
+        self.comboBox_protocol.setObjectName("comboBox_protocol")
+        self.comboBox_protocol.addItems(["TCP", "UDP", "ICMP", "FTP", "HTTP", "HTTPS", "DNS", "DHCP"])
+        self.comboBox_protocol.setStyleSheet("""
+        background-color: gray;
+        color: black;
+        """)
+
+        # Apply Button
+        self.pushButton_apply = QtWidgets.QPushButton(parent=self.tab_fabricate_packet)
+        self.pushButton_apply.setGeometry(QtCore.QRect(10, 160, 100, 30))  # Position below the other widgets
+        self.pushButton_apply.setObjectName("pushButton_apply")
+        self.pushButton_apply.setText("Apply")
+        
+
+        # Add the tab to the TabWidget
+        self.tabWidget.addTab(self.tab_fabricate_packet, "Fabricate packet")
+
+
+        #
         self.horizontalLayoutWidget = QtWidgets.QWidget(parent=self.centralwidget)
         self.horizontalLayoutWidget.setGeometry(QtCore.QRect(266, 10, 1031, 41))
         self.horizontalLayoutWidget.setObjectName("horizontalLayoutWidget")
@@ -1913,7 +1977,7 @@ class Ui_MainWindow(object):
         MainWindow.setWindowTitle(_translate("MainWindow", "MainWindow"))
         self.label_7.setText(_translate("MainWindow", "Start Time"))
         self.label_8.setText(_translate("MainWindow", "End Time"))
-        self.label_9.setText(_translate("MainWindow", "Search"))
+        self.label_9.setText(_translate("MainWindow", "Port"))
         self.checkBox.setText(_translate("MainWindow", "UDP"))
         self.checkBox_2.setText(_translate("MainWindow", "TCP"))
         self.checkBox_3.setText(_translate("MainWindow", "ICMP"))
@@ -1960,6 +2024,9 @@ class Ui_MainWindow(object):
         self.label_4.setText(_translate("MainWindow", "                      Suspicious Packets"))
         self.label_5.setText(_translate("MainWindow", "Time Elapsed:"))
         self.label_6.setText(_translate("MainWindow", "TextLabel"))
+        self.label_ip_dst.setText(_translate("MainWindow", "Enter destination IP"))
+        self.label_ip_source.setText(_translate("MainWindow", "Enter source IP"))
+        self.label_protocol.setText(_translate("MainWindow", "Enter protocol"))
         self.pushButton_5.setText(_translate("MainWindow", "Start Capture"))
         self.pushButton_6.setText(_translate("MainWindow", "Stop Capture"))
         self.menuHome.setTitle(_translate("MainWindow", "File"))
