@@ -22,7 +22,25 @@ from matplotlib.figure import Figure
 import matplotlib.pyplot as plt
 from datetime import datetime, timedelta
 from UI_Tools import Ui_Naswail_Tool
+class NetworkActivity:
+    def __init__(self,ui):
+        self.packetsysobj=None
+        self.ui=ui
+    def set_packetobj(self, packetsysobj):
+        self.packetsysobj=packetsysobj
+    def display(self):
+        try:
+            formatted_content=[]
+            for list_of_activity in self.packetsysobj.list_of_activity:
+                    loa=list_of_activity.activity
+                    formatted_content.append(loa) 
 
+            model = QStringListModel()
+            model.setStringList(formatted_content)
+            self.ui.listView_2.setModel(model)
+            self.ui.listView_2.setStyleSheet("QListView { font-size: 16px; }")
+        except Exception as e:
+            print(e) 
 class RegressionPrediction:
     def __init__(self,ui, packets):
         self.ui=ui
@@ -428,6 +446,9 @@ class Window_Tools(QWidget, Ui_Naswail_Tool):
         self.ErrorPacketSystemobj = ErrorPacketSystem(self.ui)
         self.RegPred = RegressionPrediction(self.ui, self.main_window.PacketSystemobj.packets)
         self.SuAn = SuspiciousAnalysis(self.ui, self.main_window.PacketSystemobj.anomalies, self.main_window.PacketSystemobj)
+        self.networkactobj=NetworkActivity(self.ui)
+        self.networkactobj.set_packetobj(self.main_window.PacketSystemobj)
+        self.networkactobj.display()
 
         self.ErrorPacketSystemobj.add_error_packet(self.main_window.PacketSystemobj)
         self.ErrorPacketSystemobj.display()
@@ -461,17 +482,20 @@ class Window_Tools(QWidget, Ui_Naswail_Tool):
         self.ui.checkBox_27.stateChanged.connect(self.SuAn.apply_filter)
         self.ui.checkBox_29.stateChanged.connect(self.SuAn.apply_filter)      # Other
         self.ui.pushButton_11.clicked.connect(self.SuAn.apply_filter)
-
+        self.ui.pushButton_7.clicked.connect(self.networkactobj.display)
         # Initialize and start the timer
         self.timer = QTimer(self)
         self.timer.timeout.connect(self.ttTime)
         self.timer.start(1000)  # Call every 1000 milliseconds (1 second)
         self.sec = 0
-
+        
+        
+        
     def init_ui(self):
         self.showMaximized()
         self.ui.pushButton_4.clicked.connect(self.show_main_window)
         self.ui.pushButton_2.clicked.connect(self.show_analysis_window)
+        
 
     def ttTime(self):
         """Call the display method of the ErrorPacketSystem every second."""
