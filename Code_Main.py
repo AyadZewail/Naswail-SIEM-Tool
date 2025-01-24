@@ -26,8 +26,8 @@ from matplotlib.figure import Figure
 from matplotlib.patches import Wedge
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
 from scapy.layers.http import HTTPRequest  
-from scapy.layers.inet import IP, TCP, UDP  
-from scapy.layers.dns import DNS  
+from scapy.layers.inet import IP, TCP, UDP
+from scapy.layers.dns import DNS
 import networkx as nx
 from math import cos, sin, pi
 from datetime import datetime, timedelta
@@ -384,6 +384,7 @@ class PacketSystem:
         self.rate_of_packets=0
         self.recently_qued_packets=0
         self.typeOFchartToPlot=0
+        self.packetfile = 1
         #machine learning stuff
         self.le = LabelEncoder()
         self.train = pd.read_csv('TrainATest2.csv', low_memory=False)
@@ -657,6 +658,11 @@ class PacketSystem:
                 self.ui.tableWidget.setItem(row_position, 10, QTableWidgetItem("Blocked"))
             else:
                 self.packets.append(packet)
+                if len(self.packets) >= 15000:
+                    removed_elements = self.packets[0:4999]
+                    del self.packets[0:4999]
+                    wrpcap("packet_file" + str(self.packetfile) + ".pcap", removed_elements)
+                    self.packetfile += 1
                 self.verify_packet_checksum(packet)
                 self.Update_Network_Summary(packet)
                 protocol = self.get_protocol(packet)
@@ -920,9 +926,11 @@ class PacketSystem:
             # Check if all protocol filters are unchecked and both src and dst filters are empty
             src_filter = self.ui.lineEdit_2.text().strip()
             dst_filter = self.ui.lineEdit_5.text().strip()
+            stime = self.ui.dateTimeEdit.dateTime().toSecsSinceEpoch()
+            etime = self.ui.dateTimeEdit_2.dateTime().toSecsSinceEpoch()
 
                 # Check if all protocol filters are unchecked and both src and dst filters are empty
-            if not any(protocol_filters.values()) and not src_filter and not dst_filter:
+            if not any(protocol_filters.values()) and not src_filter and not dst_filter and stime == 946677600 and etime == 946677600:
                     print("No protocols selected, and both source and destination filters are empty.")
                     self.ui.tableWidget.setRowCount(0)
                     self.helperboi()
@@ -972,6 +980,8 @@ class PacketSystem:
 
                 # Check source and destination filters
                 packet_time = datetime.fromtimestamp(float(packet.time))
+                stime_match = True if stime == 946677600 or stime <= packet.time else False
+                etime_match = True if etime == 946677600 or etime >= packet.time else False
                 
 
                 src_match = src_filter in src_ip if src_filter else True
@@ -1296,6 +1306,8 @@ class Naswail(QMainWindow, Ui_MainWindow):
         self.checkBox_9.stateChanged.connect(self.PacketSystemobj.apply_filter)    # FTP
         self.checkBox_10.stateChanged.connect(self.PacketSystemobj.apply_filter)   # Other
         self.pushButton_9.clicked.connect(self.PacketSystemobj.apply_filter)
+        self.dateTimeEdit.setDisplayFormat("dd-MMM-yyyy hh:mm AP")  # Ensures full year
+        self.dateTimeEdit_2.setDisplayFormat("dd-MMM-yyyy hh:mm AP")  # Ensures full year
         self.sniffer_thread = PacketSnifferThread()
         self.sniffer_thread.packet_captured.connect(self.PacketSystemobj.put_packet_in_queue)
         self.sniffer_thread.start()
