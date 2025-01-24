@@ -26,7 +26,7 @@ from matplotlib.figure import Figure
 from matplotlib.patches import Wedge
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
 from scapy.layers.http import HTTPRequest  
-from scapy.layers.inet import IP, TCP, UDP
+from scapy.layers.inet import IP, TCP, UDP,ICMP
 from scapy.layers.dns import DNS
 import networkx as nx
 from math import cos, sin, pi
@@ -904,7 +904,53 @@ class PacketSystem:
             ip_obj = ipaddress.ip_address(ip)
             return ip_obj.is_private  # Returns True for private IPs, False otherwise
         except ValueError:
+    
             return False  # Handle invalid IP addresses gracefully
+    def design_and_send_packet(self):
+        try:
+            # Extract values from the GUI
+            dst_ip = self.ui.lineEdit_ip_dst.text()
+            src_ip = self.ui.lineEdit_ip_source.text()
+            protocol = self.ui.comboBox_protocol.currentText()
+
+            # Validate inputs
+            if not dst_ip or not src_ip:
+                print("Source and destination IPs must be specified.")
+                return
+            
+            # Create the IP layer
+            ip_layer = IP(src=src_ip, dst=dst_ip)
+            
+            # Determine the protocol and construct the packet
+            if protocol == "TCP":
+                transport_layer = TCP(dport=80)  # Example: HTTP port
+                packet = ip_layer / transport_layer / "Hello TCP"
+            elif protocol == "UDP":
+                transport_layer = UDP(dport=53)  # Example: DNS port
+                packet = ip_layer / transport_layer / "Hello UDP"
+            elif protocol == "ICMP":
+                packet = ip_layer / ICMP() / "Hello ICMP"
+            elif protocol == "FTP":
+                transport_layer = TCP(dport=21)  # FTP uses port 21
+                packet = ip_layer / transport_layer / "FTP Packet"
+            elif protocol == "HTTP":
+                transport_layer = TCP(dport=80)  # HTTP uses port 80
+                packet = ip_layer / transport_layer / "HTTP Packet"
+            elif protocol == "HTTPS":
+                transport_layer = TCP(dport=443)  # HTTPS uses port 443
+                packet = ip_layer / transport_layer / "HTTPS Packet"
+            elif protocol == "DHCP":
+                # DHCP packets typically don't require source and destination IPs
+                packet = IP(dst="255.255.255.255") / UDP(sport=68, dport=67) / "DHCP Packet"
+            elif protocol == "DNS":
+                packet = ip_layer / UDP(dport=53) / DNS(rd=1, qd="example.com")  # Example DNS query
+            else:
+                print("Unsupported protocol selected.")
+                return
+            # Send the packet
+            send(packet, verbose=False)
+        except Exception as e:
+            print(f"Error sending packet: {e}")
     def apply_filter(self):
         try:
             """Filter packets based on selected protocols, source/destination IPs, and ComboBox selection."""
@@ -1226,6 +1272,7 @@ class PacketSnifferThread(QThread):
 
     def emit_packet(self, packet):
         self.packet_captured.emit(packet)
+        
 class Naswail(QMainWindow, Ui_MainWindow):
     def __init__(self):
         super().__init__()
@@ -1294,6 +1341,7 @@ class Naswail(QMainWindow, Ui_MainWindow):
         self.pushButton_10.clicked.connect(lambda _: self.PacketSystemobj.updateBlacklist(1))
         self.pushButton_11.clicked.connect(lambda _: self.PacketSystemobj.updateBlacklist(2))
         self.pushButton_12.clicked.connect(lambda _:self.PacketSystemobj.save_log_to_file())
+        self.pushButton_apply.clicked.connect(self.PacketSystemobj.design_and_send_packet)
         # Connect checkboxes to the apply_filter method
         self.checkBox.stateChanged.connect(self.PacketSystemobj.apply_filter)      # UDP
         self.checkBox_2.stateChanged.connect(self.PacketSystemobj.apply_filter)    # TCP
@@ -1496,6 +1544,7 @@ class Naswail(QMainWindow, Ui_MainWindow):
                     self.PacketSystemobj.packets.clear()
                     self.PacketSystemobj.qued_packets.clear()
                     packetInput = 1
+                    
                     
                 elif ext == '.csv':
                     packetInput = 2
