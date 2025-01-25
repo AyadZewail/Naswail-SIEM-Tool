@@ -6,10 +6,18 @@ import multiprocessing
 import psutil
 import os
 import ipaddress
+import threading
 from datetime import datetime, timedelta
 from sklearn.svm import OneClassSVM
 from PyQt6.QtWidgets import *
 from PyQt6.QtCore import *
+from PyQt6.QtGui import QPainter, QPixmap
+import plotly.graph_objects as go
+import geoip2.database
+import folium
+import re
+from folium.plugins import HeatMap
+from scapy.layers.inet import IP
 from scapy.all import *
 from statistics import mean, median, mode, stdev, variance
 from sklearn.model_selection import train_test_split
@@ -19,10 +27,119 @@ from sklearn.metrics import mean_squared_error, r2_score
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 import networkx as nx
 from matplotlib.figure import Figure
+from bs4 import BeautifulSoup
 import matplotlib.pyplot as plt
 from datetime import datetime, timedelta
 from UI_Analysis import Ui_Naswail_Anlaysis
 from Code_Tools import Window_Tools
+
+class GeoMap(threading.Thread):
+    def __init__(self, ui, packets, anomalies):
+        super().__init__()
+        self.ui = ui
+        self.packets = packets
+        self.anomalies = anomalies
+        self.geoip_db_path = "GeoLite2-City.mmdb"
+        self.lastindex = 0
+        self.src_lats, self.src_lons = [], []
+        self.dst_lats, self.dst_lons = [], []
+        self.lines = []
+        self.start()  
+
+    def get_location(self, ip):
+        try:
+            with geoip2.database.Reader(self.geoip_db_path) as reader:
+                response = reader.city(ip)
+                lat = response.location.latitude
+                lon = response.location.longitude
+                return lat, lon
+        except geoip2.errors.AddressNotFoundError:
+            return 30.0444, 31.2357
+
+    def create_map(self):
+        try:
+            # Iterate over the packets
+            for i in range(self.lastindex, len(self.packets)):
+                if IP in self.packets[i]:
+                    # Get source and destination coordinates
+                    src_lat, src_lon = self.get_location(self.packets[i][IP].src)
+                    dst_lat, dst_lon = self.get_location(self.packets[i][IP].dst)
+
+                    # Only process if coordinates are valid
+                    if None not in (src_lat, src_lon, dst_lat, dst_lon) and (src_lat, src_lon) != (0, 0) and (dst_lat, dst_lon) != (0, 0):
+                        self.src_lats.append(src_lat)
+                        self.src_lons.append(src_lon)
+                        self.dst_lats.append(dst_lat)
+                        self.dst_lons.append(dst_lon)
+
+                        # Debugging prints
+                        print(f"Source IP: {self.packets[i][IP].src}, Destination IP: {self.packets[i][IP].dst}")
+                        print(f"Source Latitude: {src_lat}, Longitude: {src_lon}")
+                        print(f"Destination Latitude: {dst_lat}, Longitude: {dst_lon}")
+
+                        # Add lines connecting the points (source to destination)
+                        if self.packets[i] in self.anomalies:
+                            self.lines.append({
+                                "type": "scattergeo",
+                                "lat": [src_lat, dst_lat],
+                                "lon": [src_lon, dst_lon],
+                                "mode": "lines",
+                                "line": {"width": 1, "color": "red"},
+                            })
+                        else:
+                            self.lines.append({
+                                "type": "scattergeo",
+                                "lat": [src_lat, dst_lat],
+                                "lon": [src_lon, dst_lon],
+                                "mode": "lines",
+                                "line": {"width": 1, "color": "green"},
+                            })
+
+            self.lastindex = len(self.packets)
+
+            print(f"Source Lons: {self.src_lons}")
+            print(f"Destination Lons: {self.dst_lons}")
+            print(f"Source Lats: {self.src_lats}")
+            print(f"Destination Lats: {self.dst_lats}")
+
+            # Create a scattergeo plot for source and destination points
+            points = go.Scattergeo(
+                lon=self.src_lons + self.dst_lons,  # Combine source and destination lon values
+                lat=self.src_lats + self.dst_lats,  # Combine source and destination lat values
+                mode="markers",
+                marker=dict(size=6, color="blue"),
+                text=[f"Source: {p[IP].src}" for p in self.packets if IP in p] + [f"Destination: {p[IP].dst}" for p in self.packets if IP in p],
+            )
+
+            # Combine points and lines
+            fig = go.Figure(data=[points] + self.lines)
+
+            # Set map layout
+            fig.update_layout(
+                title="Packet Origins and Destinations",
+                geo=dict(
+                    scope="world",
+                    projection_type="equirectangular",
+                    showland=True,
+                    landcolor="rgb(243, 243, 243)",
+                    subunitcolor="rgb(217, 217, 217)",
+                ),
+            )
+
+            # Save the map as an image and display it in the label
+            image_path = "packet_map.png"
+            fig.write_image(image_path)  # Save the plot as an image
+            pixmap = QPixmap(image_path)
+            self.ui.label.setPixmap(pixmap)
+
+        except Exception as e:
+            print(f"Error in create_map function: {e}")
+    
+    def run(self):
+        print("Thread is running...")
+        self.create_map()
+
+
 class Node:
     def __init__(self):
         self.mac_address = ""
@@ -847,6 +964,8 @@ class Window_Analysis(QWidget, Ui_Naswail_Anlaysis):
         self.init_ui()
         self.Visualizationobj=visualization(self.main_window,self.ui)
         self.ThreeDVisulizationobj=NetworkTopologyVisualizer(self.main_window.PacketSystemobj,self.ui)
+        self.GeoMapObj = GeoMap(self.ui, self.main_window.PacketSystemobj.packets, self.main_window.PacketSystemobj.anomalies)
+        #self.GeoMapObj.start()
     def init_ui(self):
         self.setWindowTitle("Secondary Widget")
         self.showMaximized()
@@ -881,12 +1000,14 @@ class Window_Analysis(QWidget, Ui_Naswail_Anlaysis):
         """Show the main window and hide this widget."""
         self.ThreeDVisulizationobj.find_unique_devices_and_edges()
         self.ThreeDVisulizationobj.visualize_network()
+        #self.GeoMapObj.create_map()
         self.main_window.show()
         self.hide()
     def show_tools_window(self):
         """Show the tools window and hide this widget."""
         self.ThreeDVisulizationobj.find_unique_devices_and_edges()
         self.ThreeDVisulizationobj.visualize_network()
+        #self.GeoMapObj.create_map()
         self.secondary_widget2 = Window_Tools(self.main_window)
         self.hide()
         self.secondary_widget2.show()

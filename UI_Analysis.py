@@ -1856,6 +1856,22 @@ class Ui_Naswail_Anlaysis(object):
 "}\n"
 "")
         self.label_11.setObjectName("label_11")
+        self.label_12 = QtWidgets.QLabel(parent=self.scrollAreaWidgetContents)
+        self.label_12.setGeometry(QtCore.QRect(640, 2640, 251, 31))
+        font = QtGui.QFont()
+        font.setFamily("Yu Gothic UI Semibold")
+        font.setPointSize(14)
+        font.setBold(True)
+        font.setWeight(75)
+        self.label_12.setFont(font)
+        self.label_12.setStyleSheet("QLabel {\n"
+"    color: white;\n"
+"}\n"
+"")
+        self.label_12.setObjectName("label_12")
+        self.label = QtWidgets.QLabel(parent=self.scrollAreaWidgetContents)
+        self.label.setGeometry(QtCore.QRect(60, 2710, 1371, 611))
+        self.label.setObjectName("label")
         self.scrollArea.setWidget(self.scrollAreaWidgetContents)
 
         self.retranslateUi(Ui_Naswail_Anlaysis)
@@ -1895,6 +1911,8 @@ class Ui_Naswail_Anlaysis(object):
         self.comboBox_3.setItemText(2, _translate("Ui_Naswail_Anlaysis", "Sensors"))
         self.label_6.setText(_translate("Ui_Naswail_Anlaysis", "filter on:"))
         self.label_11.setText(_translate("Ui_Naswail_Anlaysis", "                                                                            3D Network Topology Visulization"))
+        self.label_12.setText(_translate("Ui_Naswail_Anlaysis", "Geo-Location Mapping"))
+        self.label.setText(_translate("Ui_Naswail_Anlaysis", "TextLabel"))
 
 
 if __name__ == "__main__":
