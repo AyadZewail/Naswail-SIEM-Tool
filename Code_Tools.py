@@ -22,53 +22,26 @@ from matplotlib.figure import Figure
 import matplotlib.pyplot as plt
 from datetime import datetime, timedelta
 from UI_Tools import Ui_Naswail_Tool
-class NetworkActivity:
-    def __init__(self,ui):
-        self.packetsysobj=None
-        self.ui=ui
-        self.filecontent=""
-    def set_packetobj(self, packetsysobj):
-        self.packetsysobj=packetsysobj
-    def display(self):
-        try:
-            self.filecontent=""
-            formatted_content=[]
-            for list_of_activity in self.packetsysobj.list_of_activity:
-                    loa=list_of_activity.activity
-                    formatted_content.append(loa) 
-                    self.filecontent+=loa+"\n"
 
-            model = QStringListModel()
-            model.setStringList(formatted_content)
-            self.ui.listView_2.setModel(model)
-            self.ui.listView_2.setStyleSheet("QListView { font-size: 16px; }")
-        except Exception as e:
-            print(e) 
-    def save_activity(self):
-        try:
-            with open("Activity.txt", "w") as file:
-                file.write(self.filecontent)
-        except Exception as e:
-            print(e)
 class RegressionPrediction:
-    def __init__(self,ui, packets):
+    def __init__(self,ui, packets, time_series):
         self.ui=ui
         self.futureTraffic = []
         self.r2 = 0
         self.noHours = None
         self.packets = packets
         self.model = LinearRegression()
-        print(self.packets)
+        self.time_series = time_series
         
-    def pred_traffic(self, time_series):
+    def pred_traffic(self):
         #Train Regression Model
         try:
             if(len(self.packets) > 10):
                 #print(datetime.strptime(list(time_series.keys())[0], "%H:%M:%S"))
-                X = [timestamp - list(time_series.keys())[0] for timestamp in time_series.keys()]
+                X = [timestamp - list(self.time_series.keys())[0] for timestamp in self.time_series.keys()]
 
                 X = np.array(list(map(int, X))).reshape(-1, 1)
-                y = list(time_series.values())
+                y = list(self.time_series.values())
                 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, train_size=0.8, random_state=42)
                 self.model.fit(X_train, y_train)
 
@@ -90,6 +63,8 @@ class RegressionPrediction:
                 self.r2 = r2_score(y_test, y_pred)
 
                 print(self.r2)
+                self.display()
+                self.display_graph()
         except Exception as e:
             print(e)
 
@@ -98,6 +73,7 @@ class RegressionPrediction:
             if(self.ui.lineEdit.text() is None or self.ui.lineEdit.text() is object):
                 self.ui.lineEdit.setText("0")
             self.noHours = int(self.ui.lineEdit.text())
+            self.pred_traffic()
         except Exception as e:
             print(e)
     
@@ -394,6 +370,8 @@ class ErrorPacketSystem:
             self.error_packets = []
             self.packetobj=None
             self.ui=ui
+            self.filterapplied = False
+            self.filtered_packets = []
             
         
         def add_error_packet(self, packet):
@@ -443,6 +421,26 @@ class ErrorPacketSystem:
                             self.ui.tableWidget_6.setItem(row_position, 10, QTableWidgetItem(ip_version))
                 except Exception as e:
                     print(f"Error in display function: {e}")
+
+        def display_packet_details(self, row, column):
+            try:
+                if self.filterapplied==False:
+                    packet = self.error_packets[row]
+                    details = packet.show(dump=True)  # Get packet details as a string
+                    detailslist = details.split("\n")
+                    model = QStringListModel()
+                    model.setStringList(detailslist)
+                    self.ui.listView.setModel(model)
+                            
+                if self.filterapplied==True:
+                    packet = self.filtered_packets[row]
+                    details = packet.show(dump=True)  # Get packet details as a string
+                    detailslist = details.split("\n")
+                    model = QStringListModel()
+                    model.setStringList(detailslist)
+                    self.ui.listView.setModel(model)
+            except Exception as e:
+                print(f"Error displaying packet details: {e}")
            
 class Window_Tools(QWidget, Ui_Naswail_Tool):
     def __init__(self, main_window):
@@ -453,13 +451,11 @@ class Window_Tools(QWidget, Ui_Naswail_Tool):
         self.ui.setupUi(self)  # Set up the UI for this widget
         self.init_ui()
         self.ErrorPacketSystemobj = ErrorPacketSystem(self.ui)
-        self.RegPred = RegressionPrediction(self.ui, self.main_window.PacketSystemobj.packets)
+        self.RegPred = RegressionPrediction(self.ui, self.main_window.PacketSystemobj.packets, self.main_window.time_series)
         self.SuAn = SuspiciousAnalysis(self.ui, self.main_window.PacketSystemobj.anomalies, self.main_window.PacketSystemobj)
-        self.networkactobj=NetworkActivity(self.ui)
-        self.networkactobj.set_packetobj(self.main_window.PacketSystemobj)
-        self.networkactobj.display()
 
         self.ErrorPacketSystemobj.add_error_packet(self.main_window.PacketSystemobj)
+        self.ui.tableWidget_6.cellClicked.connect(self.ErrorPacketSystemobj.display_packet_details)
         self.ErrorPacketSystemobj.display()
         self.setWindowTitle("Naswail - Tools")
         self.ui.tableWidget_6.setColumnCount(11)
@@ -491,28 +487,24 @@ class Window_Tools(QWidget, Ui_Naswail_Tool):
         self.ui.checkBox_27.stateChanged.connect(self.SuAn.apply_filter)
         self.ui.checkBox_29.stateChanged.connect(self.SuAn.apply_filter)      # Other
         self.ui.pushButton_11.clicked.connect(self.SuAn.apply_filter)
-        self.ui.pushButton_7.clicked.connect(self.networkactobj.display)
-        self.ui.pushButton_5.clicked.connect(self.networkactobj.save_activity)
+
         # Initialize and start the timer
         self.timer = QTimer(self)
         self.timer.timeout.connect(self.ttTime)
         self.timer.start(1000)  # Call every 1000 milliseconds (1 second)
         self.sec = 0
-        
-        
-        
+
     def init_ui(self):
         self.showMaximized()
         self.ui.pushButton_4.clicked.connect(self.show_main_window)
         self.ui.pushButton_2.clicked.connect(self.show_analysis_window)
-        
 
     def ttTime(self):
         """Call the display method of the ErrorPacketSystem every second."""
         self.ErrorPacketSystemobj.display()
         self.SuAn.display()
         if(self.sec % 30 == 0):
-            self.RegPred.pred_traffic(self.main_window.time_series)
+            self.RegPred.pred_traffic()
             if(self.RegPred.r2 > 0.50):
                 self.RegPred.display()
                 self.RegPred.display_graph()
