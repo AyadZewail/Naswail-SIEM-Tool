@@ -6,339 +6,160 @@ import multiprocessing
 import psutil
 import os
 import ipaddress
-import threading
 from datetime import datetime, timedelta
 from sklearn.svm import OneClassSVM
 from PyQt6.QtWidgets import *
 from PyQt6.QtCore import *
-from PyQt6.QtGui import QPainter, QPixmap
-import plotly.graph_objects as go
-import geoip2.database
-import folium
-import re
-from folium.plugins import HeatMap
-from scapy.layers.inet import IP
-from scapy.all import *
+from scapy.all import sniff, IP, TCP, UDP 
+
 from statistics import mean, median, mode, stdev, variance
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LinearRegression
 from sklearn.tree import DecisionTreeRegressor
 from sklearn.metrics import mean_squared_error, r2_score
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
-import networkx as nx
 from matplotlib.figure import Figure
-from bs4 import BeautifulSoup
 import matplotlib.pyplot as plt
 from datetime import datetime, timedelta
-from UI_Analysis import Ui_Naswail_Anlaysis
-from Code_Tools import Window_Tools
-
-class GeoMap(threading.Thread):
-    def __init__(self, ui, packets, anomalies):
-        super().__init__()
-        self.ui = ui
-        self.packets = packets
-        self.anomalies = anomalies
-        self.geoip_db_path = "GeoLite2-City.mmdb"
-        self.lastindex = 0
-        self.src_lats, self.src_lons = [], []
-        self.dst_lats, self.dst_lons = [], []
-        self.lines = []
-        self.start()  
-
-    def get_location(self, ip):
-        try:
-            with geoip2.database.Reader(self.geoip_db_path) as reader:
-                response = reader.city(ip)
-                lat = response.location.latitude
-                lon = response.location.longitude
-                return lat, lon
-        except geoip2.errors.AddressNotFoundError:
-            return 30.0444, 31.2357
-
-    def create_map(self):
-        try:
-            # Iterate over the packets
-            for i in range(self.lastindex, len(self.packets)):
-                if IP in self.packets[i]:
-                    # Get source and destination coordinates
-                    src_lat, src_lon = self.get_location(self.packets[i][IP].src)
-                    dst_lat, dst_lon = self.get_location(self.packets[i][IP].dst)
-
-                    # Only process if coordinates are valid
-                    if None not in (src_lat, src_lon, dst_lat, dst_lon) and (src_lat, src_lon) != (0, 0) and (dst_lat, dst_lon) != (0, 0):
-                        self.src_lats.append(src_lat)
-                        self.src_lons.append(src_lon)
-                        self.dst_lats.append(dst_lat)
-                        self.dst_lons.append(dst_lon)
-
-                        # Debugging prints
-                        print(f"Source IP: {self.packets[i][IP].src}, Destination IP: {self.packets[i][IP].dst}")
-                        print(f"Source Latitude: {src_lat}, Longitude: {src_lon}")
-                        print(f"Destination Latitude: {dst_lat}, Longitude: {dst_lon}")
-
-                        # Add lines connecting the points (source to destination)
-                        if self.packets[i] in self.anomalies:
-                            self.lines.append({
-                                "type": "scattergeo",
-                                "lat": [src_lat, dst_lat],
-                                "lon": [src_lon, dst_lon],
-                                "mode": "lines",
-                                "line": {"width": 1, "color": "red"},
-                            })
-                        else:
-                            self.lines.append({
-                                "type": "scattergeo",
-                                "lat": [src_lat, dst_lat],
-                                "lon": [src_lon, dst_lon],
-                                "mode": "lines",
-                                "line": {"width": 1, "color": "green"},
-                            })
-
-            self.lastindex = len(self.packets)
-
-            print(f"Source Lons: {self.src_lons}")
-            print(f"Destination Lons: {self.dst_lons}")
-            print(f"Source Lats: {self.src_lats}")
-            print(f"Destination Lats: {self.dst_lats}")
-
-            # Create a scattergeo plot for source and destination points
-            points = go.Scattergeo(
-                lon=self.src_lons + self.dst_lons,  # Combine source and destination lon values
-                lat=self.src_lats + self.dst_lats,  # Combine source and destination lat values
-                mode="markers",
-                marker=dict(size=6, color="blue"),
-                text=[f"Source: {p[IP].src}" for p in self.packets if IP in p] + [f"Destination: {p[IP].dst}" for p in self.packets if IP in p],
-            )
-
-            # Combine points and lines
-            fig = go.Figure(data=[points] + self.lines)
-
-            # Set map layout
-            fig.update_layout(
-                title="Packet Origins and Destinations",
-                geo=dict(
-                    scope="world",
-                    projection_type="equirectangular",
-                    showland=True,
-                    landcolor="rgb(243, 243, 243)",
-                    subunitcolor="rgb(217, 217, 217)",
-                ),
-            )
-
-            # Save the map as an image and display it in the label
-            image_path = "packet_map.png"
-            fig.write_image(image_path)  # Save the plot as an image
-            pixmap = QPixmap(image_path)
-            self.ui.label.setPixmap(pixmap)
-
-        except Exception as e:
-            print(f"Error in create_map function: {e}")
-    
-    def run(self):
-        print("Thread is running...")
-        self.create_map()
-
-
-class Node:
-    def __init__(self):
-        self.mac_address = ""
-        self.edges = set()  # List of connected MAC addresses
-
-
-class NetworkTopologyVisualizer:
-    def __init__(self,packetobj, ui):
-        self.ui = ui
-        self.list_of_nodes = []
-        self.packetobj=packetobj
-        # Layout for self.ui.widget_6
-        self.layout = QVBoxLayout(self.ui.widget_6)
-
-        # Placeholder for the matplotlib figure
-        self.figure = plt.figure()
-        self.canvas = FigureCanvas(self.figure)
-        self.layout.addWidget(self.canvas)
-
-        self.find_unique_devices_and_edges()
-        self.visualize_network()
-
-    def find_unique_devices_and_edges(self):
-        try:
-            unique_macs = set()
-            for packet in self.packetobj.packets:
-                src_mac = packet["Ethernet"].src if packet.haslayer("Ethernet") else "N/A"
-                dst_mac = packet["Ethernet"].dst if packet.haslayer("Ethernet") else "N/A"
-                
-                # Add the MAC addresses to the set if they exist
-                if src_mac:
-                    unique_macs.add(src_mac)
-                if dst_mac:
-                    unique_macs.add(dst_mac)
-            #end of for loop for finding unique mac
-            for mac in unique_macs:
-                newnode=Node()
-                newnode.mac_address=mac
-                self.list_of_nodes.append(newnode)
-            #end of creating nodes
-            for currentnode in self.list_of_nodes:
-                for packet in self.packetobj.packets:
-                    src_mac = packet["Ethernet"].src if packet.haslayer("Ethernet") else "N/A"
-                    dst_mac = packet["Ethernet"].dst if packet.haslayer("Ethernet") else "N/A"
-                    if src_mac==currentnode.mac_address:
-                        currentnode.edges.add(dst_mac)
-                    if dst_mac==currentnode.mac_address:
-                        currentnode.edges.add(src_mac)
-                #end of packets
-            #end of for loop for finding the connections
-        except Exception as e:
-            print(f"Error in unique mac function: {e}")
-    
-    def visualize_network(self):
-        # Create a graph
-        G = nx.Graph()
-
-        # Add nodes and edges to the graph
-        pos = {}  # Dictionary to store node positions
-        for i, node in enumerate(self.list_of_nodes):
-            G.add_node(node.mac_address)
-            # Assign random 3D positions
-            pos[node.mac_address] = (i, i % 2, i // 2)
-
-            # Add edges based on the node's connections
-            for connected_mac in node.edges:
-                G.add_edge(node.mac_address, connected_mac)
-
-        # Create a 3D plot
-        ax = self.figure.add_subplot(111, projection='3d')
-        self.figure.patch.set_alpha(0.0)  # Set figure background to transparent
-        ax.set_facecolor((0, 0, 0, 0))  # Set axis background to transparent
-
-        # Draw the edges
-        for edge in G.edges():
-            x = [pos[edge[0]][0], pos[edge[1]][0]]
-            y = [pos[edge[0]][1], pos[edge[1]][1]]
-            z = [pos[edge[0]][2], pos[edge[1]][2]]
-            ax.plot(x, y, z, color='black')
-
-        # Draw the nodes
-        i=1
-        for mac_address, (x, y, z) in pos.items():
-            lab = "device "+i.__str__()+":  "+mac_address
-            i+=1
-            for name,mac in self.packetobj.sensor_obj.sensors.items():
-                if mac == mac_address:
-                    lab = name+": "+mac  # Use the name if it matches
-                    break  # Stop checking once a match is found
-            ax.scatter(x, y, z, s=100, label=lab)
-
-        # Set labels
-        ax.set_xlabel('X')
-        ax.set_ylabel('Y')
-        ax.set_zlabel('Z')
-
-        # Display legend if nodes exist
-        if self.list_of_nodes:
-             ax.legend(
-        
-        bbox_to_anchor=(1.45, 1.05),  # Move the legend to the right and slightly higher
-        borderaxespad=0.0  # Padding between the legend and the axes
-    )
-
-        # Refresh the canvas
-        self.canvas.draw()
-        plt.close()
-class visualization:#class for all the charts
-    def __init__(self,main_window,ui):
-        self.main_window=main_window
+from UI_Tools import Ui_Naswail_Tool
+class NetworkActivity:
+    def __init__(self,ui):
+        self.packetsysobj=None
         self.ui=ui
-        self.selected_option = "Protocols"
-   
-    def display_all(self):
-        self.display_pie_chart()
-        self.display_histogram()
-        self.display_graph()
-        self.display_heatmap()
-        self.display_time_series()
-    def display_histogram(self):
+        self.filecontent=""
+    def set_packetobj(self, packetsysobj):
+        self.packetsysobj=packetsysobj
+    def display(self):
         try:
-            """Display a histogram based on the selected option."""
-            if self.ui.comboBox_3.currentText()=="inside/outside":
-                total_inside=self.main_window.PacketSystemobj.total_inside_packets
-                total_outside=self.main_window.PacketSystemobj.total_outside_packets
-                labels=["Inside","Outside"]
-                counts = [total_inside, total_outside]
-                colors = ['#ff9999', '#66b3ff']
-                figure = Figure(figsize=(4, 4))
-                canvas = FigureCanvas(figure)
-                ax = figure.add_subplot(111)
-                ax.bar(labels, counts, color=['#ff9999', '#66b3ff'])
-                ax.set_title("Inside/Outside Histogram")
-                ax.set_xlabel("Inside/Outside")
-                ax.set_ylabel("Count")
-                canvas.draw()
+            self.packetsysobj.Update_Network_Summary()
+            self.filecontent=""
+            formatted_content=[]
+            for list_of_activity in self.packetsysobj.list_of_activity:
+                    loa=list_of_activity.activity
+                    formatted_content.append(loa) 
+                    self.filecontent+=loa+"\n"
 
+            model = QStringListModel()
+            model.setStringList(formatted_content)
+            self.ui.listView_2.setModel(model)
+            self.ui.listView_2.setStyleSheet("QListView { font-size: 16px; }")
+        except Exception as e:
+            print(e) 
+    def save_activity(self):
+        try:
+            with open("Activity.txt", "w") as file:
+                file.write(self.filecontent)
+        except Exception as e:
+            print(e)
+class RegressionPrediction:
+    def __init__(self,ui, packets):
+        self.ui=ui
+        self.futureTraffic = []
+        self.r2 = 0
+        self.noHours = None
+        self.packets = packets
+        self.model = LinearRegression()
+        print(self.packets)
+        
+    def pred_traffic(self, time_series):
+        #Train Regression Model
+        try:
+            if(len(self.packets) > 10):
+                #print(datetime.strptime(list(time_series.keys())[0], "%H:%M:%S"))
+                X = [timestamp - list(time_series.keys())[0] for timestamp in time_series.keys()]
+
+                X = np.array(list(map(int, X))).reshape(-1, 1)
+                y = list(time_series.values())
+                X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, train_size=0.8, random_state=42)
+                self.model.fit(X_train, y_train)
+
+                currentTime = datetime.now()
+                TimeLater = []
+                Intervals = [0, 1, 3, 6, 12, 24]
+                for i in range(6):
+                    if(i != 0):
+                        TimeLater.append(currentTime.second + 3600 * Intervals[i])
+                    else:
+                        TimeLater.append((currentTime.second + 3600 * self.noHours) if self.noHours is not None else 0)
                 
-            if self.ui.comboBox_3.currentText() == "Sensors":
-                # Access packet stats from the main window
-                sensors = self.main_window.SensorSystemobj.sen_info
+                TimeLater = np.array(TimeLater).reshape(-1, 1)
 
-                counts = []
-                labels = []
-                for s in range(0, len(self.main_window.SensorSystemobj.sen_info) - 1, 2):
-                    labels.append(sensors[s])
-                    counts.append(sensors[s + 1])
+                self.futureTraffic = self.model.predict(TimeLater)
+                for i in range(len(self.futureTraffic)):
+                    self.futureTraffic[i] -= len(self.packets)
+                y_pred = self.model.predict(X_test)
+                self.r2 = r2_score(y_test, y_pred)
 
-                # Create the histogram
-                figure = Figure(figsize=(4, 4))
-                canvas = FigureCanvas(figure)
-                ax = figure.add_subplot(111)
-                ax.bar(labels, counts, color=['#ff9999', '#66b3ff', '#99ff99', '#ffcc99'])
-                ax.set_title("Sensors Histogram")
-                ax.set_xlabel("Sensors")
-                ax.set_ylabel("Count")
-                canvas.draw()
+                print(self.r2)
+        except Exception as e:
+            print(e)
 
-            if self.ui.comboBox_3.currentText() == "Protocols":
-                # Access packet stats from the main window
-                packet_stats = self.main_window.PacketSystemobj.packet_stats
+    def setHours(self):
+        try:
+            if(self.ui.lineEdit.text() is None or self.ui.lineEdit.text() is object):
+                self.ui.lineEdit.setText("0")
+            self.noHours = int(self.ui.lineEdit.text())
+        except Exception as e:
+            print(e)
+    
+    def display(self):
+        try:
+            #self.ui.tableWidget_3.setRowCount(0)
+            #self.ui.tableWidget_3.setColumnCount(0)
+            #############################################
+            self.ui.tableWidget_3.setItem(0, 0, QTableWidgetItem(datetime.now().strftime("%I:%M:%S %p")))
+            self.ui.tableWidget_3.setItem(0, 1, QTableWidgetItem(str(len(self.packets))))
+            #############################################
+            #self.ui.tableWidget_3.insertRow(1)
+            if(self.noHours is not None):
+                self.ui.tableWidget_3.setItem(1, 0, QTableWidgetItem(datetime.now().strftime("%I:%M:%S %p")))
+                self.ui.tableWidget_3.setItem(1, 1, QTableWidgetItem(str(int(self.futureTraffic[0]))))
+            #############################################
+            #self.ui.tableWidget_3.insertRow(2)
+            self.ui.tableWidget_3.setItem(2, 0, QTableWidgetItem((datetime.now() + timedelta(hours = 1)).strftime("%I:%M:%S %p")))
+            self.ui.tableWidget_3.setItem(2, 1, QTableWidgetItem(str(int(self.futureTraffic[1]))))
+            #############################################
+            #self.ui.tableWidget_3.insertRow(3)
+            self.ui.tableWidget_3.setItem(3, 0, QTableWidgetItem((datetime.now() + timedelta(hours = 3)).strftime("%I:%M:%S %p")))
+            self.ui.tableWidget_3.setItem(3, 1, QTableWidgetItem(str(int(self.futureTraffic[2]))))
+            #############################################
+            #self.ui.tableWidget_3.insertRow(4)
+            self.ui.tableWidget_3.setItem(4, 0, QTableWidgetItem((datetime.now() + timedelta(hours = 6)).strftime("%I:%M:%S %p")))
+            self.ui.tableWidget_3.setItem(4, 1, QTableWidgetItem(str(int(self.futureTraffic[3]))))
+            #############################################
+            #self.ui.tableWidget_3.insertRow(5)
+            self.ui.tableWidget_3.setItem(5, 0, QTableWidgetItem((datetime.now() + timedelta(hours = 12)).strftime("%I:%M:%S %p")))
+            self.ui.tableWidget_3.setItem(5, 1, QTableWidgetItem(str(int(self.futureTraffic[4]))))
+            #############################################
+            #self.ui.tableWidget_3.insertRow(6)
+            self.ui.tableWidget_3.setItem(6, 0, QTableWidgetItem((datetime.now() + timedelta(hours = 24)).strftime("%I:%M:%S %p")))
+            self.ui.tableWidget_3.setItem(6, 1, QTableWidgetItem(str(int(self.futureTraffic[5]))))
+        except Exception as e:
+            print(e)
 
-                # Define the protocols
-                protocols = ["TCP", "UDP", "ICMP", "HTTP", "HTTPS", "FTP", "Telnet", "DNS", "DHCP", "Other"]
+    def display_graph(self):
+        try:
+            counts = []
+            labels = ["Current", "Desired Time", "+1 Hours", "+3 Hours", "+6 Hours", "+12 Hours" + "+24 Hours"]
+            counts.append(len(self.packets))
+            for i in range(0, len(self.futureTraffic) - 1):
+                counts.append(int(self.futureTraffic[i]))
 
-                # Extract counts for each protocol
-                counts = [
-                    packet_stats.get("tcp", 0),
-                    packet_stats.get("udp", 0),
-                    packet_stats.get("icmp", 0),
-                    packet_stats.get("http", 0),
-                    packet_stats.get("https", 0),
-                    packet_stats.get("ftp", 0),
-                    packet_stats.get("telnet", 0),
-                    packet_stats.get("dns", 0),
-                    packet_stats.get("dhcp", 0),
-                    packet_stats.get("other",0)
-                    
-                ]
+            # Create the graph
+            figure = Figure(figsize=(4, 4))
+            canvas = FigureCanvas(figure)
+            ax = figure.add_subplot(111)
+            ax.plot(labels, counts, marker='o', linestyle='-', color='b')
+            ax.set_title("Prediction Graph")
+            ax.set_xlabel("Time Intervals")
+            ax.set_ylabel("Estimated Packet Amount")
+            canvas.draw()
 
-                # Create the histogram
-                figure = Figure(figsize=(2, 2))  # Adjust size for more protocols
-                canvas = FigureCanvas(figure)
-                ax = figure.add_subplot(111)
-                ax.bar(protocols, counts, color=['#ff9999', '#66b3ff', '#99ff99', '#ffcc99', '#c5b0d5', '#ff7f0e', '#2ca02c', '#1f77b4', '#d62728', '#9467bd'])
-                ax.set_title("Protocol Histogram")
-                ax.set_xlabel("Protocol")
-                ax.set_ylabel("Count")
-                ax.set_xticks(range(len(protocols)))
-                ax.set_xticklabels(protocols, rotation=45, ha="right")  # Rotate labels for readability
-                figure.subplots_adjust(bottom=0.25, top=0.85)
-                canvas.draw()
-
-            # Clear the previous canvas in widget_2
-            if self.ui.widget_2.layout() is None:
-                layout = QVBoxLayout(self.ui.widget_2)
-                self.ui.widget_2.setLayout(layout)
+            if self.ui.widget.layout() is None:
+                layout = QVBoxLayout(self.ui.widget)
+                self.ui.widget.setLayout(layout)
             else:
-                layout = self.ui.widget_2.layout()
+                layout = self.ui.widget.layout()
                 # Clear the previous widgets in the layout
                 for i in range(layout.count()):
                     child = layout.itemAt(i).widget()
@@ -347,674 +168,398 @@ class visualization:#class for all the charts
 
             layout.addWidget(canvas)
         except Exception as e:
-            print(f"Error in display_histogram function: {e}")
-    def display_graph(self):
-        """Display a graph based on the selected option."""
-        if self.ui.comboBox_4.currentText()=="Bandwidth":
-           
-           
-           bandwidth_data = self.main_window.PacketSystemobj.bandwidth_data
-           if bandwidth_data:
-                    
-                    # Capture the last 10 data points
-                    last_10_data = bandwidth_data[-10:]
-                    times, bandwidth = zip(*last_10_data)  # Split the data into times and bandwidth
-                    
-                    figure = Figure(figsize=(4, 4))
-                    canvas = FigureCanvas(figure)
-                    ax = figure.add_subplot(111)
-                    ax.plot(times, bandwidth, marker='o', linestyle='-', color='b')
-                    ax.set_title("Bandwidth Graph")
-                    ax.set_xlabel("Time")
-                    ax.set_ylabel("Bandwidth")
-                    
-                    # Rotate x-axis labels for better readability
-                    ax.tick_params(axis='x', rotation=45)
-                    figure.tight_layout()
+            print(e)
 
-                    canvas.draw()
-            
-        if self.ui.comboBox_4.currentText()=="inside/outside":
-            total_inisde=self.main_window.PacketSystemobj.total_inside_packets
-            total_outside=self.main_window.PacketSystemobj.total_outside_packets
-            labels=["Inside","Outside"]
-            counts=[]
-            counts.append(total_inisde)
-            counts.append(total_outside)
-            figure = Figure(figsize=(4, 4))
-            canvas = FigureCanvas(figure)
-            ax = figure.add_subplot(111)
-            ax.plot(labels, counts, marker='o', linestyle='-', color='b')
-            ax.set_title("Inside/Outside Graph")
-            ax.set_xlabel("Inside/Outside")
-            ax.set_ylabel("Inside/Outside Count")
-            canvas.draw()
-        if self.ui.comboBox_4.currentText() == "Bandwidith":
-            canvas = None  # Initialize canvas to avoid unbound variable error
-            bandwidith = self.main_window.PacketSystemobj.bandwidth_data
-            if not bandwidith:
-                print("No bandwidth data available.")
-                return
+class SuspiciousAnalysis:
+    def __init__(self,ui, anomalies, packet):
+        self.ui=ui
+        self.anomalies = anomalies
+        self.packetobj= packet
+        self.filterapplied = False
+        self.filtered_packets = []
 
-            labels, counts = zip(*bandwidith)  # Extract time and bandwidth values
-            print("Labels:", labels)
-            print("Counts:", counts)
-
-            figure = Figure(figsize=(4, 4))
-            canvas = FigureCanvas(figure)
-            ax = figure.add_subplot(111)
-            ax.plot(labels, counts, marker='o', linestyle='-', color='b')
-            ax.set_title("Bandwidth Graph")
-            ax.set_xlabel("Time")
-            ax.set_ylabel("Bandwidth")
-            canvas.draw()
-
-            # Clear and update layout
-            if self.ui.widget_3.layout() is None:
-                layout = QVBoxLayout(self.ui.widget_3)
-                self.ui.widget_3.setLayout(layout)
-            else:
-                layout = self.ui.widget_3.layout()
-                for i in range(layout.count()):
-                    child = layout.itemAt(i).widget()
-                    if child is not None:
-                        child.deleteLater()
-
-            layout.addWidget(canvas)
-
-        if self.ui.comboBox_4.currentText() == "Sensors":
-            sensors = self.main_window.SensorSystemobj.sen_info
-            counts = []
-            labels = []
-            for s in range(0, len(self.main_window.SensorSystemobj.sen_info) - 1, 2):
-                labels.append(sensors[s])
-                counts.append(sensors[s + 1])
-
-            # Create the graph
-            figure = Figure(figsize=(4, 4))
-            canvas = FigureCanvas(figure)
-            ax = figure.add_subplot(111)
-            ax.plot(labels, counts, marker='o', linestyle='-', color='b')
-            ax.set_title("Sensor Graph")
-            ax.set_xlabel("Sensor")
-            ax.set_ylabel("Sensor Packet Count")
-            canvas.draw()
-
-        if self.ui.comboBox_4.currentText() == "Protocols":
-            packet_stats = self.main_window.PacketSystemobj.packet_stats
-            protocols = ["TCP", "UDP", "ICMP", "Other"]
-            counts = [
-                packet_stats.get("tcp", 0),
-                packet_stats.get("udp", 0),
-                packet_stats.get("icmp", 0),
-                packet_stats.get("total", 0)
-                - sum(packet_stats.get(proto, 0) for proto in ["tcp", "udp", "icmp"]),
-            ]
-
-            # Create the graph
-            figure = Figure(figsize=(4, 4))
-            canvas = FigureCanvas(figure)
-            ax = figure.add_subplot(111)
-            ax.plot(protocols, counts, marker='o', linestyle='-', color='b')
-            ax.set_title("Protocol Graph")
-            ax.set_xlabel("Protocol")
-            ax.set_ylabel("Count")
-            canvas.draw()
-
-        # Clear the previous canvas in widget_3
-        if self.ui.widget_3.layout() is None:
-            layout = QVBoxLayout(self.ui.widget_3)
-            self.ui.widget_3.setLayout(layout)
-        else:
-            layout = self.ui.widget_3.layout()
-            # Clear the previous widgets in the layout
-            for i in range(layout.count()):
-                child = layout.itemAt(i).widget()
-                if child is not None:
-                    child.deleteLater()
-
-        layout.addWidget(canvas)
-    def display_time_series(self):
+    def display(self):
         try:
- 
-            """Display a time series based on the selected option."""
-            if self.ui.comboBox_6.currentText()=="Bandwidth":
+            if self.filterapplied == False:
+                self.ui.tableWidget.setRowCount(0)
+                for packet in self.anomalies:
+                    src_ip = packet["IP"].src if packet.haslayer("IP") else "N/A"
+                    dst_ip = packet["IP"].dst if packet.haslayer("IP") else "N/A"
+                    protocol = self.packetobj.get_protocol(packet)
+                    macsrc = packet["Ethernet"].src if packet.haslayer("Ethernet") else "N/A"
+                    macdst = packet["Ethernet"].dst if packet.haslayer("Ethernet") else "N/A"
+                    # Extract packet length
+                    packet_length = int(len(packet))
+                    payload = packet["Raw"].load if packet.haslayer("Raw") else "N/A"          
+                    # Extract port information for TCP/UDP
+                    sport = None
+                    dport = None
+                    if packet.haslayer("TCP"):
+                            sport = packet["TCP"].sport
+                            dport = packet["TCP"].dport
+                    elif packet.haslayer("UDP"):
+                            sport = packet["UDP"].sport
+                            dport = packet["UDP"].dport
 
-                bandwidth_data = self.main_window.PacketSystemobj.bandwidth_data
-                if bandwidth_data:
-
-                    # Capture the last 10 data points
-                    last_10_data = bandwidth_data[-10:]
-                    times, bandwidth = zip(*last_10_data)  # Split the data into times and bandwidth
-                    
-                    figure = Figure(figsize=(4, 4))
-                    canvas = FigureCanvas(figure)
-                    ax = figure.add_subplot(111)
-                    ax.plot(times, bandwidth, marker='o', linestyle='-', color='b')
-                    ax.set_title("Bandwidth Graph")
-                    ax.set_xlabel("Time")
-                    ax.set_ylabel("Bandwidth")
-                    
-                    # Rotate x-axis labels for better readability
-                    ax.tick_params(axis='x', rotation=45)
-                    figure.tight_layout()
-
-                    canvas.draw()
-                    if self.ui.widget_5.layout() is None:
-                        layout = QVBoxLayout(self.ui.widget_5)
-                        self.ui.widget_5.setLayout(layout)
-                    else:
-                        layout = self.ui.widget_5.layout()
-                        # Clear the previous widgets in the layout
-                        for i in range(layout.count()):
-                            child = layout.itemAt(i).widget()
-                            if child is not None:
-                                child.deleteLater()
-
-                    layout.addWidget(canvas)
-                
-            if self.ui.comboBox_6.currentText() == "Sensors":
-                    # Access sensor statistics from the main window
-                    sensors = self.main_window.SensorSystemobj.sen_info
-
-                   
-                    packet_stats = self.main_window.PacketSystemobj.packets 
-                    packet_times = [packet.time for packet in packet_stats]
-
-                    # Define the time range for the graph
-                    start_time = min(packet_times)
-                    end_time = max(packet_times)
-
-                    # Generate 10 intervals between the start and end times
-                    intervals = np.linspace(start_time, end_time, 11)  # 11 because we want 10 intervals
-
-                    # Initialize a list to hold the packet counts for each interval (for all sensors)
-                    packet_counts = [0] * 10
-
-                    # Count how many packets fall into each time interval
-                    for packet_time in packet_times:
-                        for i in range(10):
-                            if intervals[i] <= packet_time < intervals[i + 1]:
-                                packet_counts[i] += 1
-                                break  # Stop once we find the interval for the packet
-
-                    # Plot the results
-                    figure = plt.Figure(figsize=(6, 4))  # Define a larger figure size
-                    canvas = FigureCanvas(figure)
-                    ax = figure.add_subplot(111)
-
-                    # Convert the time intervals to a human-readable format (HH:MM:SS AM/PM)
-                    time_labels = [datetime.fromtimestamp(interval).strftime("%I:%M:%S %p") for interval in intervals[:-1]]
-
-                    # Plot the packet counts over time intervals
-                    ax.plot(intervals[:-1], packet_counts, label='sensor Packet Counts', marker='o')
-
-                    # Set labels and title
-                    ax.set_xlabel("Time interval")
-                    ax.set_ylabel("sensor Packet Count")
-                    ax.set_title("sensor Packet Counts Over Time")
-
-                    # Set x-axis ticks and labels
-                    ax.set_xticks(intervals[:-1])
-                    ax.set_xticklabels(time_labels, rotation=45, ha="right")  # Rotate labels and adjust alignment
-
-                    # Increase bottom margin for x-axis labels
-                    figure.subplots_adjust(bottom=0.2)
-
-                    # Add legend
-                    ax.legend()
-                    #Clear the previous canvas in widget_5
-                        # Clear the previous canvas in widget_5
-                    if self.ui.widget_5.layout() is None:
-                        layout = QVBoxLayout(self.ui.widget_5)
-                        self.ui.widget_5.setLayout(layout)
-                    else:
-                        layout = self.ui.widget_5.layout()
-                        # Clear the previous widgets in the layout
-                        for i in range(layout.count()):
-                            child = layout.itemAt(i).widget()
-                            if child is not None:
-                                child.deleteLater()
-
-                    layout.addWidget(canvas)
-            if self.ui.comboBox_6.currentText() == "Protocols":
-                        
-                                # Access packet statistics from the main window
-                    packet_stats = self.main_window.PacketSystemobj.packets  # Replace with your actual list of packets
-
-                    # Get the times of the packets
-                    packet_times = [packet.time for packet in packet_stats]
-
-                    # Define the time range for the graph
-                    start_time = min(packet_times)
-                    end_time = max(packet_times)
-
-                    # Generate 10 intervals between the start and end times
-                    intervals = np.linspace(start_time, end_time, 11)  # 11 because we want 10 intervals
-
-                    # Initialize a list to hold the packet counts for each interval
-                    packet_counts = [0] * 10
-
-                    # Count how many packets fall into each time interval
-                    for packet_time in packet_times:
-                        for i in range(10):
-                            if intervals[i] <= packet_time < intervals[i + 1]:
-                                packet_counts[i] += 1
-                                break  # Stop once we find the interval for the packet
-
-                    # Plot the results
-                    
-                    #
-                    figure = Figure(figsize=(4, 4))
-                    canvas = FigureCanvas(figure)
-                    ax = figure.add_subplot(111)
-
-                    # Plot the time series data (using a line plot)
-                    time_labels = [datetime.fromtimestamp(interval).strftime("%I:%M:%S %p") for interval in intervals[:-1]]
-                    ax.plot(intervals[:-1], packet_counts, label=' Packet Counts', marker='o')
-
-                    ax.set_xlabel("Time interval")
-                    ax.set_ylabel("Packet Count")
-                    ax.set_title("Packet Counts Over Time")
-                    ax.set_xticks(intervals[:-1])
-                    ax.set_xticklabels(time_labels, rotation=45)
-                    figure.subplots_adjust(bottom=0.2)  # Increase bottom margin for x-axis labels
-                    ax.legend()
-                # Clear the previous canvas in widget_5
-                    if self.ui.widget_5.layout() is None:
-                        layout = QVBoxLayout(self.ui.widget_5)
-                        self.ui.widget_5.setLayout(layout)
-                    else:
-                        layout = self.ui.widget_5.layout()
-                        # Clear the previous widgets in the layout
-                        for i in range(layout.count()):
-                            child = layout.itemAt(i).widget()
-                            if child is not None:
-                                child.deleteLater()
-
-                    layout.addWidget(canvas)
+                    row_position = self.ui.tableWidget.rowCount()
+                    self.ui.tableWidget.insertRow(row_position)
+                    self.ui.tableWidget.setItem(row_position, 0, QTableWidgetItem(datetime.fromtimestamp(float(packet.time)).strftime("%I:%M:%S %p")))
+                    self.ui.tableWidget.setItem(row_position, 1, QTableWidgetItem(src_ip))
+                    self.ui.tableWidget.setItem(row_position, 2, QTableWidgetItem(dst_ip))
+                    self.ui.tableWidget.setItem(row_position, 3, QTableWidgetItem(macsrc))
+                    self.ui.tableWidget.setItem(row_position, 4, QTableWidgetItem(macdst))
+                    self.ui.tableWidget.setItem(row_position, 5, QTableWidgetItem(str(sport)))
+                    self.ui.tableWidget.setItem(row_position, 6, QTableWidgetItem(str(dport)))
+                    self.ui.tableWidget.setItem(row_position, 7, QTableWidgetItem(protocol))
+                    self.ui.tableWidget.setItem(row_position, 8, QTableWidgetItem(str(packet_length)))
+                    self.ui.tableWidget.setItem(row_position, 9, QTableWidgetItem(str(payload)))
         except Exception as e:
-            print(f"An error occurred: {e}")
+            print(e)
 
-
-    def display_heatmap(self):
-            try:
-                """Display a heatmap based on the selected option."""
-                if self.ui.comboBox_5.currentText() == "Bandwidth":
-                    bandwidth_data = self.main_window.PacketSystemobj.bandwidth_data
-                    if bandwidth_data:
-                        # Extract times and bandwidth values
-                        times, bandwidth = zip(*bandwidth_data)
-                        bandwidth = np.array(bandwidth)  # Convert bandwidth to numpy array
-                        # Ensure bandwidth is 2D (even if just one row)
-                        bandwidth = bandwidth.reshape(1, -1)  # Reshape into 2D array (1 row, n columns)
-                        # Optional: Add more rows for better visualization
-                        bandwidth = np.tile(bandwidth, (5, 1))  # Repeat row 5 times for better visual effect
-                        
-                        # Create the figure and canvas
-                        figure = Figure(figsize=(6, 6))  # Larger figure size for better readability
-                        canvas = FigureCanvas(figure)
-                        ax = figure.add_subplot(111)
-                        
-                        # Plot the heatmap
-                        cax = ax.matshow(bandwidth, cmap='coolwarm', aspect='auto')  # 'aspect=auto' for better scaling
-                        
-                        # Add colorbar for the heatmap
-                        figure.colorbar(cax)
-                        
-                        # Set tick labels for time (X-axis)
-                        ax.set_xticks(range(len(times)))
-                        
-                        # Limit the number of time labels to avoid overlap
-                        label_step = max(1, len(times) // 10)  # Show at most 10 labels
-                        ax.set_xticks(range(0, len(times), label_step))
-                        
-                        # Use only every nth time interval label
-                        ax.set_xticklabels(times[::label_step], rotation=45, ha='right')  # Rotate for readability
-                        
-                        # Set tick labels for Y-axis (Bandwidth rows)
-                        ax.set_yticks(range(bandwidth.shape[0]))  # Number of rows in bandwidth
-                        row_sums = np.sum(bandwidth, axis=1)  # Sum each row to get the total bandwidth for that row
-                        ax.set_yticklabels([f" {int(row_sum)}" for row_sum in row_sums])  # D
-                        
-                        # Align Y-axis tick labels horizontally
-                        for tick in ax.get_yticklabels():
-                            tick.set_rotation(0)  # Ensure horizontal alignment
-                        
-                        # Set title for the heatmap
-                        ax.set_title("Bandwidth Heatmap")
-                        
-                        # Draw the canvas to render the heatmap
-                        canvas.draw()
-                        
-                        # Update layout in widget_4
-                        if self.ui.widget_4.layout() is None:
-                            layout = QVBoxLayout(self.ui.widget_4)
-                            self.ui.widget_4.setLayout(layout)
-                        else:
-                            layout = self.ui.widget_4.layout()
-                            while layout.count():
-                                child = layout.takeAt(0)
-                                if child.widget():
-                                    child.widget().deleteLater()
-                        layout.addWidget(canvas)
-                if self.ui.comboBox_5.currentText() == "Sensors":
-
-                    sensors = self.main_window.SensorSystemobj.sen_info
-
-                    counts = []
-                    labels = []
-                    for s in range(0, len(self.main_window.SensorSystemobj.sen_info) - 1, 2):
-                        labels.append(sensors[s])
-                        counts.append(sensors[s + 1])
-                    counts = np.array(counts).reshape(1, -1)  # Reshape into a 2D array (1 row, n columns)
-                        
-                    # Create the figure and canvas
-                    figure = Figure(figsize=(2, 2))  # Larger figure size for better readability
-                    canvas = FigureCanvas(figure)
-                    ax = figure.add_subplot(111)
-                    
-                    # Plot the heatmap
-                    cax = ax.matshow(counts, cmap='coolwarm', aspect='auto')  # 'aspect=auto' for better scaling
-                    
-                    # Add colorbar for the heatmap
-                    figure.colorbar(cax)
-                    
-                    # Set tick labels for the x-axis (sensor names)
-                    ax.set_xticks(range(len(labels)))
-                    ax.set_xticklabels(labels, rotation=45, ha='right')  # Rotate for readability
-                    
-                    # Set tick labels for the y-axis (since it's just one row, we'll show "Packets")
-                    ax.set_yticks([0])  # Only one row in the heatmap
-                    ax.set_yticklabels(["Sensor Packet Counts"])
-                    
-                    # Set title for the heatmap
-                    ax.set_title("Sensor Packet Count Heatmap")
-                    
-                    # Draw the canvas to render the heatmap
-                    canvas.draw()
-                    
-                    # Update layout in widget_4
-                    if self.ui.widget_4.layout() is None:
-                        layout = QVBoxLayout(self.ui.widget_4)
-                        self.ui.widget_4.setLayout(layout)
-                    else:
-                        layout = self.ui.widget_4.layout()
-                        while layout.count():
-                            child = layout.takeAt(0)
-                            if child.widget():
-                                child.widget().deleteLater()
-                    
-                    layout.addWidget(canvas)
-                    
-                if self.ui.comboBox_5.currentText() == "Protocols":
-                        # Access packet statistics from the main window
-                    packet_stats = self.main_window.PacketSystemobj.packets  # Replace with your actual packet stats
-                    # Define the protocols
-                    protocols = ["TCP", "UDP", "ICMP", "HTTP", "HTTPS", "FTP", "Telnet", "DNS", "DHCP", "Other"]
-                    # Validate packet data
-                    if not packet_stats:
-                        raise ValueError("No packets available for analysis.")
-                    # Get the times of the packets (as datetime objects)
-                    packet_times = [datetime.fromtimestamp(packet.time) for packet in packet_stats if hasattr(packet, 'time')]
-                    if not packet_times:
-                        raise ValueError("No valid timestamps in packets.")
-                    # Define the time range for the graph (start and end time)
-                    start_time = min(packet_times)
-                    end_time = max(packet_times)
-                    # Generate intervals based on the packet timestamps
-                    interval_count = 10  # Adjust this for more or fewer intervals
-                    intervals = np.linspace(start_time.timestamp(), end_time.timestamp(), interval_count + 1)  # Convert to timestamp
-                    # Initialize the heatmap data (list of lists with zeros)
-                    heatmap_data = np.zeros((interval_count, len(protocols)))
-                    # Count packets for each protocol in each time interval
-                    for packet in packet_stats:
-                        packet_time = getattr(packet, 'time', None)
-                        packet_protocol = getattr(packet, 'protocol', 'Other')
-                        if packet_time is not None:
-                            packet_time = datetime.fromtimestamp(packet_time).timestamp()  # Convert to timestamp
-                            for i in range(interval_count):
-                                if intervals[i] <= packet_time < intervals[i + 1]:  # Compare using timestamps
-                                    protocol_index = protocols.index(packet_protocol) if packet_protocol in protocols else len(protocols) - 1  # 'Other' protocol index
-                                    heatmap_data[i][protocol_index] += 1
-                                    break  # Stop once we find the interval for the packet
-
-                    # Create the heatmap
-                    figure = plt.Figure(figsize=(6, 4))
-                    canvas = FigureCanvas(figure)
-                    ax = figure.add_subplot(111)
-                    cax = ax.matshow(heatmap_data, cmap='coolwarm')
-                    
-                    # Add colorbar
-                    figure.colorbar(cax)
-                    
-                    # Format the time intervals as strings for the x-axis labels
-                    time_interval_labels = [datetime.fromtimestamp(interval).strftime("%I:%M:%S %p") for interval in intervals[:-1]]
-                    
-                    # Set the tick labels for time intervals and protocols
-                    ax.set_xticks(range(len(time_interval_labels)))
-                    ax.set_yticks(range(len(protocols)))
-                    ax.set_xticklabels(time_interval_labels, rotation=45, ha='right')  # Rotate for better readability
-                    ax.set_yticklabels(protocols)
-                    
-                    # Set the title
-                    ax.set_title("Protocol Heatmap Over Time")
-                    
-                    canvas.draw()
-
-                    # Clear the previous canvas in widget_4
-                    if self.ui.widget_4.layout() is None:
-                        layout = QVBoxLayout(self.ui.widget_4)
-                        self.ui.widget_4.setLayout(layout)
-                    else:
-                        layout = self.ui.widget_4.layout()
-                        # Clear the previous widgets in the layout
-                        for i in range(layout.count()):
-                            child = layout.itemAt(i).widget()
-                            if child is not None:
-                                child.deleteLater()
-
-                    layout.addWidget(canvas)
-            except Exception as e:
-                print(f"Error: {e}")
-
-    def display_pie_chart(self):
+    def decode_packet(self, row, column):
         try:
-            """Display the pie chart based on the selected option."""
-            if self.selected_option=="inside/outside":
-                total_inisde=self.main_window.PacketSystemobj.total_inside_packets
-                total_outside=self.main_window.PacketSystemobj.total_outside_packets
-                labels=["inside","Outside"]
-                sizes=[]
-                sizes.append(total_inisde)
-                sizes.append(total_outside)
-                colors = ['#ff9999', '#66b3ff']
-                print(f"Sizes: {sizes}, Labels: {labels}")
-                figure = Figure(figsize=(4, 4), facecolor='white')
-                canvas = FigureCanvas(figure)
-                ax = figure.add_subplot(111)
-                wedges, texts, autotexts = ax.pie(
-                    sizes, 
-                    autopct='%1.1f%%', 
-                    startangle=140, 
-                    colors=colors
-                )
+            if not self.packetobj.filterapplied:  # Check if the filter is not applied
+                packet = self.packetobj.packets[row]
+                
+                # Get the raw content of the packet
+                raw_content = bytes(packet)
+                
+                # Prepare the formatted content with hex and ASCII
+                formatted_content = []
+                for i in range(0, len(raw_content), 16):  # Process 16 bytes per line
+                    chunk = raw_content[i:i + 16]
+                    
+                    # Hexadecimal representation
+                    hex_part = " ".join(f"{byte:02x}" for byte in chunk)
+                    
+                    # ASCII representation (printable characters or dots for non-printable ones)
+                    ascii_part = "".join(
+                        chr(byte) if 32 <= byte <= 126 else "." for byte in chunk
+                    )
+                    
+                    # Combine hex and ASCII parts
+                    formatted_content.append(f"{hex_part:<48}  {ascii_part}")
+                
+                # Create a QStringListModel and set it to the listView_2
+                model = QStringListModel()
+                model.setStringList(formatted_content)
+                self.ui.listView_4.setModel(model)
+        except Exception as e:
+            print(f"Error displaying packet content with ASCII: {e}")
 
-                # Add a legend outside the pie chart
-                ax.legend(
-                    wedges, 
-                    labels, 
-                    loc="center left", 
-                    bbox_to_anchor=(1, 0.5), 
-                    title="Inside/Outside"
-                )
+    def display_packet_details(self, row, column):
+        try:
+            if self.filterapplied==False:
+                 packet = self.anomalies[row]
+                 details = packet.show(dump=True)  # Get packet details as a string
+                 detailslist = details.split("\n")
+                 model = QStringListModel()
+                 model.setStringList(detailslist)
+                 self.ui.listView_3.setModel(model)
+                        
+            if self.filterapplied==True:
+                packet = self.filtered_packets[row]
+                details = packet.show(dump=True)  # Get packet details as a string
+                detailslist = details.split("\n")
+                model = QStringListModel()
+                model.setStringList(detailslist)
+                self.ui.listView_3.setModel(model)
+        except Exception as e:
+            print(f"Error displaying packet details: {e}")
 
-                # Set the title
-                ax.set_title("Inside/Outside Proportions")
+    def apply_filter(self):
+        try:
+            """Filter packets based on selected protocols, source/destination IPs, and ComboBox selection."""
+            # Map checkbox states to protocol names
+            protocol_filters = {
+                "udp": self.ui.checkBox_21.isChecked(),
+                "tcp": self.ui.checkBox_22.isChecked(),
+                "icmp": self.ui.checkBox_23.isChecked(),
+                "dns": self.ui.checkBox_24.isChecked(),
+                "dhcp": self.ui.checkBox_28.isChecked(),
+                "http": self.ui.checkBox_25.isChecked(),
+                "https": self.ui.checkBox_26.isChecked(),
+                "telnet": self.ui.checkBox_30.isChecked(),
+                "ftp": self.ui.checkBox_27.isChecked(),
+                "other": self.ui.checkBox_29.isChecked(),
+            }
+            
 
-                # Adjust layout to fit the legend
-                figure.tight_layout()
-                canvas.draw()
-                canvas.setParent(self.ui.widget)  # Set parent to self.ui.widget
-                canvas.setGeometry(0, 0, self.ui.widget.width(), self.ui.widget.height())  # Adjust canvas size
-                canvas.show()
-            #end of if for inside/outside
-        
-            if self.selected_option == "Protocols":
-                # Access packet stats
-                packet_stats = self.main_window.PacketSystemobj.packet_stats
-                # Extract data for the pie chart
-                tcp_count = packet_stats.get("tcp", 0)
-                udp_count = packet_stats.get("udp", 0)
-                icmp_count = packet_stats.get("icmp", 0)
-                total_count = packet_stats.get("total", 0)
-                other_count = packet_stats.get("other",0)
-                # Prepare data for the pie chart
-                labels = ["  TCP  ", "    UDP    ", "   ICMP   ", "  Other   "]
-                sizes = [tcp_count, udp_count, icmp_count, other_count]
-                colors = ['#ff9999', '#66b3ff', '#99ff99', '#ffcc99']
-                print(f"Sizes: {sizes}, Labels: {labels}")
-                figure = Figure(figsize=(4, 4), facecolor='white')
-                canvas = FigureCanvas(figure)
-                ax = figure.add_subplot(111)
-                wedges, texts, autotexts = ax.pie(
-                    sizes, 
-                    autopct='%1.1f%%', 
-                    startangle=140, 
-                    colors=colors
-                )
-                # Add a legend outside the pie chart
-                ax.legend(
-                    wedges, 
-                    labels, 
-                    loc="center left", 
-                    bbox_to_anchor=(1, 0.5), 
-                    title="Protocols"
-                )
-                # Set the title
-                ax.set_title("Protocol Proportions")
-                # Adjust layout to fit the legend
-                figure.tight_layout()
-                canvas.draw()
-                # Clear existing children in the widget
-                # Embed the canvas into the widget
-                canvas.setParent(self.ui.widget)  # Set parent to self.ui.widget
-                canvas.setGeometry(0, 0, self.ui.widget.width(), self.ui.widget.height())  # Adjust canvas size
-                canvas.show()
-            #end of protocol if pie charyt
-            if self.selected_option == "Sensors":
-                # Access packet stats
-                sensors = self.main_window.SensorSystemobj.sen_info
-                sizes=[]
-                labels=[]
-                for s in range(0,len(self.main_window.SensorSystemobj.sen_info)-1,2):
-                    labels.append(sensors[s])
-                    sizes.append(sensors[s+1])
+            # Check if all protocol filters are unchecked and both src and dst filters are empty
+            src_filter = self.ui.lineEdit_8.text().strip()
+            dst_filter = self.ui.lineEdit_9.text().strip()
+
+                # Check if all protocol filters are unchecked and both src and dst filters are empty
+            if not any(protocol_filters.values()) and not src_filter and not dst_filter:
+                    print("No protocols selected, and both source and destination filters are empty.")
+                    self.filterapplied=False
+                    self.ui.tableWidget.setRowCount(0)
+                    self.process_packet_index=0
+                    self.pcap_process_packet_index=0
+                    return  # Or handle this case appropriately
+                #
+            self.filterapplied = True
+
+            # Determine which protocols to filter
+            selected_protocols = [protocol for protocol, checked in protocol_filters.items() if checked]
+            # Get the source and destination IP filters
+            src_filter = self.ui.lineEdit_8.text().strip()
+            dst_filter = self.ui.lineEdit_9.text().strip()
+            # Get ComboBox selection
+            combo_selection = self.ui.comboBox_3.currentText()  # 'Inside' or 'Outside'
+            # Clear the table before adding filtered packets
+            self.ui.tableWidget.setRowCount(0)
+
+            # Filter packets
+            self.filtered_packets = []
+            x = self.anomalies
+            
+            for packet in x:
+                src_ip = packet["IP"].src if packet.haslayer("IP") else "N/A"
+                dst_ip = packet["IP"].dst if packet.haslayer("IP") else "N/A"
+                protocol = self.packetobj.get_protocol(packet)
+
+                # Determine if source/destination IPs are local
+                src_is_local = self.packetobj.is_local_ip(src_ip)
+                dst_is_local = self.packetobj.is_local_ip(dst_ip)
+
+                # Check if the packet matches the selected protocols
+                layer = "UDP" if packet.haslayer("UDP") else "TCP" if packet.haslayer("TCP") else "Other"
+                protocol_match = protocol in selected_protocols if selected_protocols else True
+                if "udp" in selected_protocols and layer == "UDP":
+                 
+                 protocol_match = True
+                elif "tcp" in selected_protocols and layer == "TCP":
+                    protocol_match = True
+                elif "other" in selected_protocols and layer=="Other":
+                    protocol_match=True
                 
 
+                # Check source and destination filters
+                packet_time = datetime.fromtimestamp(float(packet.time))
+                
+
+                src_match = src_filter in src_ip if src_filter else True
+                dst_match = dst_filter in dst_ip if dst_filter else True
+
+                # Check ComboBox selection
+                if combo_selection == "Inside":
+                    ip_match = src_is_local and dst_is_local
+                elif combo_selection == "Outside":
+                    ip_match = not src_is_local or not dst_is_local
+                else:
+                    ip_match = True  # Default: no filter based on inside/outside
+
+                # Include packet if it matches all criteria
+                if protocol_match and src_match and dst_match and ip_match:
+
+                    self.filtered_packets.append(packet)
+                    macsrc = packet["Ethernet"].src if packet.haslayer("Ethernet") else "N/A"
+                    macdst = packet["Ethernet"].dst if packet.haslayer("Ethernet") else "N/A"
+                    # Extract packet length
+                    packet_length = int(len(packet))
+                    payload = packet["Raw"].load if packet.haslayer("Raw") else "N/A"
+
+                # Extract IP version
+                    ip_version = "IPv6" if packet.haslayer("IPv6") else "IPv4" if packet.haslayer("IP") else "N/A"
+                    layer = "udp" if packet.haslayer("UDP") else "tcp" if packet.haslayer("TCP") else "Other"
+                    # Extract port information for TCP/UDP
+                    sport = None
+                    dport = None
+                    if packet.haslayer("TCP"):
+                        sport = packet["TCP"].sport
+                        dport = packet["TCP"].dport
+                    elif packet.haslayer("UDP"):
+                        sport = packet["UDP"].sport
+                        dport = packet["UDP"].dport
+                    
+                    row_position = self.ui.tableWidget.rowCount()
+                    
+                    self.ui.tableWidget.insertRow(row_position)
+                    self.ui.tableWidget.setItem(row_position, 0, QTableWidgetItem(datetime.fromtimestamp(float(packet.time)).strftime("%I:%M:%S %p")))
+                    self.ui.tableWidget.setItem(row_position, 1, QTableWidgetItem(src_ip))
+                    self.ui.tableWidget.setItem(row_position, 2, QTableWidgetItem(dst_ip))
+                    self.ui.tableWidget.setItem(row_position, 3, QTableWidgetItem(macsrc))
+                    self.ui.tableWidget.setItem(row_position, 4, QTableWidgetItem(macdst))
+                    self.ui.tableWidget.setItem(row_position, 5, QTableWidgetItem(str(sport)))
+                    self.ui.tableWidget.setItem(row_position, 6, QTableWidgetItem(str(dport)))
+                    self.ui.tableWidget.setItem(row_position, 7, QTableWidgetItem(protocol))
+                    self.ui.tableWidget.setItem(row_position, 8, QTableWidgetItem(str(packet_length)))
+                    self.ui.tableWidget.setItem(row_position, 9, QTableWidgetItem(str(payload)))
+            self.apply_filter=False
+        except Exception as e:
+            print(f"Error processing packet: {e}")
+
+class ErrorPacketSystem:
+        def __init__(self,ui):
+            self.error_packets = []
+            self.packetobj=None
+            self.ui=ui
             
-                colors = ['#ff9999', '#66b3ff', '#99ff99', '#ffcc99']
+        
+        def add_error_packet(self, packet):
+                self.packetobj=packet
+        
 
-                print(f"Sizes: {sizes}, Labels: {labels}")
-                figure = Figure(figsize=(4, 4), facecolor='white')
-                canvas = FigureCanvas(figure)
-                ax = figure.add_subplot(111)
-                wedges, texts, autotexts = ax.pie(
-                    sizes, 
-                    autopct='%1.1f%%', 
-                    startangle=140, 
-                    colors=colors
-                )
-
-                # Add a legend outside the pie chart
-                ax.legend(
-                    wedges, 
-                    labels, 
-                    loc="center left", 
-                    bbox_to_anchor=(1, 0.5), 
-                    title="sensors"
-                )
-
-                # Set the title
-                ax.set_title("sensors Proportions")
-
-                # Adjust layout to fit the legend
-                figure.tight_layout()
-                canvas.draw()
-
-            
-
-                # Embed the canvas into the widget
-                canvas.setParent(self.ui.widget)  # Set parent to self.ui.widget
-                canvas.setGeometry(0, 0, self.ui.widget.width(), self.ui.widget.height())  # Adjust canvas size
-                canvas.show()
-            #end of sensorrs
-        except Exception as e:        
-            print(f"Error: {e}")
-        #end of pie chart
-
-
-class Window_Analysis(QWidget, Ui_Naswail_Anlaysis):
+        def display(self):
+                try:
+                    self.ui.tableWidget_6.setRowCount(0)
+                    for packet in self.packetobj.corrupted_packet:
+                            
+                            #print("in error packet")
+                            src_ip = packet["IP"].src if packet.haslayer("IP") else "N/A"
+                            dst_ip = packet["IP"].dst if packet.haslayer("IP") else "N/A"
+                            protocol = self.packetobj.get_protocol(packet)
+                            layer = "UDP" if packet.haslayer("UDP") else "TCP" if packet.haslayer("TCP") else "Other"
+                            packet_time = datetime.fromtimestamp(float(packet.time))
+                            macsrc = packet["Ethernet"].src if packet.haslayer("Ethernet") else "N/A"
+                            macdst = packet["Ethernet"].dst if packet.haslayer("Ethernet") else "N/A"
+                            # Extract packet length
+                            packet_length = int(len(packet))
+                            # Extract IP version
+                            ip_version = "IPv6" if packet.haslayer("IPv6") else "IPv4" if packet.haslayer("IP") else "N/A"
+                            layer = "udp" if packet.haslayer("UDP") else "tcp" if packet.haslayer("TCP") else "Other"
+                            # Extract port information for TCP/UDP
+                            sport = None
+                            dport = None
+                            if packet.haslayer("TCP"):
+                                    sport = packet["TCP"].sport
+                                    dport = packet["TCP"].dport
+                            elif packet.haslayer("UDP"):
+                                    sport = packet["UDP"].sport
+                                    dport = packet["UDP"].dport
+                            row_position = self.ui.tableWidget_6.rowCount()
+                            self.ui.tableWidget_6.insertRow(row_position)
+                            self.ui.tableWidget_6.setItem(row_position, 0, QTableWidgetItem(datetime.fromtimestamp(float(packet.time)).strftime("%I:%M:%S %p")))
+                            self.ui.tableWidget_6.setItem(row_position, 1, QTableWidgetItem(src_ip))
+                            self.ui.tableWidget_6.setItem(row_position, 2, QTableWidgetItem(dst_ip))
+                            self.ui.tableWidget_6.setItem(row_position, 3, QTableWidgetItem(protocol))
+                            self.ui.tableWidget_6.setItem(row_position, 4, QTableWidgetItem(layer))
+                                    # Add MAC addresses and port info to the table
+                            self.ui.tableWidget_6.setItem(row_position, 5, QTableWidgetItem(macsrc))
+                            self.ui.tableWidget_6.setItem(row_position, 6, QTableWidgetItem(macdst))
+                            self.ui.tableWidget_6.setItem(row_position, 7, QTableWidgetItem(str(sport) if sport else "N/A"))
+                            self.ui.tableWidget_6.setItem(row_position, 8, QTableWidgetItem(str(dport) if dport else "N/A"))
+                            self.ui.tableWidget_6.setItem(row_position, 9, QTableWidgetItem(str(packet_length)))
+                            self.ui.tableWidget_6.setItem(row_position, 10, QTableWidgetItem(ip_version))
+                except Exception as e:
+                    print(f"Error in display function: {e}")
+           
+class Window_Tools(QWidget, Ui_Naswail_Tool):
     def __init__(self, main_window):
         super().__init__()
         self.main_window = main_window  # Reference to the main window
 
-        self.ui = Ui_Naswail_Anlaysis()  # Create an instance of the UI class
+        self.ui = Ui_Naswail_Tool()  # Create an instance of the UI class
         self.ui.setupUi(self)  # Set up the UI for this widget
         self.init_ui()
-        self.Visualizationobj=visualization(self.main_window,self.ui)
-        self.ThreeDVisulizationobj=NetworkTopologyVisualizer(self.main_window.PacketSystemobj,self.ui)
-        self.GeoMapObj = GeoMap(self.ui, self.main_window.PacketSystemobj.packets, self.main_window.PacketSystemobj.anomalies)
-        #self.GeoMapObj.start()
-    def init_ui(self):
-        self.setWindowTitle("Secondary Widget")
-        self.showMaximized()
-        self.Visualizationobj=visualization(self.main_window,self.ui)
-        # Connect comboBox_2 selection change
-        self.ui.comboBox_2.currentIndexChanged.connect(self.on_combobox_change)
-        self.ui.comboBox_3.currentIndexChanged.connect(self.on_combobox_change)
-        self.ui.comboBox_4.currentIndexChanged.connect(self.on_combobox_change)
-        self.ui.comboBox_5.currentIndexChanged.connect(self.on_combobox_change)
-        self.ui.comboBox_6.currentIndexChanged.connect(self.on_combobox_change)
-        # Connect PushButton_5 click to display pie chart
-        
-        self.ui.pushButton_4.clicked.connect(self.show_main_window)
-        self.ui.pushButton_3.clicked.connect(self.show_tools_window)
-       
-     
-        # Initialize a placeholder for selected option
-        self.selected_option = "Protocols"
-        self.Visualizationobj.display_graph()
-        self.Visualizationobj.display_heatmap()
-        self.Visualizationobj.display_histogram()
-        self.Visualizationobj.display_pie_chart()
-        self.Visualizationobj.display_time_series()
+        self.ErrorPacketSystemobj = ErrorPacketSystem(self.ui)
+        self.RegPred = RegressionPrediction(self.ui, self.main_window.PacketSystemobj.packets)
+        self.SuAn = SuspiciousAnalysis(self.ui, self.main_window.PacketSystemobj.anomalies, self.main_window.PacketSystemobj)
+        self.networkactobj=NetworkActivity(self.ui)
+        self.networkactobj.set_packetobj(self.main_window.PacketSystemobj)
+        self.networkactobj.display()
 
-    def on_combobox_change(self):
-        """Handle changes in comboBox_2."""
-        self.selected_option = self.ui.comboBox_2.currentText()
-        self.Visualizationobj.selected_option = self.selected_option
-        self.Visualizationobj.display_all()
-        print(f"Selected option: {self.selected_option}")  # Debugging output
+        self.ErrorPacketSystemobj.add_error_packet(self.main_window.PacketSystemobj)
+        self.ErrorPacketSystemobj.display()
+        self.setWindowTitle("Naswail - Tools")
+        self.ui.tableWidget_6.setColumnCount(11)
+        self.ui.tableWidget_6.setHorizontalHeaderLabels(
+            ["Timestamp", "Source", "Destination", "Protocol", "Layer", "MAC Src", "MAC Dst", "Src Port", "Dst Port", "Length", "IP Version"]
+        )
+
+        self.ui.tableWidget_3.setColumnCount(2)
+        self.ui.tableWidget_3.setRowCount(7)
+        self.ui.tableWidget_3.setHorizontalHeaderLabels(["Time", "Packet Esitmate"])
+        self.ui.tableWidget_3.setVerticalHeaderLabels(["Current", "Desired Time", "+ 1 Hour", "+ 3 Hour", "+ 6 Hour", "+ 12 Hour", "+ 24 Hour"])
+        self.ui.pushButton.clicked.connect(self.RegPred.setHours)
+        self.ui.pushButton_6.clicked.connect(self.resetfilter)
+
+        self.ui.tableWidget.setColumnCount(10)
+        self.ui.tableWidget.setHorizontalHeaderLabels(
+            ["Timestamp", "Source IP", "Destination IP", "MAC Src", "MAC Dst", "Src Port", "Dst Port", "Protocol", "Length", "Payload"]
+        )
+        self.ui.tableWidget.cellClicked.connect(self.SuAn.display_packet_details)
+        self.ui.tableWidget.cellClicked.connect(self.SuAn.decode_packet)   # UDP
+        self.ui.checkBox_21.stateChanged.connect(self.SuAn.apply_filter)    # TCP
+        self.ui.checkBox_22.stateChanged.connect(self.SuAn.apply_filter)    # ICMP
+        self.ui.checkBox_23.stateChanged.connect(self.SuAn.apply_filter)    # DNS
+        self.ui.checkBox_24.stateChanged.connect(self.SuAn.apply_filter)    # DHCP
+        self.ui.checkBox_28.stateChanged.connect(self.SuAn.apply_filter)    # HTTP
+        self.ui.checkBox_25.stateChanged.connect(self.SuAn.apply_filter)    # HTTPS
+        self.ui.checkBox_26.stateChanged.connect(self.SuAn.apply_filter)    # TELNET
+        self.ui.checkBox_30.stateChanged.connect(self.SuAn.apply_filter)    # FTP
+        self.ui.checkBox_27.stateChanged.connect(self.SuAn.apply_filter)
+        self.ui.checkBox_29.stateChanged.connect(self.SuAn.apply_filter)      # Other
+        self.ui.pushButton_11.clicked.connect(self.SuAn.apply_filter)
+        self.ui.pushButton_7.clicked.connect(self.networkactobj.display)
+        self.ui.pushButton_5.clicked.connect(self.networkactobj.save_activity)
+        # Initialize and start the timer
+        self.timer = QTimer(self)
+        self.timer.timeout.connect(self.ttTime)
+        self.timer.start(1000)  # Call every 1000 milliseconds (1 second)
+        self.sec = 0
+        
+        
+        
+    def init_ui(self):
+        self.showMaximized()
+        self.ui.pushButton_4.clicked.connect(self.show_main_window)
+        self.ui.pushButton_2.clicked.connect(self.show_analysis_window)
+        
+
+    def ttTime(self):
+        """Call the display method of the ErrorPacketSystem every second."""
+        self.ErrorPacketSystemobj.display()
+        self.SuAn.display()
+        if(self.sec % 30 == 0):
+            self.RegPred.pred_traffic(self.main_window.time_series)
+            if(self.RegPred.r2 > 0.50):
+                self.RegPred.display()
+                self.RegPred.display_graph()
+                pass
+        self.sec += 1
+
+    def resetfilter(self):
+        try:
+            self.SuAn.process_packet_index=0
+            self.SuAn.pcap_process_packet_index=0
+            self.ui.tableWidget.setRowCount(0)
+            self.SuAn.filterapplied=False
+            self.ui.lineEdit_8.setText("")
+            self.ui.lineEdit_9.setText("")
+            checkboxes = [
+                self.ui.checkBox_21,
+                self.ui.checkBox_22,
+                self.ui.checkBox_23,
+                self.ui.checkBox_24,
+                self.ui.checkBox_28,
+                self.ui.checkBox_25,
+                self.ui.checkBox_26,
+                self.ui.checkBox_30,
+                self.ui.checkBox_27,
+                self.ui.checkBox_29,
+            ]
+            for checkbox in checkboxes:
+                checkbox.setCheckState(Qt.CheckState.Unchecked)
+            self.SuAn.filterapplied = False
+        except Exception as e:
+            print(f"Error in resetfilter function: {e}")
+
+    def show_analysis_window(self):
+        """Show the analysis window and hide this widget."""
+        self.secondary_widget = self.main_window.open_analysis()
+        self.hide()
+
     def show_main_window(self):
         """Show the main window and hide this widget."""
-        self.ThreeDVisulizationobj.find_unique_devices_and_edges()
-        self.ThreeDVisulizationobj.visualize_network()
-        #self.GeoMapObj.create_map()
         self.main_window.show()
         self.hide()
-    def show_tools_window(self):
-        """Show the tools window and hide this widget."""
-        self.ThreeDVisulizationobj.find_unique_devices_and_edges()
-        self.ThreeDVisulizationobj.visualize_network()
-        #self.GeoMapObj.create_map()
-        self.secondary_widget2 = Window_Tools(self.main_window)
-        self.hide()
-        self.secondary_widget2.show()
+
 
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
-    main_window = Window_Analysis()
+    main_window = Window_Tools()
     main_window.show()
     sys.exit(app.exec())
