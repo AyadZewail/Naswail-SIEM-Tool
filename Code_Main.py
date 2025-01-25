@@ -373,7 +373,7 @@ class PacketSystem:
         self.networkLog=""
         self.filterapplied = False
         self.application_filter_flag=False
-        self.packet_stats = {"total": 0, "tcp": 0, "udp": 0, "icmp": 0, "other": 0,"http":0,"https":0,"dns":0,"dhcp":0}
+        self.packet_stats = {"total": 0, "tcp": 0, "udp": 0, "icmp": 0, "other": 0,"http":0,"https":0,"dns":0,"dhcp":0,"ftp":0,"telnet":0}
         self.anomalies = []
         self.sensor_obj = None
         self.capture = -1
@@ -517,37 +517,39 @@ class PacketSystem:
             self.ui.listView_4.setModel(model)
         except Exception as e:
             print(f"Error updating blacklist: {e}")
-    def Update_Network_Summary(self, packet):
+    def Update_Network_Summary(self):
         try:
-            if packet.haslayer(HTTPRequest):
-                host = packet[HTTPRequest].Host.decode() if packet[HTTPRequest].Host else "Unknown"
-                path = packet[HTTPRequest].Path.decode() if packet[HTTPRequest].Path else "Unknown"
+            self.list_of_activity.clear()
+            for packet in self.qued_packets:
+                if packet.haslayer(HTTPRequest):
+                    host = packet[HTTPRequest].Host.decode() if packet[HTTPRequest].Host else "Unknown"
+                    path = packet[HTTPRequest].Path.decode() if packet[HTTPRequest].Path else "Unknown"
 
-                # Create a new NetworkActivity instance
-                newnetworkactivity = NetworkActivity()
-                
-                # Format the timestamp
-                packet_time = datetime.fromtimestamp(float(packet.time)).strftime("%H:%M:%S")
+                    # Create a new NetworkActivity instance
+                    newnetworkactivity = NetworkActivity()
+                    
+                    # Format the timestamp
+                    packet_time = datetime.fromtimestamp(float(packet.time)).strftime("%H:%M:%S")
 
-                newnetworkactivity.activity = f"{packet_time} | HTTP Request: {host}{path}"
-                newnetworkactivity.mac_of_device = packet["Ethernet"].src if packet.haslayer("Ethernet") else "N/A"
-                # Append to the list
-                self.list_of_activity.append(newnetworkactivity)
+                    newnetworkactivity.activity = f"{packet_time} | HTTP Request: {host}{path}"
+                    newnetworkactivity.mac_of_device = packet["Ethernet"].src if packet.haslayer("Ethernet") else "N/A"
+                    # Append to the list
+                    self.list_of_activity.append(newnetworkactivity)
 
-            elif packet.haslayer(DNS) and packet[DNS].qr == 0:  # Check for DNS queries
-                domain = packet[DNS].qd.qname.decode() if packet[DNS].qd.qname else "Unknown"
+                elif packet.haslayer(DNS) and packet[DNS].qr == 0:  # Check for DNS queries
+                    domain = packet[DNS].qd.qname.decode() if packet[DNS].qd.qname else "Unknown"
 
-                # Create a new NetworkActivity instance
-                newnetworkactivity = NetworkActivity()
-                
-                # Format the timestamp
-                packet_time = datetime.fromtimestamp(float(packet.time)).strftime("%H:%M:%S")
+                    # Create a new NetworkActivity instance
+                    newnetworkactivity = NetworkActivity()
+                    
+                    # Format the timestamp
+                    packet_time = datetime.fromtimestamp(float(packet.time)).strftime("%H:%M:%S")
 
-                newnetworkactivity.activity = f"{packet_time} | DNS Query: {domain}"
-                newnetworkactivity.mac_of_device = packet["Ethernet"].src if packet.haslayer("Ethernet") else "N/A"
-                
-                # Append to the list
-                self.list_of_activity.append(newnetworkactivity)
+                    newnetworkactivity.activity = f"{packet_time} | DNS Query: {domain}"
+                    newnetworkactivity.mac_of_device = packet["Ethernet"].src if packet.haslayer("Ethernet") else "N/A"
+                    
+                    # Append to the list
+                    self.list_of_activity.append(newnetworkactivity)
 
         except Exception as e:
             print(f"Error updating network summary: {e}")
@@ -664,7 +666,7 @@ class PacketSystem:
                     wrpcap("packet_file" + str(self.packetfile) + ".pcap", removed_elements)
                     self.packetfile += 1
                 self.verify_packet_checksum(packet)
-                self.Update_Network_Summary(packet)
+                #self.Update_Network_Summary(packet)
                 protocol = self.get_protocol(packet)
                 if protocol == "icmp":
                     self.tot_icmp_packets += 1
@@ -698,13 +700,18 @@ class PacketSystem:
                 elif packet.haslayer("ICMP"):
                     self.packet_stats["ICMP"]+=1
                 packet_length = int(len(packet))
-                layer = "udp" if packet.haslayer("UDP") else "tcp" if packet.haslayer("TCP") else "N/A"
+                layer = (
+    "udp" if packet.haslayer("UDP") 
+    else "tcp" if packet.haslayer("TCP") 
+    else "icmp" if packet.haslayer("ICMP") 
+    else "N/A"
+)
                 self.packet_stats["total"] += 1
                 if protocol == "tcp":
                     self.packet_stats["tcp"] += 1
                 elif protocol== "udp":
                     self.packet_stats["udp"] += 1
-                elif protocol == "icmp":
+                elif protocol == "icmp" or layer=="icmp":
                     self.packet_stats["icmp"] += 1
                 elif protocol == "dns":
                     self.packet_stats["dns"] += 1
@@ -714,6 +721,10 @@ class PacketSystem:
                     self.packet_stats["http"] += 1
                 elif protocol == "https":
                     self.packet_stats["https"] += 1
+                elif protocol == "ftp":
+                    self.packet_stats["ftp"] += 1
+                elif protocol=="telnet":
+                    self.packet_stats["telnet"] += 1
                 else:
                     self.packet_stats["other"] += 1
                 
@@ -783,8 +794,8 @@ class PacketSystem:
         except Exception as e:
             print(f"Error processing packet: {e}")
             tb = traceback.format_exc()
-            print("Traceback details:")
-            print(tb)
+            #print("Traceback details:")
+           # print(tb)
     def verify_packet_checksum(self,packet):
         try:
             # Check if the packet has a checksum field
@@ -816,8 +827,8 @@ class PacketSystem:
     def get_protocol(self, packet):
         try:
             # Define common ports for protocols
-            http_ports = [80, 8080, 8000, 8888,443]  # Common HTTP ports
-            https_ports = [443, 8443, 9443,80]  # Common HTTPS ports
+            http_ports = [80, 8080, 8000, 8888,5988]  # Common HTTP ports
+            https_ports = [443, 8443, 9443,5989]  # Common HTTPS ports
 
             # General checks for HTTP and HTTPS based on ports
             if hasattr(packet, 'sport') and hasattr(packet, 'dport'):  # Check if ports are available
@@ -844,9 +855,9 @@ class PacketSystem:
                     if packet.haslayer("TCP"):
                         sport = packet["TCP"].sport
                         dport = packet["TCP"].dport
-                        if dport == 20 or sport == 20:
+                        if dport == 21 or dport == 20:
                             return "ftp"
-                        elif dport == 23 or sport == 23:
+                        elif dport == 23 or dport == 23:
                             return "telnet"
                         else:
                             return "tcp"
@@ -868,6 +879,7 @@ class PacketSystem:
         except Exception as e:
             print(f"Error getting protocol: {e}")
             return "N/A"
+
 
     def display_log(self):
         try:
@@ -948,6 +960,7 @@ class PacketSystem:
             elif protocol == "DHCP":
                 # DHCP packets typically don't require source and destination IPs
                 packet = IP(dst="255.255.255.255") / UDP(sport=68, dport=67) / "DHCP Packet"
+                return
             elif protocol == "DNS":
                 packet = ip_layer / UDP(dport=53) / DNS(rd=1, qd="example.com")  # Example DNS query
             else:
@@ -1021,14 +1034,21 @@ class PacketSystem:
                 dst_is_local = self.is_local_ip(dst_ip)
 
                 # Check if the packet matches the selected protocols
-                layer = "UDP" if packet.haslayer("UDP") else "TCP" if packet.haslayer("TCP") else "Other"
+                layer = (
+                        "udp" if packet.haslayer("UDP") 
+                        else "tcp" if packet.haslayer("TCP") 
+                        else "icmp" if packet.haslayer("ICMP") 
+                        else "N/A"
+                    )
                 protocol_match = protocol in selected_protocols if selected_protocols else True
-                if "udp" in selected_protocols and layer == "UDP":
+                if "udp" in selected_protocols and layer == "udp":
                  
                  protocol_match = True
-                elif "tcp" in selected_protocols and layer == "TCP":
+                elif "tcp" in selected_protocols and layer == "tcp":
                     protocol_match = True
-                elif "other" in selected_protocols and layer=="Other":
+                elif "icmp" in selected_protocols and layer == "icmp":
+                    protocol_match = True
+                elif "other" in selected_protocols and layer=="other":
                     protocol_match=True
                 
 
@@ -1076,7 +1096,12 @@ class PacketSystem:
 
                 # Extract IP version
                     ip_version = "IPv6" if packet.haslayer("IPv6") else "IPv4" if packet.haslayer("IP") else "N/A"
-                    layer = "udp" if packet.haslayer("UDP") else "tcp" if packet.haslayer("TCP") else "Other"
+                    layer = (
+    "udp" if packet.haslayer("UDP") 
+    else "tcp" if packet.haslayer("TCP") 
+    else "icmp" if packet.haslayer("ICMP") 
+    else "N/A"
+)
                     # Extract port information for TCP/UDP
                     
                     
@@ -1108,7 +1133,12 @@ class PacketSystem:
                         dst_ip = packet["IP"].dst if packet.haslayer("IP") else "N/A"
                         protocol = self.get_protocol(packet)
                         # Check if the packet matches the selected protocols
-                        layer = "UDP" if packet.haslayer("UDP") else "TCP" if packet.haslayer("TCP") else "Other"
+                        layer = (
+    "udp" if packet.haslayer("UDP") 
+    else "tcp" if packet.haslayer("TCP") 
+    else "icmp" if packet.haslayer("ICMP") 
+    else "N/A"
+)
                         # Check source and destination filters
                         packet_time = datetime.fromtimestamp(float(packet.time))
                         macsrc = packet["Ethernet"].src if packet.haslayer("Ethernet") else "N/A"
@@ -1261,6 +1291,7 @@ class PacketSnifferThread(QThread):
     def run(self):
         try:
             global packetInput, packetFile, packetIndex
+            
             print(packetInput)
             print("GOOGOO")
             window.packets.clear()
@@ -1455,7 +1486,12 @@ class Naswail(QMainWindow, Ui_MainWindow):
                         dst_ip = packet["IP"].dst if packet.haslayer("IP") else "N/A"
                         protocol = self.PacketSystemobj.get_protocol(packet)
                         # Check if the packet matches the selected protocols
-                        layer = "UDP" if packet.haslayer("UDP") else "TCP" if packet.haslayer("TCP") else "Other"
+                        layer = (
+    "udp" if packet.haslayer("UDP") 
+    else "tcp" if packet.haslayer("TCP") 
+    else "icmp" if packet.haslayer("ICMP") 
+    else "N/A"
+)
                         # Check source and destination filters
                         packet_time = datetime.fromtimestamp(float(packet.time))
                         macsrc = packet["Ethernet"].src if packet.haslayer("Ethernet") else "N/A"
@@ -1465,7 +1501,12 @@ class Naswail(QMainWindow, Ui_MainWindow):
 
                     # Extract IP version
                         ip_version = "IPv6" if packet.haslayer("IPv6") else "IPv4" if packet.haslayer("IP") else "N/A"
-                        layer = "udp" if packet.haslayer("UDP") else "tcp" if packet.haslayer("TCP") else "Other"
+                        layer = (
+    "udp" if packet.haslayer("UDP") 
+    else "tcp" if packet.haslayer("TCP") 
+    else "icmp" if packet.haslayer("ICMP") 
+    else "N/A"
+)
                         # Extract port information for TCP/UDP
                         sport = None
                         dport = None
