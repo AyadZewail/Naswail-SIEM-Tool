@@ -550,6 +550,7 @@ class PacketSystem:
                     
                     # Append to the list
                     self.list_of_activity.append(newnetworkactivity)
+                
 
         except Exception as e:
             print(f"Error updating network summary: {e}")
@@ -598,9 +599,14 @@ class PacketSystem:
                 "tcp": self.tot_tcp_packets,
                 "udp": self.tot_udp_packets,
                 "icmp": self.tot_icmp_packets,
+                "dns": self.packet_stats.get("dns", 0),
+                "http": self.packet_stats.get("http", 0),
+                "https": self.packet_stats.get("https", 0),
+                "telnet": self.packet_stats.get("telnet", 0),
+                "ftp": self.packet_stats.get("ftp", 0),
             }
             
-            packet_values = [self.tot_tcp_packets, self.tot_udp_packets, self.tot_icmp_packets]
+            packet_values = [self.tot_tcp_packets, self.tot_udp_packets, self.tot_icmp_packets, self.packet_stats.get("dns", 0), self.packet_stats.get("http", 0), self.packet_stats.get("https", 0), self.packet_stats.get("telnet", 0), self.packet_stats.get("ftp", 0)]
             packet_mean = mean(packet_values)
             packet_range = max(packet_values) - min(packet_values)
             packet_mode = mode(packet_values) if len(set(packet_values)) > 1 else "No Mode"  # Handle single-value case
@@ -611,6 +617,11 @@ class PacketSystem:
                 f"TCP Packets: {self.packet_statics['tcp']}",
                 f"UDP Packets: {self.packet_statics['udp']}",
                 f"ICMP Packets: {self.packet_statics['icmp']}",
+                f"DNS Packets: {self.packet_statics['dns']}",
+                f"HTTP Packets: {self.packet_statics['http']}",
+                f"HTTPS Packets: {self.packet_statics['https']}",
+                f"Telnet Packets: {self.packet_statics['telnet']}",
+                f"FTP Packets: {self.packet_statics['ftp']}",
                 "Statistical Metrics:",
             f"Mean: {packet_mean:.2f}",
             f"Range: {packet_range}",
@@ -816,6 +827,8 @@ class PacketSystem:
                     return False
                 else:
                     self.corrupted_packet.append(packet)
+                    current_time = datetime.now().strftime("%H:%M:%S")
+                    self.networkLog+=current_time+"/  "+"A packet has been corrupted"+"\n"
                     return True
             else:
                 return False
