@@ -1427,7 +1427,7 @@ class Naswail(QMainWindow, Ui_MainWindow):
 
         self.num=100
       
-        self.stats_timer.start(100 )
+        self.stats_timer.start(10 )
         self.packet_per_seconds_timer = QTimer()
         self.packet_per_seconds_timer.timeout.connect(self.ppsttick)
         self.packet_per_seconds_timer.start(1000)
@@ -1474,6 +1474,8 @@ class Naswail(QMainWindow, Ui_MainWindow):
                 self.secondary_widget.show()
             except Exception as e:
                 print(f"Error in open_analysis function: {e}")
+                tb=traceback.format_exc()
+                print(tb)
     def resetfilter(self):
         try:
             self.PacketSystemobj.draw_gauge()
