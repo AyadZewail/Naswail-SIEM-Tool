@@ -165,15 +165,19 @@ class NetworkTopologyVisualizer:
     def find_unique_devices_and_edges(self):
         try:
             unique_ips = set()
-            
+            pure_local=[]#local in both dst and src
             # Collect unique IP addresses
             for packet in self.packetobj.local_packets:
                 src_ip = packet["IP"].src if packet.haslayer("IP") else "N/A"
-                
-                
+                dst_ip = packet["IP"].dst if packet.haslayer("IP") else "N/A"
+                islocal=self.packetobj.is_local_ip(dst_ip)
+                if islocal:
+                    unique_ips.add(dst_ip)
                 # Add the IP addresses to the set if they exist
                 if src_ip:
                     unique_ips.add(src_ip)
+                if src_ip and islocal:
+                    pure_local.append(packet) 
             # End of for loop for finding unique IPs
             
             # Create nodes for each unique IP
@@ -185,11 +189,14 @@ class NetworkTopologyVisualizer:
             
             # Find and record connections (edges) for each node
             for current_node in self.list_of_nodes:
-                for packet in self.packetobj.local_packets:
+                for packet in pure_local:
                     
                     dst_ip = packet["IP"].dst if packet.haslayer("IP") else "N/A"
+                    src_ip = packet["IP"].src if packet.haslayer("IP") else "N/A"
                     if dst_ip == current_node.mac_address:
                         current_node.edges.add(src_ip)
+                    if src_ip == current_node.mac_address:
+                        current_node.edges.add(dst_ip)
                 # End of packets
             # End of for loop for finding the connections
             
