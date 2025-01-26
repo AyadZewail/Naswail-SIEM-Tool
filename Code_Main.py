@@ -48,44 +48,53 @@ class ApplicationsSystem:
         #the purpose of this function is to set the packet system object later on due to circular import
         self.packet_obj = packet_obj
     def get_applications_with_ports(self):
-        apps_with_ports = []#a list of dictionaries containing various app info for filtering
+        try:
+            apps_with_ports = []
 
-        for proc in psutil.process_iter(attrs=['pid', 'name', 'status','cpu_percent', 'memory_percent']):
-            try:
-                pid = proc.info['pid']
-                app_name = proc.info['name']
-               
-                app_status = proc.info['status']
-                app_cpu=proc.info['cpu_percent']
-                app_mem=proc.info['memory_percent']
+            for proc in psutil.process_iter(attrs=['pid', 'name', 'status', 'cpu_percent', 'memory_percent']):
+                try:
+                    pid = proc.info['pid']
+                    app_name = proc.info['name']
+                    app_status = proc.info['status']
+                    app_cpu = proc.info['cpu_percent']
+                    app_mem = proc.memory_percent()
+                    connections = psutil.Process(pid).net_connections(kind='inet')
+                    connection_details = []
 
-                connections = psutil.Process(pid).net_connections(kind='inet')
-                for conn in connections:
-                    local_ip, local_port = conn.laddr
-                    apps_with_ports.append({
+                    for conn in connections:
+                        if conn.laddr:  # Check if there is a valid local address
+                            local_ip, local_port = conn.laddr
+                            connection_details.append({
+                                "IP": local_ip,
+                                "Port": local_port
+                            })
+
+                    entry = {
                         "Application": app_name,
                         "IP": local_ip,
                         "Port": local_port,
-                     
                         "Status": app_status,
                         "CPU": app_cpu,
-                        "Memory": app_mem
-                    })
-            except (psutil.AccessDenied, psutil.NoSuchProcess):
-                continue
+                        "Memory": app_mem,
+                    }
 
-        self.apps = apps_with_ports
-        self.ui.tableWidget_3.setRowCount(0)#to clear the table 
-        for app in self.apps:
-            row_position = self.ui.tableWidget_3.rowCount()
-            self.ui.tableWidget_3.insertRow(row_position)
-            self.ui.tableWidget_3.setItem(row_position, 0, QTableWidgetItem(str(app["Port"])))
-            self.ui.tableWidget_3.setItem(row_position, 1, QTableWidgetItem(str(app["Application"])))
-            self.ui.tableWidget_3.setItem(row_position, 2, QTableWidgetItem(str(app["IP"])))
-            self.ui.tableWidget_3.setItem(row_position, 3, QTableWidgetItem(str(app["CPU"])))
-            self.ui.tableWidget_3.setItem(row_position, 4, QTableWidgetItem(str(app["Memory"])))
+                    if not any(existing_entry["Application"] == entry["Application"] and existing_entry["IP"] == "0.0.0.0" for existing_entry in apps_with_ports):
+                        apps_with_ports.append(entry)
+                except (psutil.AccessDenied, psutil.NoSuchProcess):
+                    continue
 
-
+            self.apps = apps_with_ports
+            self.ui.tableWidget_3.setRowCount(0)
+            for app in self.apps:
+                row_position = self.ui.tableWidget_3.rowCount()
+                self.ui.tableWidget_3.insertRow(row_position)
+                self.ui.tableWidget_3.setItem(row_position, 0, QTableWidgetItem(str(app["Port"])))
+                self.ui.tableWidget_3.setItem(row_position, 1, QTableWidgetItem(str(app["Application"])))
+                self.ui.tableWidget_3.setItem(row_position, 2, QTableWidgetItem(str(app["IP"])))
+                self.ui.tableWidget_3.setItem(row_position, 3, QTableWidgetItem(str(app["CPU"])))
+                self.ui.tableWidget_3.setItem(row_position, 4, QTableWidgetItem(str(app["Memory"])))
+        except Exception as e:
+            print(f"Error in get_applications_with_ports function: {e}")
     def analyze_app(self, row):
         try:
             #this function filters by the clicked application
@@ -663,10 +672,13 @@ class PacketSystem:
                 self.ui.tableWidget.setItem(row_position, 10, QTableWidgetItem("Blocked"))
             else:
                 self.packets.append(packet)
-                if len(self.packets) >= 15000:
-                    removed_elements = self.packets[0:4999]
-                    del self.packets[0:4999]
+                if len(self.packets) >=15000:
+                    removed_elements = self.packets[0:5000]
+                    del self.qued_packets[0:5000]
+                    del self.packets[0:5000]
+                    self.process_packet_index -= 5000
                     wrpcap("packet_file" + str(self.packetfile) + ".pcap", removed_elements)
+                    removed_elements.clear()
                     self.packetfile += 1
                 self.verify_packet_checksum(packet)
                 
@@ -1318,7 +1330,7 @@ class Naswail(QMainWindow, Ui_MainWindow):
         #
         self.PacketSystemobj.draw_gauge()
         #Logo Image
-        pixmap = QPixmap(r"logo.jpg")
+        pixmap = QPixmap(r"logo.png")
         self.pixmap_item = QGraphicsPixmapItem(pixmap)
         self.scene.addItem(self.pixmap_item)
         self.graphicsView.setScene(self.scene)
@@ -1340,7 +1352,7 @@ class Naswail(QMainWindow, Ui_MainWindow):
         self.tableWidget_3.cellClicked.connect(self.Appsystemobj.analyze_app)
         self.tableWidget_4.setColumnCount(4)
         self.tableWidget_4.setHorizontalHeaderLabels(["Timestamp", "Source", "Destination", "Protocol"])
-        self.tableWidget_4.cellClicked.connect(self.Appsystemobj.analyze_app)
+        #self.tableWidget_4.cellClicked.connect(self.Appsystemobj.analyze_app)
         self.pushButton_5.clicked.connect(self.toggleCapture)
         self.pushButton_6.clicked.connect(self.toggleCapture)
         self.pushButton_7.clicked.connect(self.SensorSystemobj.toggleSenFlag)
@@ -1375,7 +1387,7 @@ class Naswail(QMainWindow, Ui_MainWindow):
 
         self.num=100
       
-        self.stats_timer.start(100 )
+        self.stats_timer.start(10 )
         self.packet_per_seconds_timer = QTimer()
         self.packet_per_seconds_timer.timeout.connect(self.ppsttick)
         self.packet_per_seconds_timer.start(1000)
@@ -1561,6 +1573,7 @@ class Naswail(QMainWindow, Ui_MainWindow):
                     packetInput=69#random number to stop sniffing until the below stuff is done
                     self.PacketSystemobj.process_packet_index=0
                     self.PacketSystemobj.pcap_process_packet_index=0
+                    self.PacketSystemobj.packet_stats={"total": 0, "tcp": 0, "udp": 0, "icmp": 0, "other": 0,"http":0,"https":0,"dns":0,"dhcp":0,"ftp":0,"telnet":0}
                     self.PacketSystemobj.tot_icmp_packets=0
                     self.PacketSystemobj.tot_tcp_packets=0
                     self.PacketSystemobj.tot_udp_packets=0
