@@ -31,9 +31,10 @@ class NetworkActivity:
         self.packetsysobj=packetsysobj
     def display(self):
         try:
+            self.packetsysobj.Update_Network_Summary()
             self.filecontent=""
             formatted_content=[]
-            for list_of_activity in self.packetsysobj.list_of_activity:
+            for list_of_activity  in self.packetsysobj.list_of_activity:
                     loa=list_of_activity.activity
                     formatted_content.append(loa) 
                     self.filecontent+=loa+"\n"
@@ -58,7 +59,7 @@ class RegressionPrediction:
         self.noHours = None
         self.packets = packets
         self.model = LinearRegression()
-        print(self.packets)
+        #print(self.packets)
         
     def pred_traffic(self, time_series):
         #Train Regression Model
