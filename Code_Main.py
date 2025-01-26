@@ -385,6 +385,7 @@ class PacketSystem:
         self.recently_qued_packets=0
         self.typeOFchartToPlot=0
         self.packetfile = 1
+        self.local_packets = []
         #machine learning stuff
         self.le = LabelEncoder()
         self.train = pd.read_csv('TrainATest2.csv', low_memory=False)
@@ -685,6 +686,7 @@ class PacketSystem:
                 islocal=self. is_local_ip(src_ip)
                 if islocal==True:
                     self.total_inside_packets+=1
+                    self.local_packets.append(packet)
                 else:
                     self.total_outside_packets+=1
                 # Extract MAC addresses
@@ -709,7 +711,7 @@ class PacketSystem:
                     sport = packet["UDP"].sport
                     dport = packet["UDP"].dport
                 elif packet.haslayer("ICMP"):
-                    self.packet_stats["ICMP"]+=1
+                    self.packet_stats["icmp"]+=1
                 packet_length = int(len(packet))
                 layer = (
     "udp" if packet.haslayer("UDP") 
@@ -805,8 +807,8 @@ class PacketSystem:
         except Exception as e:
             print(f"Error processing packet: {e}")
             tb = traceback.format_exc()
-            #print("Traceback details:")
-           # print(tb)
+            print("Traceback details:")
+            print(tb)
     def verify_packet_checksum(self,packet):
         try:
             # Check if the packet has a checksum field
@@ -1311,7 +1313,7 @@ class PacketSnifferThread(QThread):
             window.tableWidget.setRowCount(0)
             match packetInput:
                 case 0:
-                    sniff(prn=self.emit_packet, store=False, stop_filter=lambda _: packetInput != 0)
+                    sniff(prn=self.emit_packet,promisc=True, store=False, stop_filter=lambda _: packetInput != 0)
                 case 1:
                     try:
                         packets = rdpcap(packetFile)
