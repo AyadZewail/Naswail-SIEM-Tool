@@ -19,6 +19,7 @@ from sklearn.tree import DecisionTreeRegressor
 from sklearn.metrics import mean_squared_error, r2_score
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
+
 import matplotlib.pyplot as plt
 from datetime import datetime, timedelta
 from UI_Tools import Ui_Naswail_Tool
@@ -31,10 +32,9 @@ class NetworkActivity:
         self.packetsysobj=packetsysobj
     def display(self):
         try:
-            self.packetsysobj.Update_Network_Summary()
             self.filecontent=""
             formatted_content=[]
-            for list_of_activity  in self.packetsysobj.list_of_activity:
+            for list_of_activity in self.packetsysobj.list_of_activity:
                     loa=list_of_activity.activity
                     formatted_content.append(loa) 
                     self.filecontent+=loa+"\n"
@@ -59,7 +59,7 @@ class RegressionPrediction:
         self.noHours = None
         self.packets = packets
         self.model = LinearRegression()
-        #print(self.packets)
+        print(self.packets)
         
     def pred_traffic(self, time_series):
         #Train Regression Model
