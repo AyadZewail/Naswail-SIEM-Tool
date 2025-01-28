@@ -1775,7 +1775,7 @@ class Ui_MainWindow(object):
         self.tab_7 = QtWidgets.QWidget()
         self.tab_7.setObjectName("tab_7")
         self.listView_3 = QtWidgets.QListView(parent=self.tab_7)
-        self.listView_3.setGeometry(QtCore.QRect(0, 0, 791, 261))
+        self.listView_3.setGeometry(QtCore.QRect(0, 0, 791, 231))
         self.tabWidget.addTab(self.tab_7, "Packet statictics")
         self.tab_8 = QtWidgets.QWidget()
         self.tab_8.setObjectName("tab_8")
