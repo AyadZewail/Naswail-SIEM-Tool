@@ -28,6 +28,8 @@ pip install numpy pandas psutil ipaddress scapy matplotlib networkx PyQt6 statis
 4.preferably on visual studio code(optional).
 
 ### Packet Capture:
+#Default Setting
+- The app captures packets that are traversing through currently connected network by default, but additional methods are available
 #Packet Export
 - Click **Start Capture** to begin capturing packets(you will now if it is currently capturing based on the fact that the time intervel will become highlighted in red).
 - Click **Stop Capture** to halt the capture process.
