@@ -7,8 +7,9 @@ This software runs **only on Windows**. Before using it, you must install **Npca
 
 1. Download the **Npcap Installer** from [https://npcap.com/](https://npcap.com/).
 2. Run the installer and follow the on-screen instructions.
-3.python  interpreter 3.13.0(newer version may or may not work)
-4.use visual studio code(optional but prefered)
+3.Python  interpreter 3.13.0(newer version may or may not work)
+4.Download the whole Repository and extract it
+5.Use visual studio code(optional but prefered)
 
 ### Required Python Libraries
 Ensure you have Python installed, then open a terminal (Command Prompt or PowerShell) and run the following command to install the necessary dependencies:
@@ -23,8 +24,8 @@ pip install numpy pandas psutil ipaddress scapy matplotlib networkx PyQt6 statis
 ### Running the Application
 1. Ensure **Npcap** is installed.
 2.make sure to extract the GeoLite2.rar and copy the file inside it into the directory(next to naswail_main,naswail_tools etc) as otherwise the map won't show
-2. Run the script using Python.
-3.preferably on visual studio code(optional).
+3. Run the script using Python.
+4.preferably on visual studio code(optional).
 
 ### Packet Capture:
 #Packet Export
