@@ -1,4 +1,4 @@
-# Naiswail Network Traffic Analysis Tool
+Naiswail Network Traffic Analysis Tool
 
 ## Installation Guide
 
@@ -72,7 +72,7 @@ pip install numpy pandas psutil ipaddress scapy matplotlib networkx PyQt6 statis
 ### Visualization & Analytics
  - **Charts & Sensors**:
    -Create one or more sensors under the Sensor Tab.
-   -Click Focus On to generate relevant charts,⚠ otherwise the charts wont show any info on sensors.
+   -Click Focus On to generate relevant charts,⚠ otherwise the charts wont show any info on sensors,then go back to oacket filtering and click reset so that the packets aren't filtered based on the sensors.
  -**3D Network Visualization and GeoMap**:
     -A slight delay of a few seconds may occur depending on the number of packets being processed. It may take a few seconds for both the 3D visualization and GeoMap to render.
 
