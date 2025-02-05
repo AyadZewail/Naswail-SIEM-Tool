@@ -52,7 +52,7 @@ pip install numpy pandas psutil ipaddress scapy matplotlib networkx PyQt6 statis
 - **Advanced Filtering**: Filter packets by protocol, IP, port, and time.
 - **Machine Learning-Based Anomaly Detection**: Uses **Random Forest** for detecting anomalies.
 - **Network Traffic Prediction**: Uses **Linear Regression** to forecast traffic trends(note that it is not instant you must wait for a few seconds before it generates the predication).
-- **3D Network Topology Visualization**: Displays network structure interactively,pererd to ping devices directly as to see imediate results for new devices.
+- **3D Network Topology Visualization**: Displays network structure interactively; preferred to ping devices directly as to see imediate results for new devices.
 - **Geolocation-Based Traffic Analysis**: Maps IP-based geolocations.
 - **Network Activity detection:informs the user if a device brows a website or performs an http request
 - **Corrupt Packet Detection**: Identifies and flags corrupted packets.
