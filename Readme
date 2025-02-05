@@ -37,13 +37,13 @@ pip install numpy pandas psutil ipaddress scapy matplotlib networkx PyQt6 statis
 2. **Extract GeoLite2**:
    - Extract `GeoLite2.rar`.
    - Copy the extracted file into the main directory (next to `naiswail_main`, `naiswail_tools`, etc.).
-   - Without this step, the **map feature will not work**.
+   - Without this step, the **map feature will not work**⚠.
 3. Run the script using Python.
 4. Running it inside **Visual Studio Code** is preferred but optional.
 
 ---
 
-## Features Overview
+#### Features Overview
 
 ### Packet Capture
 - **Default Capture Mode**: 
@@ -66,13 +66,15 @@ pip install numpy pandas psutil ipaddress scapy matplotlib networkx PyQt6 statis
 
 ### Packet Analysis
 - **Packet Decode & Details**:
-  - Select a packet by clicking on it **twice**.
+  - Select a packet by clicking on it **twice**⚠.
   - Click **Packet Details** or **Packet Decode** to view relevant information.
 
 ### Visualization & Analytics
-- **Charts & Sensors**:
-  - Create one or more sensors under the **Sensor Tab**.
-  - Click **Focus On** to generate relevant charts.
+ - **Charts & Sensors**:
+   -Create one or more sensors under the Sensor Tab.
+   -Click Focus On to generate relevant charts,⚠ otherwise the charts wont show any info on sensors.
+ -**3D Network Visualization and GeoMap**:
+    -A slight delay of a few seconds may occur depending on the number of packets being processed. It may take a few seconds for both the 3D visualization and GeoMap to render.
 
 ### Key Features
 ✅ **Real-time Packet Capture** – Monitor live network traffic.  
