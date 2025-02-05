@@ -22,6 +22,7 @@ pip install numpy pandas psutil ipaddress scapy matplotlib networkx PyQt6 statis
 
 ### Running the Application
 1. Ensure **Npcap** is installed.
+2.make sure to extract the GeoLite2.rar and copy the file inside it into the directory(next to naswail_main,naswail_tools etc) as otherwise the map won't show
 2. Run the script using Python.
 3.preferably on visual studio code(optional).
 
