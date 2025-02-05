@@ -26,10 +26,18 @@ pip install numpy pandas psutil ipaddress scapy matplotlib networkx PyQt6 statis
 2. Run the script using Python.
 3.preferably on visual studio code(optional).
 
-### Packet Capture
-- Click **Start Capture** to begin capturing packets.
+### Packet Capture:
+#Packet Export
+- Click **Start Capture** to begin capturing packets(you will now if it is currently capturing based on the fact that the time intervel will become highlighted in red).
 - Click **Stop Capture** to halt the capture process.
-- Click **Export** to save the captured packets.
+- Click **Export** in the file tab which is on the top left to save the captured packets.
+# Packet Import
+-Click on the file tab(on the top left corner) and click on import then pick your pcap file
+-The packets will not instantly load rather they will be rendred sequentially for performance reasons,eventually it will stop rendering packets indicating that the whole pcap has been loaded.
+#live capture
+-Click on the live capture opton in the file tap to return back to live capture
+
+
 
 ### Visualization
 - To generate charts related to sensors, you must first create one or more sensors.
