@@ -1,1 +1,47 @@
-#each file that contains the word _page at the end is the actual code to be run while the other files are meant to be the ui files
+# Naiswail Network Traffic Analysis Tool
+
+## Installation Guide
+
+### Prerequisites
+This software runs **only on Windows**. Before using it, you must install **Npcap**:
+
+1. Download the **Npcap Installer** from [https://npcap.com/](https://npcap.com/).
+2. Run the installer and follow the on-screen instructions.
+
+### Required Python Libraries
+Ensure you have Python installed, then open a terminal (Command Prompt or PowerShell) and run the following command to install the necessary dependencies:
+
+```sh
+pip install numpy pandas psutil ipaddress scapy matplotlib networkx PyQt6 statistics scikit-learn
+```
+
+## Usage Instructions
+
+### Running the Application
+1. Ensure **Npcap** is installed.
+2. Run the script using Python.
+
+### Packet Capture
+- Click **Start Capture** to begin capturing packets.
+- Click **Stop Capture** to halt the capture process.
+- Click **Export** to save the captured packets.
+
+### Visualization
+- To generate **charts based on sensors**, you must first create one or more sensors.
+- After creating sensors, navigate to the **Sensor Tab** and click **Focus On**.
+
+## Features Overview
+- **Real-time Packet Capture**: Captures live network traffic.
+- **PCAP File Support**: Import and analyze stored capture files.
+- **Advanced Filtering**: Filter packets by protocol, IP, port, MAC, and time.
+- **Machine Learning-Based Anomaly Detection**: Uses **Random Forest** for detecting anomalies.
+- **Network Traffic Prediction**: Uses **Linear Regression** to forecast traffic trends.
+- **3D Network Topology Visualization**: Displays network structure interactively.
+- **Geolocation-Based Traffic Analysis**: Maps IP-based geolocations.
+- **Corrupt Packet Detection**: Identifies and flags corrupted packets.
+- **Custom Sensor System**: Allows user-defined monitoring points.
+- **Comprehensive Graphs**: Generates pie charts, histograms, time series plots, and heatmaps.
+-**and more.
+
+For additional support, refer to the documentation or contact the developers.
+
