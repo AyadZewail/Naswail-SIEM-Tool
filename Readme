@@ -8,8 +8,8 @@ This software runs **only on Windows**. Before using it, you must install **Npca
 1. Download the **Npcap Installer** from [https://npcap.com/](https://npcap.com/).
 2. Run the installer and follow the on-screen instructions.
 3.Python  interpreter 3.13.0(newer version may or may not work)
-4.Download the whole Repository and extract it
-5.Use visual studio code(optional but prefered)
+4.Download the whole Repository(by clicking on code and then download zip,make sure you are in the main branch not the testing) and extract it
+5.Use visual studio code (optional but prefered)
 
 ### Required Python Libraries
 Ensure you have Python installed, then open a terminal (Command Prompt or PowerShell) and run the following command to install the necessary dependencies:
