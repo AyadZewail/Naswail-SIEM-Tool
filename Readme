@@ -7,12 +7,15 @@ This software runs **only on Windows**. Before using it, you must install **Npca
 
 1. Download the **Npcap Installer** from [https://npcap.com/](https://npcap.com/).
 2. Run the installer and follow the on-screen instructions.
+3.python  interpreter 3.13.0(newer version may or may not work)
+4.use visual studio code(optional but prefered)
 
 ### Required Python Libraries
 Ensure you have Python installed, then open a terminal (Command Prompt or PowerShell) and run the following command to install the necessary dependencies:
 
 ```sh
-pip install numpy pandas psutil ipaddress scapy matplotlib networkx PyQt6 statistics scikit-learn
+pip install numpy pandas psutil ipaddress scapy matplotlib networkx PyQt6 statistics scikit-learn plotly geoip2 folium bs4
+
 ```
 
 ## Usage Instructions
@@ -28,8 +31,8 @@ pip install numpy pandas psutil ipaddress scapy matplotlib networkx PyQt6 statis
 - Click **Export** to save the captured packets.
 
 ### Visualization
-- To generate **charts based on sensors**, you must first create one or more sensors.
-- After creating sensors, navigate to the **Sensor Tab** and click **Focus On**.
+- To generate charts related to sensors, you must first create one or more sensors.
+- After creating sensors in **Sensor Tab** and click **Focus On**.
 
 ## Features Overview
 - **Real-time Packet Capture**: Captures live network traffic.
@@ -44,5 +47,5 @@ pip install numpy pandas psutil ipaddress scapy matplotlib networkx PyQt6 statis
 - **Comprehensive Graphs**: Generates pie charts, histograms, time series plots, and heatmaps.
 -**and more.
 
-For additional support, refer to the documentation or contact the developers.
+:D
 
