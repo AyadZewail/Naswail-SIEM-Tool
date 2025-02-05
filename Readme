@@ -3,63 +3,87 @@
 ## Installation Guide
 
 ### Prerequisites
-This software runs **only on Windows**. Before using it, you must install **Npcap**:
+This software runs **only on Windows**. Before using it, you must install the following:
 
-1. Download the **Npcap Installer** from [https://npcap.com/](https://npcap.com/).
-2. Run the installer and follow the on-screen instructions.
-3.Python  interpreter 3.13.0(newer version may or may not work)
-4.Download the whole Repository(by clicking on code and then download zip,make sure you are in the main branch not the testing) and extract it
-5.Use visual studio code (optional but prefered)
+1. **Npcap**:
+   - Download the **Npcap Installer** from [Npcap Official Site](https://npcap.com/).
+   - Run the installer and follow the on-screen instructions.
+
+2. **Python 3.13.0** (Newer versions may or may not work):
+   - Download Python from [https://www.python.org/](https://www.python.org/).
+   - Ensure `python` is added to the system `PATH` during installation.
+
+3. **Naiswail Repository**:
+   - Download the repository by clicking on **Code → Download ZIP**.
+   - Ensure you are on the **main branch**, not the testing branch.
+   - Extract the ZIP file.
+
+4. **Recommended IDE** (Optional but preferred):
+   - Install **Visual Studio Code** for better debugging and performance.
 
 ### Required Python Libraries
-Ensure you have Python installed, then open a terminal (Command Prompt or PowerShell) and run the following command to install the necessary dependencies:
+Ensure you have Python installed, then open a terminal (Command Prompt or PowerShell) and run:
 
 ```sh
 pip install numpy pandas psutil ipaddress scapy matplotlib networkx PyQt6 statistics scikit-learn plotly geoip2 folium bs4
-
 ```
+
+---
 
 ## Usage Instructions
 
 ### Running the Application
 1. Ensure **Npcap** is installed.
-2.make sure to extract the GeoLite2.rar and copy the file inside it into the directory(next to naswail_main,naswail_tools etc) as otherwise the map won't show
+2. **Extract GeoLite2**:
+   - Extract `GeoLite2.rar`.
+   - Copy the extracted file into the main directory (next to `naiswail_main`, `naiswail_tools`, etc.).
+   - Without this step, the **map feature will not work**.
 3. Run the script using Python.
-4.preferably on visual studio code(optional).
+4. Running it inside **Visual Studio Code** is preferred but optional.
 
-### Packet Capture:
-#Default Setting
-- The app captures packets that are traversing through currently connected network by default, but additional methods are available,if the packets exceed a specfic number it will save them in a pacap file and delete a portion of them to save resources.
-#Packet Export
-- Click **Start Capture** to begin capturing packets(you will now if it is currently capturing based on the fact that the time intervel will become highlighted in red).
-- Click **Stop Capture** to halt the capture process.
-- Click **Export** in the file tab which is on the top left to save the captured packets.
-# Packet Import
--Click on the file tab(on the top left corner) and click on import then pick your pcap file.
--The packets will not instantly load rather they will be rendred sequentially for performance reasons,eventually it will stop rendering packets indicating that the whole pcap has been loaded.
-#live capture
--Click on the live capture opton in the file tap to return back to live capture.
-
-### Packet decode/details:
--Both tabs rely on the user to specify the packet by selecting it,to select a packet simply click on it twice and then once u click on either packet details or packet decode it should display the relevant information.
-
-### Visualization
-- To generate charts related to sensors, you must first create one or more sensors.
-- After creating sensors in **Sensor Tab** and click **Focus On**.
+---
 
 ## Features Overview
-- **Real-time Packet Capture**: Captures live network traffic.
-- **PCAP File Support**: Import and analyze stored capture files.
-- **Advanced Filtering**: Filter packets by protocol, IP, port, and time.
-- **Machine Learning-Based Anomaly Detection**: Uses **Random Forest** for detecting anomalies.
-- **Network Traffic Prediction**: Uses **Linear Regression** to forecast traffic trends(note that it is not instant you must wait for a few seconds before it generates the predication).
-- **3D Network Topology Visualization**: Displays network structure interactively; preferred to ping devices directly as to see imediate results for new devices.
-- **Geolocation-Based Traffic Analysis**: Maps IP-based geolocations.
-- **Network Activity detection:informs the user if a device brows a website or performs an http request
-- **Corrupt Packet Detection**: Identifies and flags corrupted packets.
-- **Custom Sensor System**: Allows user-defined monitoring points.
-- **Comprehensive Graphs**: Generates pie charts, histograms, time series plots, and heatmaps.
-- **and more.
 
-:D
+### Packet Capture
+- **Default Capture Mode**: 
+  - Captures packets from the currently connected network.
+  - If the packet count exceeds a specific limit, they are saved to a **PCAP file**, and older packets are removed to save resources.
+  
+- **Packet Export**:
+  - Click **Start Capture** to begin capturing packets.
+  - When capturing, the **time interval will be highlighted in red**.
+  - Click **Stop Capture** to halt the process.
+  - To save captured packets, go to **File → Export**.
 
+- **Packet Import**:
+  - Go to **File → Import**, then select a **PCAP file**.
+  - Packets will **load sequentially** for performance reasons.
+  - Once loading stops, the entire **PCAP file** has been imported.
+
+- **Live Capture Mode**:
+  - Click **File → Live Capture** to return to real-time monitoring.
+
+### Packet Analysis
+- **Packet Decode & Details**:
+  - Select a packet by clicking on it **twice**.
+  - Click **Packet Details** or **Packet Decode** to view relevant information.
+
+### Visualization & Analytics
+- **Charts & Sensors**:
+  - Create one or more sensors under the **Sensor Tab**.
+  - Click **Focus On** to generate relevant charts.
+
+### Key Features
+✅ **Real-time Packet Capture** – Monitor live network traffic.  
+✅ **PCAP File Support** – Import and analyze stored packet data.  
+✅ **Advanced Filtering** – Filter packets by **protocol, IP, port, time, and more**.  
+✅ **Machine Learning-Based Anomaly Detection** – Uses **Random Forest** for anomaly detection.  
+✅ **Network Traffic Prediction** – Uses **Linear Regression** to forecast trends (*takes a few seconds*).  
+✅ **3D Network Topology Visualization** – Interactive network mapping.  
+✅ **Geolocation-Based Traffic Analysis** – Maps IP-based geolocations.  
+✅ **Network Activity Detection** – Detects website browsing & HTTP requests.  
+✅ **Corrupt Packet Detection** – Flags and isolates corrupted packets.  
+✅ **Custom Sensor System** – User-defined monitoring points.  
+✅ **Comprehensive Graphs** – Generates **pie charts, histograms, time-series plots, and heatmaps**.  
+✅ **And more!
