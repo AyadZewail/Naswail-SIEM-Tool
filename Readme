@@ -20,6 +20,7 @@ pip install numpy pandas psutil ipaddress scapy matplotlib networkx PyQt6 statis
 ### Running the Application
 1. Ensure **Npcap** is installed.
 2. Run the script using Python.
+3.preferably on visual studio code(optional).
 
 ### Packet Capture
 - Click **Start Capture** to begin capturing packets.
