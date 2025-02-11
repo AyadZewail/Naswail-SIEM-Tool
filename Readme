@@ -30,6 +30,9 @@ Ensure you have Python installed, then open a terminal (Command Prompt or PowerS
 ```sh
 pip install numpy pandas psutil ipaddress scapy matplotlib networkx PyQt6 statistics scikit-learn plotly geoip2 folium bs4
 pip install pandas scikit-learn matplotlib
+pip install geoip2 folium
+pip install geoip2 folium beautifulsoup4
+
 
 ```
 
