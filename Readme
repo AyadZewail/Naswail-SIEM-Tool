@@ -9,17 +9,20 @@ This software runs **only on Windows**. Before using it, you must install the fo
    - Download the **Npcap Installer** from [Npcap Official Site](https://npcap.com/).
    - Run the installer and follow the on-screen instructions.
 
-2. **Python 3.13.0** (Newer versions may or may not work):
-   - Download Python from [https://www.python.org/](https://www.python.org/).
-   - Ensure `python` is added to the system `PATH` during installation.
-
-3. **Naiswail Repository**:
+2. **Naiswail Repository**:
    - Download the repository by clicking on **Code → Download ZIP**.
    - Ensure you are on the **main branch**, not the testing branch.
    - Extract the ZIP file.
 
-4. **Recommended IDE** (Optional but preferred):
+3. **Recommended IDE** (Optional but preferred):
    - Install **Visual Studio Code** for better debugging and performance.
+
+4. **Python 3.13.0** (Newer versions may or may not work):
+   - Download Python from [https://www.python.org/](https://www.python.org/).
+   - Ensure `python` is added to the system `PATH` during installation.
+   -Create virtual environment: type "python -m venv venv" into the terminal on vscode
+   -Activate virtual enviroment: type "venv\Scripts\activate"into the terminal on vscode
+   -Specifying inturperter version:type "py -3.13 -m venv venv" into the terminal on vscode
 
 ### Required Python Libraries
 Ensure you have Python installed, then open a terminal (Command Prompt or PowerShell) and run:
