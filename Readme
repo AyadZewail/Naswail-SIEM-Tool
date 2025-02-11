@@ -26,6 +26,8 @@ This software runs **only on Windows**. Before using it, you must install the fo
    -Specifying inturperter version:type "py -3.13 -m venv venv" into the terminal on vscode
 5a. **TrainAtest2.csv does not exist error ⚠**(related to the virtual enviroment step)
    -copy and place the trainAtest2.csv file on the same folder directory that has the vnv folder there should be two folders the naswail folder and the vnv with the third being the csv
+5b. **Error in create_map function: [Errno 2] No such file or directory: b'GeoLite2-City.mmdb ⚠**(related to the virtual enviroment step)
+   - similarly to the csv file you have to copy and place the GeoLite2-City.mmdb file into the same directory that houses both the vnv folder and the Naswail folder and trainAtest2(after you have manually added it)
 
 ### Required Python Libraries
 Ensure you have Python installed, then open a terminal (Command Prompt or PowerShell) and run:
@@ -35,6 +37,7 @@ pip install numpy pandas psutil ipaddress scapy matplotlib networkx PyQt6 statis
 pip install pandas scikit-learn matplotlib
 pip install geoip2 folium
 pip install geoip2 folium beautifulsoup4
+pip install -U kaleido
 
 
 ```
