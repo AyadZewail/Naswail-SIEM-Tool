@@ -20,9 +20,12 @@ This software runs **only on Windows**. Before using it, you must install the fo
 4. **Python 3.13.0** (Newer versions may or may not work):
    - Download Python from [https://www.python.org/](https://www.python.org/).
    - Ensure `python` is added to the system `PATH` during installation.
+5. **virtual enviroment**(only if the code doesnt run straight away becuse of outdated python or library versions)
    -Create virtual environment: type "python -m venv venv" into the terminal on vscode
    -Activate virtual enviroment: type "venv\Scripts\activate"into the terminal on vscode
    -Specifying inturperter version:type "py -3.13 -m venv venv" into the terminal on vscode
+5a. **TrainAtest2.csv does not exist error ⚠**(related to the virtual enviroment step)
+   -copy and place the trainAtest2.csv file on the same folder directory that has the vnv folder there should be two folders the naswail folder and the vnv with the third being the csv
 
 ### Required Python Libraries
 Ensure you have Python installed, then open a terminal (Command Prompt or PowerShell) and run:
