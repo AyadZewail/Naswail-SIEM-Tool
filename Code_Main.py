@@ -5,6 +5,8 @@ import time
 import multiprocessing
 import psutil
 import os
+import platform
+import subprocess
 import ipaddress
 from sklearn.svm import OneClassSVM
 from PyQt6.QtWidgets import *
@@ -417,6 +419,35 @@ class PacketSystem:
 
     def set_sensor_system(self, sensor_obj):
         self.sensor_obj = sensor_obj
+    def block_ip(self,ip):
+        system = platform.system()
+        
+        if system == "Windows":
+            print(f"Blocking {ip} on Windows Firewall")
+            os.system(f'netsh advfirewall firewall add rule name="Block {ip}" dir=in action=block remoteip={ip}')
+            os.system(f'netsh advfirewall firewall add rule name="Block {ip}" dir=out action=block remoteip={ip}')
+        
+        elif system == "Linux":
+            print(f"Blocking {ip} using iptables")
+            subprocess.run(["sudo", "iptables", "-A", "INPUT", "-s", ip, "-j", "DROP"])
+            subprocess.run(["sudo", "iptables", "-A", "OUTPUT", "-d", ip, "-j", "DROP"])
+        
+        else:
+            print("Unsupported OS")
+    def unblock_ip(self,ip):
+        system = platform.system()
+        
+        if system == "Windows":
+            print(f"Unblocking {ip} from Windows Firewall")
+            os.system(f'netsh advfirewall firewall delete rule name="Block {ip}"')
+
+        elif system == "Linux":
+            print(f"Unblocking {ip} from iptables")
+            subprocess.run(["sudo", "iptables", "-D", "INPUT", "-s", ip, "-j", "DROP"])
+            subprocess.run(["sudo", "iptables", "-D", "OUTPUT", "-d", ip, "-j", "DROP"])
+        
+        else:
+            print("Unsupported OS")
     def draw_gauge(self):
         if self.sensor_obj.senFlag == 1 or self.sensor_obj.singleSenFlag == 1:
             self.typeOFchartToPlot=1
@@ -514,6 +545,7 @@ class PacketSystem:
                 
             else:
                 self.blacklist.remove(ip)
+                self.unblock_ip(ip)
                
 
             model = QStringListModel()
@@ -670,6 +702,10 @@ class PacketSystem:
                 self.ui.tableWidget.setItem(row_position, 8, QTableWidgetItem("Blocked"))
                 self.ui.tableWidget.setItem(row_position, 9, QTableWidgetItem("Blocked"))
                 self.ui.tableWidget.setItem(row_position, 10, QTableWidgetItem("Blocked"))
+                if src_ip in self.blacklist:
+                    self.block_ip(src_ip)
+                else:
+                    self.block_ip(dst_ip)
             else:
                 self.packets.append(packet)
                 if len(self.packets) >=15000:
