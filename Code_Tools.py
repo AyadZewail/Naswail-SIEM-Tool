@@ -6,6 +6,7 @@ import multiprocessing
 import psutil
 import os
 import ipaddress
+import threading
 from datetime import datetime, timedelta
 from sklearn.svm import OneClassSVM
 from PyQt6.QtWidgets import *
@@ -51,25 +52,29 @@ class NetworkActivity:
                 file.write(self.filecontent)
         except Exception as e:
             print(e)
-class RegressionPrediction:
-    def __init__(self,ui, packets):
+
+class RegressionPrediction(threading.Thread):
+    def __init__(self,ui, packets, time_series):
+        super().__init__()
         self.ui=ui
         self.futureTraffic = []
         self.r2 = 0
         self.noHours = None
         self.packets = packets
+        self.time_series = time_series
         self.model = LinearRegression()
         #print(self.packets)
+        self.start()  
         
-    def pred_traffic(self, time_series):
+    def pred_traffic(self):
         #Train Regression Model
         try:
             if(len(self.packets) > 10):
                 #print(datetime.strptime(list(time_series.keys())[0], "%H:%M:%S"))
-                X = [timestamp - list(time_series.keys())[0] for timestamp in time_series.keys()]
+                X = [timestamp - list(self.time_series.keys())[0] for timestamp in self.time_series.keys()]
 
                 X = np.array(list(map(int, X))).reshape(-1, 1)
-                y = list(time_series.values())
+                y = list(self.time_series.values())
                 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, train_size=0.8, random_state=42)
                 self.model.fit(X_train, y_train)
 
@@ -169,6 +174,10 @@ class RegressionPrediction:
             layout.addWidget(canvas)
         except Exception as e:
             print(e)
+
+    def run(self):
+        print("Thread is running...")
+        self.pred_traffic()
 
 class SuspiciousAnalysis:
     def __init__(self,ui, anomalies, packet):
@@ -453,7 +462,7 @@ class Window_Tools(QWidget, Ui_Naswail_Tool):
         self.ui.setupUi(self)  
         self.init_ui()
         self.ErrorPacketSystemobj = ErrorPacketSystem(self.ui)
-        self.RegPred = RegressionPrediction(self.ui, self.main_window.PacketSystemobj.packets)
+        self.RegPred = RegressionPrediction(self.ui, self.main_window.PacketSystemobj.packets, self.main_window.time_series)
         self.SuAn = SuspiciousAnalysis(self.ui, self.main_window.PacketSystemobj.anomalies, self.main_window.PacketSystemobj)
         self.networkactobj=NetworkActivity(self.ui)
         self.networkactobj.set_packetobj(self.main_window.PacketSystemobj)
@@ -511,8 +520,8 @@ class Window_Tools(QWidget, Ui_Naswail_Tool):
         
         self.ErrorPacketSystemobj.display()
         self.SuAn.display()
-        if(self.sec % 30 == 0):
-            self.RegPred.pred_traffic(self.main_window.time_series)
+        if(self.sec % 15 == 0):
+            self.RegPred.pred_traffic()
             if(self.RegPred.r2 > 0.50):
                 self.RegPred.display()
                 self.RegPred.display_graph()
