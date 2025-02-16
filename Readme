@@ -3,7 +3,7 @@ Naiswail Network Traffic Analysis Tool
 ## Installation Guide
 
 ### Prerequisites
-This software runs **only on Windows and should be ran as admin**. Before using it, you must install the following:
+This software runs **only on Windows(linux is in devlopment among other features) and should be ran as admin**. Before using it, you must install the following:
 
 1. **Npcap**:
    - Download the **Npcap Installer** from [Npcap Official Site](https://npcap.com/).
