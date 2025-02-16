@@ -6,10 +6,18 @@ import multiprocessing
 import psutil
 import os
 import ipaddress
+import threading
 from datetime import datetime, timedelta
 from sklearn.svm import OneClassSVM
 from PyQt6.QtWidgets import *
 from PyQt6.QtCore import *
+from PyQt6.QtGui import QPainter, QPixmap
+import plotly.graph_objects as go
+import geoip2.database
+import folium
+import re
+from folium.plugins import HeatMap
+from scapy.layers.inet import IP
 from scapy.all import *
 from statistics import mean, median, mode, stdev, variance
 from sklearn.model_selection import train_test_split
@@ -19,62 +27,176 @@ from sklearn.metrics import mean_squared_error, r2_score
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 import networkx as nx
 from matplotlib.figure import Figure
+from bs4 import BeautifulSoup
 import matplotlib.pyplot as plt
 from datetime import datetime, timedelta
 from UI_Analysis import Ui_Naswail_Anlaysis
 from Code_Tools import Window_Tools
+
+class GeoMap(threading.Thread):
+    def __init__(self, ui, packets, anomalies):
+        super().__init__()
+        self.ui = ui
+        self.packets = packets
+        self.anomalies = anomalies
+        self.geoip_db_path = "GeoLite2-City.mmdb"
+        self.lastindex = 0
+        self.src_lats, self.src_lons = [], []
+        self.dst_lats, self.dst_lons = [], []
+        self.lines = []
+        self.start()  
+
+    def get_location(self, ip):
+        try:
+            with geoip2.database.Reader(self.geoip_db_path) as reader:
+                response = reader.city(ip)
+                lat = response.location.latitude
+                lon = response.location.longitude
+                return lat, lon
+        except geoip2.errors.AddressNotFoundError:
+            return 30.0444, 31.2357
+
+    def create_map(self):
+        try:
+            
+            for i in range(self.lastindex, len(self.packets)):
+                if IP in self.packets[i]:
+                    
+                    src_lat, src_lon = self.get_location(self.packets[i][IP].src)
+                    dst_lat, dst_lon = self.get_location(self.packets[i][IP].dst)
+
+                    # Only process if coordinates are valid
+                    if None not in (src_lat, src_lon, dst_lat, dst_lon) and (src_lat, src_lon) != (0, 0) and (dst_lat, dst_lon) != (0, 0):
+                        self.src_lats.append(src_lat)
+                        self.src_lons.append(src_lon)
+                        self.dst_lats.append(dst_lat)
+                        self.dst_lons.append(dst_lon)
+
+                        
+
+                        # add lines connecting the source to destination
+                        if self.packets[i] in self.anomalies:
+                            self.lines.append({
+                                "type": "scattergeo",
+                                "lat": [src_lat, dst_lat],
+                                "lon": [src_lon, dst_lon],
+                                "mode": "lines",
+                                "line": {"width": 1, "color": "red"},
+                            })
+                        else:
+                            self.lines.append({
+                                "type": "scattergeo",
+                                "lat": [src_lat, dst_lat],
+                                "lon": [src_lon, dst_lon],
+                                "mode": "lines",
+                                "line": {"width": 1, "color": "green"},
+                            })
+
+            self.lastindex = len(self.packets)
+
+            points = go.Scattergeo(
+                lon=self.src_lons + self.dst_lons,  # Combine source and destination lon values
+                lat=self.src_lats + self.dst_lats,  # Combine source and destination lat values
+                mode="markers",
+                marker=dict(size=6, color="blue"),
+                text=[f"Source: {p[IP].src}" for p in self.packets if IP in p] + [f"Destination: {p[IP].dst}" for p in self.packets if IP in p],
+            )
+
+            # Combine points and lines
+            fig = go.Figure(data=[points] + self.lines)
+
+            # Set map layout
+            fig.update_layout(
+                title="Packet Origins and Destinations",
+                geo=dict(
+                    scope="world",
+                    projection_type="equirectangular",
+                    showland=True,
+                    landcolor="rgb(243, 243, 243)",
+                    subunitcolor="rgb(217, 217, 217)",
+                ),
+            )
+
+            
+            image_path = "packet_map.png"
+            fig.write_image(image_path)  
+            pixmap = QPixmap(image_path)
+            self.ui.label.setPixmap(pixmap)
+
+        except Exception as e:
+            print(f"Error in create_map function: {e}")
+    
+    def run(self):
+        print("GeoMap Thread is running...")
+        self.create_map()
+
+
 class Node:
     def __init__(self):
         self.mac_address = ""
-        self.edges = set()  # List of connected MAC addresses
+        self.edges = set()  # set of connected devices
 
 
-class NetworkTopologyVisualizer:
+class NetworkTopologyVisualizer(threading.Thread):
     def __init__(self,packetobj, ui):
+        super().__init__()
         self.ui = ui
         self.list_of_nodes = []
         self.packetobj=packetobj
         # Layout for self.ui.widget_6
         self.layout = QVBoxLayout(self.ui.widget_6)
 
-        # Placeholder for the matplotlib figure
+        
         self.figure = plt.figure()
         self.canvas = FigureCanvas(self.figure)
         self.layout.addWidget(self.canvas)
 
-        self.find_unique_devices_and_edges()
-        self.visualize_network()
+        self.start()
 
     def find_unique_devices_and_edges(self):
         try:
-            unique_macs = set()
-            for packet in self.packetobj.packets:
-                src_mac = packet["Ethernet"].src if packet.haslayer("Ethernet") else "N/A"
-                dst_mac = packet["Ethernet"].dst if packet.haslayer("Ethernet") else "N/A"
+            unique_ips = set()
+            pure_local=[]#local in both dst and src
+            #  unique IP addresses
+            for packet in self.packetobj.qued_packets:
+                src_ip = packet["IP"].src if packet.haslayer("IP") else "N/A"
+                dst_ip = packet["IP"].dst if packet.haslayer("IP") else "N/A"
+                islocal=self.packetobj.is_local_ip(dst_ip)
+                islocal2=self.packetobj.is_local_ip(src_ip)
+                if "255" in src_ip or "255" in dst_ip:
+                    continue
+
+                if islocal:
+                    unique_ips.add(dst_ip)
                 
-                # Add the MAC addresses to the set if they exist
-                if src_mac:
-                    unique_macs.add(src_mac)
-                if dst_mac:
-                    unique_macs.add(dst_mac)
-            #end of for loop for finding unique mac
-            for mac in unique_macs:
-                newnode=Node()
-                newnode.mac_address=mac
-                self.list_of_nodes.append(newnode)
-            #end of creating nodes
-            for currentnode in self.list_of_nodes:
-                for packet in self.packetobj.packets:
-                    src_mac = packet["Ethernet"].src if packet.haslayer("Ethernet") else "N/A"
-                    dst_mac = packet["Ethernet"].dst if packet.haslayer("Ethernet") else "N/A"
-                    if src_mac==currentnode.mac_address:
-                        currentnode.edges.add(dst_mac)
-                    if dst_mac==currentnode.mac_address:
-                        currentnode.edges.add(src_mac)
-                #end of packets
-            #end of for loop for finding the connections
+                if islocal2:
+                    unique_ips.add(src_ip)
+                if islocal2 and islocal:
+                    pure_local.append(packet) 
+           
+            
+            # Create nodes
+            for ip in unique_ips:
+                new_node = Node()
+                new_node.mac_address = ip
+                self.list_of_nodes.append(new_node)
+            
+            
+            # connections
+            for current_node in self.list_of_nodes:
+                for packet in pure_local:
+                    
+                    dst_ip = packet["IP"].dst if packet.haslayer("IP") else "N/A"
+                    src_ip = packet["IP"].src if packet.haslayer("IP") else "N/A"
+                    if dst_ip == current_node.mac_address:
+                        current_node.edges.add(src_ip)
+                    if src_ip == current_node.mac_address:
+                        current_node.edges.add(dst_ip)
+            
+            
         except Exception as e:
-            print(f"Error in unique mac function: {e}")
+            print(f"Error in unique IP function: {e}")
+
     
     def visualize_network(self):
         # Create a graph
@@ -84,17 +206,17 @@ class NetworkTopologyVisualizer:
         pos = {}  # Dictionary to store node positions
         for i, node in enumerate(self.list_of_nodes):
             G.add_node(node.mac_address)
-            # Assign random 3D positions
+            # semi random pos
             pos[node.mac_address] = (i, i % 2, i // 2)
 
-            # Add edges based on the node's connections
+            # Add edges based on connections
             for connected_mac in node.edges:
                 G.add_edge(node.mac_address, connected_mac)
 
-        # Create a 3D plot
+        # Create a 3D 
         ax = self.figure.add_subplot(111, projection='3d')
-        self.figure.patch.set_alpha(0.0)  # Set figure background to transparent
-        ax.set_facecolor((0, 0, 0, 0))  # Set axis background to transparent
+        self.figure.patch.set_alpha(0.0)  
+        ax.set_facecolor((0, 0, 0, 0))  
 
         # Draw the edges
         for edge in G.edges():
@@ -110,8 +232,8 @@ class NetworkTopologyVisualizer:
             i+=1
             for name,mac in self.packetobj.sensor_obj.sensors.items():
                 if mac == mac_address:
-                    lab = name+": "+mac  # Use the name if it matches
-                    break  # Stop checking once a match is found
+                    lab = name+": "+mac  
+                    break  
             ax.scatter(x, y, z, s=100, label=lab)
 
         # Set labels
@@ -127,9 +249,15 @@ class NetworkTopologyVisualizer:
         borderaxespad=0.0  # Padding between the legend and the axes
     )
 
-        # Refresh the canvas
+        
         self.canvas.draw()
         plt.close()
+
+    def run(self):
+        print("3D Thread is running...")
+        self.find_unique_devices_and_edges()
+        self.visualize_network()
+
 class visualization:#class for all the charts
     def __init__(self,main_window,ui):
         self.main_window=main_window
@@ -144,7 +272,7 @@ class visualization:#class for all the charts
         self.display_time_series()
     def display_histogram(self):
         try:
-            """Display a histogram based on the selected option."""
+            
             if self.ui.comboBox_3.currentText()=="inside/outside":
                 total_inside=self.main_window.PacketSystemobj.total_inside_packets
                 total_outside=self.main_window.PacketSystemobj.total_outside_packets
@@ -162,7 +290,7 @@ class visualization:#class for all the charts
 
                 
             if self.ui.comboBox_3.currentText() == "Sensors":
-                # Access packet stats from the main window
+                
                 sensors = self.main_window.SensorSystemobj.sen_info
 
                 counts = []
@@ -182,13 +310,13 @@ class visualization:#class for all the charts
                 canvas.draw()
 
             if self.ui.comboBox_3.currentText() == "Protocols":
-                # Access packet stats from the main window
+                
                 packet_stats = self.main_window.PacketSystemobj.packet_stats
 
-                # Define the protocols
+                
                 protocols = ["TCP", "UDP", "ICMP", "HTTP", "HTTPS", "FTP", "Telnet", "DNS", "DHCP", "Other"]
 
-                # Extract counts for each protocol
+                
                 counts = [
                     packet_stats.get("tcp", 0),
                     packet_stats.get("udp", 0),
@@ -199,8 +327,8 @@ class visualization:#class for all the charts
                     packet_stats.get("telnet", 0),
                     packet_stats.get("dns", 0),
                     packet_stats.get("dhcp", 0),
-                    packet_stats.get("total", 0)
-                    - sum(packet_stats.get(proto, 0) for proto in ["tcp", "udp", "icmp", "http", "https", "ftp", "telnet", "dns", "dhcp"]),
+                    packet_stats.get("other",0)
+                    
                 ]
 
                 # Create the histogram
@@ -397,21 +525,21 @@ class visualization:#class for all the charts
                     layout.addWidget(canvas)
                 
             if self.ui.comboBox_6.currentText() == "Sensors":
-                    # Access sensor statistics from the main window
+                
                     sensors = self.main_window.SensorSystemobj.sen_info
 
                    
                     packet_stats = self.main_window.PacketSystemobj.packets 
                     packet_times = [packet.time for packet in packet_stats]
 
-                    # Define the time range for the graph
+                
                     start_time = min(packet_times)
                     end_time = max(packet_times)
 
-                    # Generate 10 intervals between the start and end times
+                
                     intervals = np.linspace(start_time, end_time, 11)  # 11 because we want 10 intervals
 
-                    # Initialize a list to hold the packet counts for each interval (for all sensors)
+                    # I list to hold the packet counts for each interval (for 10 intervals)
                     packet_counts = [0] * 10
 
                     # Count how many packets fall into each time interval
@@ -421,15 +549,15 @@ class visualization:#class for all the charts
                                 packet_counts[i] += 1
                                 break  # Stop once we find the interval for the packet
 
-                    # Plot the results
-                    figure = plt.Figure(figsize=(6, 4))  # Define a larger figure size
+                
+                    figure = plt.Figure(figsize=(6, 4))  
                     canvas = FigureCanvas(figure)
                     ax = figure.add_subplot(111)
 
-                    # Convert the time intervals to a human-readable format (HH:MM:SS AM/PM)
+                
                     time_labels = [datetime.fromtimestamp(interval).strftime("%I:%M:%S %p") for interval in intervals[:-1]]
 
-                    # Plot the packet counts over time intervals
+                   
                     ax.plot(intervals[:-1], packet_counts, label='sensor Packet Counts', marker='o')
 
                     # Set labels and title
@@ -439,15 +567,14 @@ class visualization:#class for all the charts
 
                     # Set x-axis ticks and labels
                     ax.set_xticks(intervals[:-1])
-                    ax.set_xticklabels(time_labels, rotation=45, ha="right")  # Rotate labels and adjust alignment
+                    ax.set_xticklabels(time_labels, rotation=45, ha="right")  
 
                     # Increase bottom margin for x-axis labels
                     figure.subplots_adjust(bottom=0.2)
 
                     # Add legend
                     ax.legend()
-                    #Clear the previous canvas in widget_5
-                        # Clear the previous canvas in widget_5
+                    
                     if self.ui.widget_5.layout() is None:
                         layout = QVBoxLayout(self.ui.widget_5)
                         self.ui.widget_5.setLayout(layout)
@@ -462,23 +589,23 @@ class visualization:#class for all the charts
                     layout.addWidget(canvas)
             if self.ui.comboBox_6.currentText() == "Protocols":
                         
-                                # Access packet statistics from the main window
-                    packet_stats = self.main_window.PacketSystemobj.packets  # Replace with your actual list of packets
+                                
+                    packet_stats = self.main_window.PacketSystemobj.packets  
 
-                    # Get the times of the packets
+                    
                     packet_times = [packet.time for packet in packet_stats]
 
-                    # Define the time range for the graph
+                    
                     start_time = min(packet_times)
                     end_time = max(packet_times)
 
-                    # Generate 10 intervals between the start and end times
+                    
                     intervals = np.linspace(start_time, end_time, 11)  # 11 because we want 10 intervals
 
-                    # Initialize a list to hold the packet counts for each interval
+                    #  a list to hold the packet counts for each interval
                     packet_counts = [0] * 10
 
-                    # Count how many packets fall into each time interval
+                    
                     for packet_time in packet_times:
                         for i in range(10):
                             if intervals[i] <= packet_time < intervals[i + 1]:
@@ -492,7 +619,7 @@ class visualization:#class for all the charts
                     canvas = FigureCanvas(figure)
                     ax = figure.add_subplot(111)
 
-                    # Plot the time series data (using a line plot)
+                    
                     time_labels = [datetime.fromtimestamp(interval).strftime("%I:%M:%S %p") for interval in intervals[:-1]]
                     ax.plot(intervals[:-1], packet_counts, label=' Packet Counts', marker='o')
 
@@ -526,16 +653,16 @@ class visualization:#class for all the charts
                 if self.ui.comboBox_5.currentText() == "Bandwidth":
                     bandwidth_data = self.main_window.PacketSystemobj.bandwidth_data
                     if bandwidth_data:
-                        # Extract times and bandwidth values
+                        
                         times, bandwidth = zip(*bandwidth_data)
                         bandwidth = np.array(bandwidth)  # Convert bandwidth to numpy array
-                        # Ensure bandwidth is 2D (even if just one row)
+                        
                         bandwidth = bandwidth.reshape(1, -1)  # Reshape into 2D array (1 row, n columns)
                         # Optional: Add more rows for better visualization
-                        bandwidth = np.tile(bandwidth, (5, 1))  # Repeat row 5 times for better visual effect
+                        bandwidth = np.tile(bandwidth, (5, 1))  #  5 times for better visual effect
                         
                         # Create the figure and canvas
-                        figure = Figure(figsize=(6, 6))  # Larger figure size for better readability
+                        figure = Figure(figsize=(4, 4))  # Larger figure size for better readability
                         canvas = FigureCanvas(figure)
                         ax = figure.add_subplot(111)
                         
@@ -548,8 +675,8 @@ class visualization:#class for all the charts
                         # Set tick labels for time (X-axis)
                         ax.set_xticks(range(len(times)))
                         
-                        # Limit the number of time labels to avoid overlap
-                        label_step = max(1, len(times) // 10)  # Show at most 10 labels
+                    
+                        label_step = max(1, len(times) // 10)  # Show at most 10 time labels
                         ax.set_xticks(range(0, len(times), label_step))
                         
                         # Use only every nth time interval label
@@ -751,7 +878,7 @@ class visualization:#class for all the charts
                 udp_count = packet_stats.get("udp", 0)
                 icmp_count = packet_stats.get("icmp", 0)
                 total_count = packet_stats.get("total", 0)
-                other_count = total_count - (tcp_count + udp_count + icmp_count)
+                other_count = packet_stats.get("other",0)
                 # Prepare data for the pie chart
                 labels = ["  TCP  ", "    UDP    ", "   ICMP   ", "  Other   "]
                 sizes = [tcp_count, udp_count, icmp_count, other_count]
@@ -847,9 +974,12 @@ class Window_Analysis(QWidget, Ui_Naswail_Anlaysis):
         self.init_ui()
         self.Visualizationobj=visualization(self.main_window,self.ui)
         self.ThreeDVisulizationobj=NetworkTopologyVisualizer(self.main_window.PacketSystemobj,self.ui)
+        self.GeoMapObj = GeoMap(self.ui, self.main_window.PacketSystemobj.packets, self.main_window.PacketSystemobj.anomalies)
+        #self.GeoMapObj.start()
     def init_ui(self):
         self.setWindowTitle("Secondary Widget")
         self.showMaximized()
+        self.setWindowTitle("Naswail - Visualization")
         self.Visualizationobj=visualization(self.main_window,self.ui)
         # Connect comboBox_2 selection change
         self.ui.comboBox_2.currentIndexChanged.connect(self.on_combobox_change)
@@ -859,8 +989,17 @@ class Window_Analysis(QWidget, Ui_Naswail_Anlaysis):
         self.ui.comboBox_6.currentIndexChanged.connect(self.on_combobox_change)
         # Connect PushButton_5 click to display pie chart
         
+        pixmap = QPixmap(r"logo.png")
+        self.pixmap_item = QGraphicsPixmapItem(pixmap)
+        self.scene = QGraphicsScene(self)
+        self.scene.addItem(self.pixmap_item)
+        self.ui.graphicsView.setScene(self.scene)
+        self.ui.graphicsView.setFixedSize(71, 61)
+        self.ui.graphicsView.fitInView(self.scene.sceneRect(), Qt.AspectRatioMode.KeepAspectRatio)
         self.ui.pushButton_4.clicked.connect(self.show_main_window)
         self.ui.pushButton_3.clicked.connect(self.show_tools_window)
+
+        self.ui.label.setText("")
        
      
         # Initialize a placeholder for selected option
@@ -879,14 +1018,16 @@ class Window_Analysis(QWidget, Ui_Naswail_Anlaysis):
         print(f"Selected option: {self.selected_option}")  # Debugging output
     def show_main_window(self):
         """Show the main window and hide this widget."""
-        self.ThreeDVisulizationobj.find_unique_devices_and_edges()
-        self.ThreeDVisulizationobj.visualize_network()
+        #self.ThreeDVisulizationobj.find_unique_devices_and_edges()
+        #self.ThreeDVisulizationobj.visualize_network()
+        #self.GeoMapObj.create_map()
         self.main_window.show()
         self.hide()
     def show_tools_window(self):
         """Show the tools window and hide this widget."""
-        self.ThreeDVisulizationobj.find_unique_devices_and_edges()
-        self.ThreeDVisulizationobj.visualize_network()
+        #self.ThreeDVisulizationobj.find_unique_devices_and_edges()
+        #self.ThreeDVisulizationobj.visualize_network()
+        #self.GeoMapObj.create_map()
         self.secondary_widget2 = Window_Tools(self.main_window)
         self.hide()
         self.secondary_widget2.show()
