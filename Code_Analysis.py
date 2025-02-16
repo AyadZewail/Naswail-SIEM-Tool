@@ -127,7 +127,7 @@ class GeoMap(threading.Thread):
             print(f"Error in create_map function: {e}")
     
     def run(self):
-        print("Thread is running...")
+        print("GeoMap Thread is running...")
         self.create_map()
 
 
@@ -137,8 +137,9 @@ class Node:
         self.edges = set()  # set of connected devices
 
 
-class NetworkTopologyVisualizer:
+class NetworkTopologyVisualizer(threading.Thread):
     def __init__(self,packetobj, ui):
+        super().__init__()
         self.ui = ui
         self.list_of_nodes = []
         self.packetobj=packetobj
@@ -150,8 +151,7 @@ class NetworkTopologyVisualizer:
         self.canvas = FigureCanvas(self.figure)
         self.layout.addWidget(self.canvas)
 
-        self.find_unique_devices_and_edges()
-        self.visualize_network()
+        self.start()
 
     def find_unique_devices_and_edges(self):
         try:
@@ -252,6 +252,12 @@ class NetworkTopologyVisualizer:
         
         self.canvas.draw()
         plt.close()
+
+    def run(self):
+        print("3D Thread is running...")
+        self.find_unique_devices_and_edges()
+        self.visualize_network()
+
 class visualization:#class for all the charts
     def __init__(self,main_window,ui):
         self.main_window=main_window
@@ -1012,15 +1018,15 @@ class Window_Analysis(QWidget, Ui_Naswail_Anlaysis):
         print(f"Selected option: {self.selected_option}")  # Debugging output
     def show_main_window(self):
         """Show the main window and hide this widget."""
-        self.ThreeDVisulizationobj.find_unique_devices_and_edges()
-        self.ThreeDVisulizationobj.visualize_network()
+        #self.ThreeDVisulizationobj.find_unique_devices_and_edges()
+        #self.ThreeDVisulizationobj.visualize_network()
         #self.GeoMapObj.create_map()
         self.main_window.show()
         self.hide()
     def show_tools_window(self):
         """Show the tools window and hide this widget."""
-        self.ThreeDVisulizationobj.find_unique_devices_and_edges()
-        self.ThreeDVisulizationobj.visualize_network()
+        #self.ThreeDVisulizationobj.find_unique_devices_and_edges()
+        #self.ThreeDVisulizationobj.visualize_network()
         #self.GeoMapObj.create_map()
         self.secondary_widget2 = Window_Tools(self.main_window)
         self.hide()
