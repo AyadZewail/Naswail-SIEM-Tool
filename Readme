@@ -3,7 +3,7 @@ Naiswail Network Traffic Analysis Tool
 ## Installation Guide
 
 ### Prerequisites
-This software runs **only on Windows**. Before using it, you must install the following:
+This software runs **only on Windows and should be ran as admin**. Before using it, you must install the following:
 
 1. **Npcap**:
    - Download the **Npcap Installer** from [Npcap Official Site](https://npcap.com/).
@@ -15,7 +15,7 @@ This software runs **only on Windows**. Before using it, you must install the fo
    - Extract the ZIP file.
 
 3. **Recommended IDE** (Optional but preferred):
-   - Install **Visual Studio Code** for better debugging and performance.
+   - Install **Visual Studio Code** for better debugging and performance but run it as admin otherwise the black list function wont actually block the packets.
 
 4. **Python 3.13.0** (Newer versions may or may not work):
    - Download Python from [https://www.python.org/](https://www.python.org/).
