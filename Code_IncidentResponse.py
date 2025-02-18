@@ -124,22 +124,31 @@ class PortBlocking():
     def updateBlockedPorts(self, f):
         try:
             port = self.ui.lineEdit_2.text().strip()
-            if(f == 1):
-                self.blocked_ports.append(port)
-                self.block_port(port)
-            else:
-                self.blocked_ports.remove(port)
-                self.unblock_port(port)
-               
-            self.ui.tableWidget_2.setRowCount(0)
-            row_position = self.ui.tableWidget_6.rowCount()
-            self.ui.tableWidget_2.insertRow(row_position)
-            self.ui.tableWidget_2.setItem(row_position, 0, QTableWidgetItem(str(port)))
-            self.ui.tableWidget_2.setItem(row_position, 1, QTableWidgetItem("Blocked"))
-        except Exception as e:
-            print(f"Error updating blacklist: {e}")
+            if f == 1:  # Block port
+                if port not in self.blocked_ports:  # Avoid duplicate entries
+                    self.blocked_ports.append(port)
+                    self.block_port(port)
+                    row_position = self.ui.tableWidget_2.rowCount()
+                    self.ui.tableWidget_2.insertRow(row_position)
+                    self.ui.tableWidget_2.setItem(row_position, 0, QTableWidgetItem(str(port)))
+                    self.ui.tableWidget_2.setItem(row_position, 1, QTableWidgetItem("Blocked"))
+            else:  # Unblock port
+                if port in self.blocked_ports:
+                    self.blocked_ports.remove(port)
+                    self.unblock_port(port)
+                    self.remove_port_from_table(port)  # Remove from table
 
-    def block_port(port):
+        except Exception as e:
+            print(f"Error updating port blocked: {e}")
+
+    def remove_port_from_table(self, port):
+        
+        for row in range(self.ui.tableWidget_2.rowCount()):
+            if self.ui.tableWidget_2.item(row, 0) and self.ui.tableWidget_2.item(row, 0).text() == str(port):
+                self.ui.tableWidget_2.removeRow(row)
+                break  # Stop after removing the first matching row
+
+    def block_port(self,port):
         os_name = platform.system()
 
         if os_name == "Windows":
@@ -151,12 +160,13 @@ class PortBlocking():
         else:
             print("Unsupported OS.")
 
-    def unblock_port(port):
+    def unblock_port(self,port):
         os_name = platform.system()
 
         if os_name == "Windows":
             os.system(f'netsh advfirewall firewall delete rule name="BlockPort{port}" protocol=TCP localport={port}')
             print(f"Unblocked port {port} on Windows.")
+            
         elif os_name == "Linux":
             os.system(f"sudo iptables -D INPUT -p tcp --dport {port} -j DROP")
             print(f"Unblocked port {port} on Linux.")
@@ -169,6 +179,7 @@ class IncidentResponse(QWidget, Ui_IncidentResponse):
         self.main_window = main_window
         self.ui = Ui_IncidentResponse()
         self.ui.setupUi(self)
+        self.showMaximized()
         self.ui.pushButton_8.clicked.connect(self.show_main_window)
         self.ui.pushButton_7.clicked.connect(self.show_analysis_window)
         self.ui.pushButton_6.clicked.connect(self.show_tools_window)
