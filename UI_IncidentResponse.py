@@ -13,11 +13,6 @@ class Ui_IncidentResponse(object):
     def setupUi(self, Form):
         Form.setObjectName("Form")
         Form.resize(1387, 873)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Policy.Expanding, QtWidgets.QSizePolicy.Policy.Expanding)
-        sizePolicy.setHorizontalStretch(0)
-        sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(Form.sizePolicy().hasHeightForWidth())
-        Form.setSizePolicy(sizePolicy)
         Form.setStyleSheet("QWidget:window {                    /* Borders around the code editor and debug window */\n"
 "        border: 1px solid #263238;\n"
 "        background-color: #263238;\n"
@@ -1482,7 +1477,7 @@ class Ui_IncidentResponse(object):
 "\n"
 "")
         self.horizontalLayoutWidget = QtWidgets.QWidget(parent=Form)
-        self.horizontalLayoutWidget.setGeometry(QtCore.QRect(180, 20, 1141, 41))
+        self.horizontalLayoutWidget.setGeometry(QtCore.QRect(180, 10, 1141, 41))
         self.horizontalLayoutWidget.setObjectName("horizontalLayoutWidget")
         self.horizontalLayout_2 = QtWidgets.QHBoxLayout(self.horizontalLayoutWidget)
         self.horizontalLayout_2.setContentsMargins(0, 0, 0, 0)
@@ -1509,12 +1504,12 @@ class Ui_IncidentResponse(object):
         self.label_2.setFont(font)
         self.label_2.setObjectName("label_2")
         self.tableWidget = QtWidgets.QTableWidget(parent=Form)
-        self.tableWidget.setGeometry(QtCore.QRect(50, 120, 731, 381))
+        self.tableWidget.setGeometry(QtCore.QRect(50, 100, 731, 381))
         self.tableWidget.setObjectName("tableWidget")
         self.tableWidget.setColumnCount(0)
         self.tableWidget.setRowCount(0)
         self.tabWidget = QtWidgets.QTabWidget(parent=Form)
-        self.tabWidget.setGeometry(QtCore.QRect(774, 530, 581, 291))
+        self.tabWidget.setGeometry(QtCore.QRect(774, 500, 581, 291))
         self.tabWidget.setObjectName("tabWidget")
         self.tab = QtWidgets.QWidget()
         self.tab.setObjectName("tab")
@@ -1565,7 +1560,7 @@ class Ui_IncidentResponse(object):
         self.pushButton_11.setObjectName("pushButton_11")
         self.tabWidget.addTab(self.tab_2, "")
         self.treeView = QtWidgets.QTreeView(parent=Form)
-        self.treeView.setGeometry(QtCore.QRect(30, 550, 641, 271))
+        self.treeView.setGeometry(QtCore.QRect(30, 530, 641, 271))
         self.treeView.setStyleSheet("QTreeView {\n"
 "   border: 1px solid #76797C;\n"
 "    gridline-color: #31363b;\n"
@@ -1574,12 +1569,12 @@ class Ui_IncidentResponse(object):
 "")
         self.treeView.setObjectName("treeView")
         self.tableWidget_3 = QtWidgets.QTableWidget(parent=Form)
-        self.tableWidget_3.setGeometry(QtCore.QRect(850, 120, 501, 381))
+        self.tableWidget_3.setGeometry(QtCore.QRect(850, 100, 501, 381))
         self.tableWidget_3.setObjectName("tableWidget_3")
         self.tableWidget_3.setColumnCount(0)
         self.tableWidget_3.setRowCount(0)
         self.label_4 = QtWidgets.QLabel(parent=Form)
-        self.label_4.setGeometry(QtCore.QRect(230, 510, 241, 31))
+        self.label_4.setGeometry(QtCore.QRect(230, 490, 241, 31))
         font = QtGui.QFont()
         font.setFamily("Yu Gothic UI")
         font.setPointSize(11)
@@ -1588,7 +1583,7 @@ class Ui_IncidentResponse(object):
         self.label_4.setFont(font)
         self.label_4.setObjectName("label_4")
         self.label_5 = QtWidgets.QLabel(parent=Form)
-        self.label_5.setGeometry(QtCore.QRect(1020, 80, 161, 31))
+        self.label_5.setGeometry(QtCore.QRect(1020, 60, 161, 31))
         font = QtGui.QFont()
         font.setFamily("Yu Gothic UI")
         font.setPointSize(11)
@@ -1596,9 +1591,18 @@ class Ui_IncidentResponse(object):
         font.setWeight(75)
         self.label_5.setFont(font)
         self.label_5.setObjectName("label_5")
+        self.label_6 = QtWidgets.QLabel(parent=Form)
+        self.label_6.setGeometry(QtCore.QRect(300, 60, 161, 31))
+        font = QtGui.QFont()
+        font.setFamily("Yu Gothic UI")
+        font.setPointSize(11)
+        font.setBold(True)
+        font.setWeight(75)
+        self.label_6.setFont(font)
+        self.label_6.setObjectName("label_6")
 
         self.retranslateUi(Form)
-        self.tabWidget.setCurrentIndex(1)
+        self.tabWidget.setCurrentIndex(0)
         QtCore.QMetaObject.connectSlotsByName(Form)
 
     def retranslateUi(self, Form):
@@ -1619,12 +1623,14 @@ class Ui_IncidentResponse(object):
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_2), _translate("Form", "Port Blocking"))
         self.label_4.setText(_translate("Form", " Auto-Pilot Acitvity Log"))
         self.label_5.setText(_translate("Form", "Attack Intelligence"))
+        self.label_6.setText(_translate("Form", "Suspecious Packets"))
+
 
 if __name__ == "__main__":
     import sys
     app = QtWidgets.QApplication(sys.argv)
-    IncidentResponse = QtWidgets.QWidget()
+    Form = QtWidgets.QWidget()
     ui = Ui_IncidentResponse()
-    ui.setupUi(IncidentResponse)
-    IncidentResponse.show()
+    ui.setupUi(Form)
+    Form.show()
     sys.exit(app.exec())
