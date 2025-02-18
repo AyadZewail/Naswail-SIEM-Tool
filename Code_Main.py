@@ -545,10 +545,12 @@ class PacketSystem:
             if(f == 1):
                 self.blacklist.append(ip)
                 self.block_ip(ip)
+                self.networkLog+="Blocked IP: "+ip+"\n"
                 
             else:
                 self.blacklist.remove(ip)
                 self.unblock_ip(ip)
+                self.networkLog+="Unblocked IP: "+ip+"\n"
                
 
             model = QStringListModel()
