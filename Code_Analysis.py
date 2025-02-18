@@ -32,6 +32,7 @@ import matplotlib.pyplot as plt
 from datetime import datetime, timedelta
 from UI_Analysis import Ui_Naswail_Anlaysis
 from Code_Tools import Window_Tools
+from Code_IncidentResponse import IncidentResponse
 
 class GeoMap(threading.Thread):
     def __init__(self, ui, packets, anomalies):
@@ -998,6 +999,7 @@ class Window_Analysis(QWidget, Ui_Naswail_Anlaysis):
         self.ui.graphicsView.fitInView(self.scene.sceneRect(), Qt.AspectRatioMode.KeepAspectRatio)
         self.ui.pushButton_4.clicked.connect(self.show_main_window)
         self.ui.pushButton_3.clicked.connect(self.show_tools_window)
+        self.ui.pushButton_5.clicked.connect(self.show_incidentresponse_window)
 
         self.ui.label.setText("")
        
@@ -1018,17 +1020,16 @@ class Window_Analysis(QWidget, Ui_Naswail_Anlaysis):
         print(f"Selected option: {self.selected_option}")  # Debugging output
     def show_main_window(self):
         """Show the main window and hide this widget."""
-        #self.ThreeDVisulizationobj.find_unique_devices_and_edges()
-        #self.ThreeDVisulizationobj.visualize_network()
-        #self.GeoMapObj.create_map()
         self.main_window.show()
         self.hide()
     def show_tools_window(self):
         """Show the tools window and hide this widget."""
-        #self.ThreeDVisulizationobj.find_unique_devices_and_edges()
-        #self.ThreeDVisulizationobj.visualize_network()
-        #self.GeoMapObj.create_map()
         self.secondary_widget2 = Window_Tools(self.main_window)
+        self.hide()
+        self.secondary_widget2.show()
+    def show_incidentresponse_window(self):
+        """Show the tools window and hide this widget."""
+        self.secondary_widget2 = IncidentResponse(self.main_window)
         self.hide()
         self.secondary_widget2.show()
 

@@ -1659,6 +1659,9 @@ class Ui_Naswail_Anlaysis(object):
         self.pushButton_4 = QtWidgets.QPushButton(parent=self.horizontalLayoutWidget)
         self.pushButton_4.setObjectName("pushButton_4")
         self.horizontalLayout.addWidget(self.pushButton_4)
+        self.pushButton_5 = QtWidgets.QPushButton(parent=self.horizontalLayoutWidget)
+        self.pushButton_5.setObjectName("pushButton_5")
+        self.horizontalLayout.addWidget(self.pushButton_5)
         self.pushButton_3 = QtWidgets.QPushButton(parent=self.horizontalLayoutWidget)
         self.pushButton_3.setObjectName("pushButton_3")
         self.horizontalLayout.addWidget(self.pushButton_3)
@@ -1881,6 +1884,7 @@ class Ui_Naswail_Anlaysis(object):
         _translate = QtCore.QCoreApplication.translate
         Ui_Naswail_Anlaysis.setWindowTitle(_translate("Ui_Naswail_Anlaysis", "Form"))
         self.pushButton_4.setText(_translate("Ui_Naswail_Anlaysis", "Home"))
+        self.pushButton_5.setText(_translate("Ui_Naswail_Anlaysis", "Incident Response"))
         self.pushButton_3.setText(_translate("Ui_Naswail_Anlaysis", "Tools"))
         self.pushButton_2.setText(_translate("Ui_Naswail_Anlaysis", "Analysis"))
         self.label_4.setText(_translate("Ui_Naswail_Anlaysis", "Naswail"))
