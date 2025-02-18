@@ -514,6 +514,7 @@ class Window_Tools(QWidget, Ui_Naswail_Tool):
         self.showMaximized()
         self.ui.pushButton_4.clicked.connect(self.show_main_window)
         self.ui.pushButton_2.clicked.connect(self.show_analysis_window)
+        self.ui.pushButton_8.clicked.connect(self.show_incidentresponse_window)
         
 
     def ttTime(self):
@@ -555,14 +556,25 @@ class Window_Tools(QWidget, Ui_Naswail_Tool):
             print(f"Error in resetfilter function: {e}")
 
     def show_analysis_window(self):
-        
-        self.secondary_widget = self.main_window.open_analysis()
-        self.hide()
+        try:
+            self.secondary_widget = self.main_window.open_analysis()
+            self.hide()
+        except Exception as e:
+            print(f"Error in show_analysis_window function: {e}")
+    
+    def show_incidentresponse_window(self):
+        try:
+            self.secondary_widget = self.main_window.open_incidentresponse()
+            self.hide()
+        except Exception as e:
+            print(f"Error in show_incidentresponse_window function: {e}")
 
     def show_main_window(self):
-        
-        self.main_window.show()
-        self.hide()
+        try:
+            self.main_window.show()
+            self.hide()
+        except Exception as e:
+            print(f"Error in show_main_window function: {e}")
 
 
 
