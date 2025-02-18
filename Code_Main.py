@@ -544,6 +544,7 @@ class PacketSystem:
             ip = self.ui.lineEdit_6.text().strip()
             if(f == 1):
                 self.blacklist.append(ip)
+                self.block_ip(ip)
                 
             else:
                 self.blacklist.remove(ip)
@@ -719,10 +720,10 @@ class PacketSystem:
                 self.ui.tableWidget.setItem(row_position, 8, QTableWidgetItem("Blocked"))
                 self.ui.tableWidget.setItem(row_position, 9, QTableWidgetItem("Blocked"))
                 self.ui.tableWidget.setItem(row_position, 10, QTableWidgetItem("Blocked"))
-                if src_ip in self.blacklist:
-                    self.block_ip(src_ip)
-                else:
-                    self.block_ip(dst_ip)
+               # if src_ip in self.blacklist:
+                 #   self.block_ip(src_ip)
+                #else:
+                    #self.block_ip(dst_ip)
             else:
                 self.packets.append(packet)
                 if len(self.packets) >=15000:
