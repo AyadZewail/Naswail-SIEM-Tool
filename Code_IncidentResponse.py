@@ -67,18 +67,23 @@ class AnomalousPackets():
 
 
 class Blacklist():
-    def __init__(self, ui, blacklist):
+    def __init__(self, ui, blacklist,packetsysobj):
         self.ui = ui
         self.blacklist = blacklist
+        self.packetsysobj = packetsysobj
+        self.log=packetsysobj.networkLog
 
     def updateBlacklist(self, f):
         try:
             ip = self.ui.lineEdit.text().strip()
             if(f == 1):
                 self.blacklist.append(ip)
+                self.block_ip(ip)
+                self.packetsysobj.networkLog+="Blocked IP: "+ip+"\n"
             else:
                 self.blacklist.remove(ip)
                 self.unblock_ip(ip)
+                self.packetsysobj.networkLog+="Unblocked IP: "+ip+"\n"
                
             model = QStringListModel()
             model.setStringList(self.blacklist)
@@ -117,10 +122,11 @@ class Blacklist():
             print("Unsupported OS")
 
 class PortBlocking():
-    def __init__(self, ui, blocked_ports):
+    def __init__(self, ui, blocked_ports,packetsysobj):
         self.ui = ui
         self.blocked_ports = blocked_ports
-
+        self.packetsysobj = packetsysobj
+        self.log=packetsysobj.networkLog
     def updateBlockedPorts(self, f):
         try:
             port = self.ui.lineEdit_2.text().strip()
@@ -128,6 +134,7 @@ class PortBlocking():
                 if port not in self.blocked_ports:  # Avoid duplicate entries
                     self.blocked_ports.append(port)
                     self.block_port(port)
+                    self.packetsysobj.networkLog+="Blocked Port: "+port+"\n"
                     row_position = self.ui.tableWidget_2.rowCount()
                     self.ui.tableWidget_2.insertRow(row_position)
                     self.ui.tableWidget_2.setItem(row_position, 0, QTableWidgetItem(str(port)))
@@ -136,6 +143,7 @@ class PortBlocking():
                 if port in self.blocked_ports:
                     self.blocked_ports.remove(port)
                     self.unblock_port(port)
+                    self.packetsysobj.networkLog+="Unblocked Port: "+port+"\n"
                     self.remove_port_from_table(port)  # Remove from table
 
         except Exception as e:
@@ -190,8 +198,8 @@ class IncidentResponse(QWidget, Ui_IncidentResponse):
         self.sec = 0
 
         self.anomalousPacketsObj = AnomalousPackets(self.ui, self.main_window.PacketSystemobj.anomalies, self.main_window.PacketSystemobj)
-        self.blacklistObj = Blacklist(self.ui, self.main_window.PacketSystemobj.blacklist)
-        self.portBlockingObj = PortBlocking(self.ui, self.main_window.PacketSystemobj.blocked_ports)
+        self.blacklistObj = Blacklist(self.ui, self.main_window.PacketSystemobj.blacklist,self.main_window.PacketSystemobj)
+        self.portBlockingObj = PortBlocking(self.ui, self.main_window.PacketSystemobj.blocked_ports,self.main_window.PacketSystemobj)
 
         self.ui.tableWidget.setColumnCount(10)
         self.ui.tableWidget.setHorizontalHeaderLabels(
