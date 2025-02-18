@@ -11,11 +11,14 @@ import ipaddress
 from sklearn.svm import OneClassSVM
 from PyQt6.QtWidgets import *
 from PyQt6.QtCore import *
-from PyQt6.QtGui import QPainter, QPixmap
+from PyQt6.QtGui import *
 import matplotlib.pyplot as plt
 from scapy.all import *
 from scapy.layers.dns import DNS
 from scapy.layers.inet import IP, TCP, UDP
+from scapy.layers.http import HTTPRequest  
+from scapy.layers.inet import IP, TCP, UDP,ICMP
+from scapy.layers.dns import DNS
 from statistics import mean, median, mode, stdev, variance
 from sklearn.model_selection import train_test_split, StratifiedShuffleSplit
 from sklearn.linear_model import LinearRegression
@@ -27,15 +30,13 @@ from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 from matplotlib.patches import Wedge
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
-from scapy.layers.http import HTTPRequest  
-from scapy.layers.inet import IP, TCP, UDP,ICMP
-from scapy.layers.dns import DNS
 import networkx as nx
 from math import cos, sin, pi
 from datetime import datetime, timedelta
 from UI_Main import Ui_MainWindow
 from Code_Analysis import Window_Analysis
 from Code_Tools import Window_Tools
+from Code_IncidentResponse import IncidentResponse
 
 packetInput = 0
 packetFile = None
@@ -397,6 +398,7 @@ class PacketSystem:
         self.sensor_obj = None
         self.capture = -1
         self.blacklist = []
+        self.blocked_ports = []
         self.tot_tcp_packets = 0
         self. tot_udp_packets = 0
         self.tot_icmp_packets = 0
@@ -687,7 +689,22 @@ class PacketSystem:
             readable_time = datetime.fromtimestamp(timestamp).strftime("%I:%M:%S %p")
             src_ip = packet["IP"].src if packet.haslayer("IP") else "N/A"
             dst_ip = packet["IP"].dst if packet.haslayer("IP") else "N/A"
-            if src_ip in self.blacklist or dst_ip in self.blacklist:
+            # extract port information for TCP/UDP
+            sport = None
+            dport = None
+            if packet.haslayer("TCP"):
+                self.packet_stats["tcp"] += 1
+                self.tot_tcp_packets += 1
+                sport = packet["TCP"].sport
+                dport = packet["TCP"].dport
+            elif packet.haslayer("UDP"):
+                self.packet_stats["udp"] += 1
+                self.tot_udp_packets += 1
+                sport = packet["UDP"].sport
+                dport = packet["UDP"].dport
+            elif packet.haslayer("ICMP"):
+                self.packet_stats["icmp"]+=1
+            if src_ip in self.blacklist or dst_ip in self.blacklist or dport in self.blocked_ports:
                 row_position = self.ui.tableWidget.rowCount()
                 
                 self.ui.tableWidget.insertRow(row_position)
@@ -738,21 +755,6 @@ class PacketSystem:
 
             # 3xtract IP version
                 ip_version = "IPv6" if packet.haslayer("IPv6") else "IPv4" if packet.haslayer("IP") else "N/A"
-                # extract port information for TCP/UDP
-                sport = None
-                dport = None
-                if packet.haslayer("TCP"):
-                    self.packet_stats["tcp"] += 1
-                    self.tot_tcp_packets += 1
-                    sport = packet["TCP"].sport
-                    dport = packet["TCP"].dport
-                elif packet.haslayer("UDP"):
-                    self.packet_stats["udp"] += 1
-                    self.tot_udp_packets += 1
-                    sport = packet["UDP"].sport
-                    dport = packet["UDP"].dport
-                elif packet.haslayer("ICMP"):
-                    self.packet_stats["icmp"]+=1
                 packet_length = int(len(packet))
                 layer = (
     "udp" if packet.haslayer("UDP") 
@@ -1433,6 +1435,7 @@ class Naswail(QMainWindow, Ui_MainWindow):
         self.ct = 0
         self.pushButton_2.clicked.connect(self.open_analysis)
         self.pushButton_3.clicked.connect(self.open_tool)
+        self.pushButton_13.clicked.connect(self.open_incidentresponse)
         self.lineEdit.setStyleSheet("""
             QLineEdit {
                 background-color: grey
@@ -1473,6 +1476,17 @@ class Naswail(QMainWindow, Ui_MainWindow):
                 self.secondary_widget.show()
             except Exception as e:
                 print(f"Error in open_analysis function: {e}")
+                tb=traceback.format_exc()
+                print(tb)
+
+    def open_incidentresponse(self):
+            try:
+
+                self.secondary_widget = IncidentResponse(self)  
+                self.hide()
+                self.secondary_widget.show()
+            except Exception as e:
+                print(f"Error in open_incidentresponse function: {e}")
                 tb=traceback.format_exc()
                 print(tb)
     def resetfilter(self):
