@@ -1360,7 +1360,7 @@ class Naswail(QMainWindow, Ui_MainWindow):
         self.total_outside_packets=0
         self.time_series = {}
         #objects
-      
+        self.secondary_widget3=None
         self.PacketSystemobj = PacketSystem(self)
         self.SensorSystemobj = SensorSystem(self)
         self.Appsystemobj = ApplicationsSystem(self)
@@ -1481,10 +1481,10 @@ class Naswail(QMainWindow, Ui_MainWindow):
 
     def open_incidentresponse(self):
             try:
-
-                self.secondary_widget = IncidentResponse(self)  
+                if self.secondary_widget3==None:
+                     self.secondary_widget3 = IncidentResponse(self)  
                 self.hide()
-                self.secondary_widget.show()
+                self.secondary_widget3.show()
             except Exception as e:
                 print(f"Error in open_incidentresponse function: {e}")
                 tb=traceback.format_exc()
