@@ -384,9 +384,34 @@ class MachineLearningModels:
         self.src_count = defaultdict(int)          # Tracks ct_src_ltm
         self.src_dport_count = defaultdict(int)
         self.anomalyAPI = load('rfmodel.joblib')
+        self.encoder = load('encoder.joblib')
         self.imputer = load('imputer.joblib')
         self.selectedFeatures = load('selected_features.joblib')
         self.flowtable = pd.DataFrame(columns=self.selectedFeatures)
+        self.flowtable.insert(0, 'flow_key', [])
+        self.originalColumns = [
+            " Destination Port", " Flow Duration", " Total Fwd Packets", " Total Backward Packets",
+            "Total Length of Fwd Packets", " Total Length of Bwd Packets", " Fwd Packet Length Max", 
+            " Fwd Packet Length Min", " Fwd Packet Length Mean", " Fwd Packet Length Std",
+            "Bwd Packet Length Max", " Bwd Packet Length Min", " Bwd Packet Length Mean", 
+            " Bwd Packet Length Std", "Flow Bytes/s", " Flow Packets/s", " Flow IAT Mean", 
+            " Flow IAT Std", " Flow IAT Max", " Flow IAT Min", "Fwd IAT Total", " Fwd IAT Mean", 
+            " Fwd IAT Std", " Fwd IAT Max", " Fwd IAT Min", "Bwd IAT Total", " Bwd IAT Mean", 
+            " Bwd IAT Std", " Bwd IAT Max", " Bwd IAT Min", "Fwd PSH Flags", " Bwd PSH Flags", 
+            " Fwd URG Flags", " Bwd URG Flags", " Fwd Header Length", " Bwd Header Length",
+            "Fwd Packets/s", " Bwd Packets/s", " Min Packet Length", " Max Packet Length", 
+            " Packet Length Mean", " Packet Length Std", " Packet Length Variance", "FIN Flag Count", 
+            " SYN Flag Count", " RST Flag Count", " PSH Flag Count", " ACK Flag Count", " URG Flag Count", 
+            " CWE Flag Count", " ECE Flag Count", " Down/Up Ratio", " Average Packet Size", 
+            " Avg Fwd Segment Size", " Avg Bwd Segment Size", " Fwd Header Length",
+            "Fwd Avg Bytes/Bulk", " Fwd Avg Packets/Bulk", " Fwd Avg Bulk Rate", 
+            " Bwd Avg Bytes/Bulk", " Bwd Avg Packets/Bulk", "Bwd Avg Bulk Rate", 
+            "Subflow Fwd Packets", " Subflow Fwd Bytes", " Subflow Bwd Packets", 
+            " Subflow Bwd Bytes", "Init_Win_bytes_forward", " Init_Win_bytes_backward", 
+            " act_data_pkt_fwd", " min_seg_size_forward", "Active Mean", " Active Std", 
+            " Active Max", " Active Min", "Idle Mean", " Idle Std", " Idle Max", " Idle Min", " Label"
+        ]
+
         self.tableColumns = [' Destination Port', ' Flow Duration', ' Total Fwd Packets',
        ' Total Backward Packets', 'Total Length of Fwd Packets',
        ' Total Length of Bwd Packets', ' Fwd Packet Length Max',
@@ -513,6 +538,7 @@ class MachineLearningModels:
                     "Sum of IAT": 0,
                     "Sum of Squared IAT": 0,
                     "Sum of Squared Fwd IAT": 0,
+                    "PacketLengthsList": []
                 }
                 new_flow_df = pd.DataFrame([new_flow])
                 self.flowtable = self.flowtable = pd.concat([self.flowtable, new_flow_df], ignore_index=True)
@@ -543,6 +569,21 @@ class MachineLearningModels:
                         self.flowtable.at[flow_idx, ' Fwd IAT Max'] = self.flowtable.at[flow_idx, ' Flow Duration'] - self.flowtable.at[flow_idx - 1, ' Flow Duration']
                     if(self.flowtable.at[flow_idx, ' Flow Duration'] - self.flowtable.at[flow_idx - 1, ' Flow Duration'] < self.flowtable.at[flow_idx, ' Fwd IAT Min']):
                         self.flowtable.at[flow_idx, ' Fwd IAT Min'] = self.flowtable.at[flow_idx, ' Flow Duration'] - self.flowtable.at[flow_idx - 1, ' Flow Duration']
+                if IP in packet:
+                    self.flowtable.at[flow_idx, ' Fwd Header Length'] += len(packet[IP]) - len(packet[IP].payload)
+                self.flowtable.at[flow_idx, 'Fwd Packets/s'] = self.flowtable.at[flow_idx, ' Total Fwd Packets'] / self.flowtable.at[flow_idx, ' Flow Duration']
+                self.flowtable.at[flow_idx, ' Avg Fwd Segment Size'] = self.flowtable.at[flow_idx, ' Fwd Packet Length Mean']
+                self.flowtable.at[flow_idx, ' Fwd Header Length.1'] = self.flowtable.at[flow_idx, ' Fwd Header Length']
+                if TCP in packet and (packet[TCP].flags & (2 | 4)):
+                    self.flowtable.at[flow_idx, ' Subflow Fwd Bytes'] = 0
+                self.flowtable.at[flow_idx, ' Subflow Fwd Bytes'] += len(packet)
+                if self.flowtable.at[flow_idx, 'Init_Win_bytes_forward'] == 0:
+                    self.flowtable.at[flow_idx, 'Init_Win_bytes_forward'] = packet[TCP].window
+                if TCP in packet:
+                    if len(packet[TCP].payload) > 0:
+                        self.flowtable.at[flow_idx, ' act_data_pkt_fwd'] += 1
+                    if(len(packet[TCP].payload) < self.flowtable.at[flow_idx, ' min_seg_size_forward']):
+                        self.flowtable.at[flow_idx, ' min_seg_size_forward'] = len(packet[TCP].payload)
 
 
             else:
@@ -556,14 +597,16 @@ class MachineLearningModels:
                     self.flowtable.at[flow_idx, ' Bwd Packet Length Min'] = len(packet)
                 self.flowtable.at[flow_idx, ' Bwd Packet Length Mean'] = self.flowtable.at[flow_idx, ' Total Length of Bwd Packets'] / self.flowtable.at[flow_idx, ' Total Backward Packets']
                 self.flowtable.at[flow_idx, ' Bwd Packet Length Std'] = ((self.flowtable.at[flow_idx, 'Sum of Squared Bwd Packet Lengths'] / self.flowtable.at[flow_idx, ' Total Backward Packets']) - (self.flowtable.at[flow_idx, ' Bwd Packet Length Mean'] ** 2)) ** 0.5
-                if self.flowtable.at[flow_idx, 'last_dst_pkt_time'] is not None:
-                    self.flowtable.at[flow_idx, 'dinpkt'] = packet.time - self.flowtable.at[flow_idx, 'last_dst_pkt_time']
-                self.flowtable.at[flow_idx, 'last_dst_pkt_time'] = packet.time
-                if self.flowtable.at[flow_idx, 'last_dst_pkt_time'] is not None:
-                    self.flowtable.at[flow_idx, 'inter_arrival_time'] = packet.time - self.flowtable.at[flow_idx, 'last_dst_pkt_time']
-                    djit = abs(self.flowtable.at[flow_idx, 'inter_arrival_time'] - self.flowtable.at[flow_idx, 'prev_dst_inter_arrival_time'])
-                    self.flowtable.at[flow_idx, 'prev_dst_inter_arrival_time'] = self.flowtable.at[flow_idx, 'inter_arrival_time']
-                self.flowtable.at[flow_idx, 'last_dst_pkt_time'] = packet.time
+                if IP in packet:
+                    self.flowtable.at[flow_idx, ' Bwd Header Length'] += len(packet[IP]) - len(packet[IP].payload)
+                self.flowtable.at[flow_idx, ' Bwd Packets/s'] = self.flowtable.at[flow_idx, ' Total Backward Packets'] / self.flowtable.at[flow_idx, ' Flow Duration']
+                self.flowtable.at[flow_idx, ' Avg Bwd Segment Size'] = self.flowtable.at[flow_idx, ' Bwd Packet Length Mean']
+                if TCP in packet and (packet[TCP].flags & (2 | 4)):
+                    self.flowtable.at[flow_idx, ' Subflow Bwd Bytes'] = 0
+                self.flowtable.at[flow_idx, ' Subflow Bwd Bytes'] += len(packet)
+                if self.flowtable.at[flow_idx, ' Init_Win_bytes_backward'] == 0:
+                    self.flowtable.at[flow_idx, ' Init_Win_bytes_backward'] = packet[TCP].window
+
             
             self.flowtable.at[flow_idx, 'Flow Bytes/s'] = (self.flowtable.at[flow_idx, 'Total Length of Fwd Packets'] + self.flowtable.at[flow_idx, ' Total Length of Bwd Packets']) / self.flowtable.at[flow_idx, ' Flow Duration']
             self.flowtable.at[flow_idx, ' Flow Packets/s'] = (self.flowtable.at[flow_idx, ' Total Fwd Packets'] + self.flowtable.at[flow_idx, ' Total Backward Packets']) / self.flowtable.at[flow_idx, ' Flow Duration']
@@ -576,49 +619,28 @@ class MachineLearningModels:
                     self.flowtable.at[flow_idx, ' Flow IAT Max'] = self.flowtable.at[flow_idx, ' Flow Duration'] - self.flowtable.at[flow_idx - 1, ' Flow Duration']
                 if(self.flowtable.at[flow_idx, ' Flow Duration'] - self.flowtable.at[flow_idx - 1, ' Flow Duration'] < self.flowtable.at[flow_idx, ' Flow IAT Min']):
                     self.flowtable.at[flow_idx, ' Flow IAT Min'] = self.flowtable.at[flow_idx, ' Flow Duration'] - self.flowtable.at[flow_idx - 1, ' Flow Duration']
-
-            if TCP in packet:
-                self.flowtable.at[flow_idx, 'dtcpb'] = packet[TCP].seq
-                if packet[TCP].flags == 'S':
-                    self.flowtable.at[flow_idx, 'syn_time'] = packet.time
-                elif packet[TCP].flags == 'SA':
-                    self.flowtable.at[flow_idx, 'tcprtt'] = packet.time - self.flowtable.at[flow_idx, 'syn_time']
-            # Update general counters
-            service_src_key = (service, src_ip)
-            service_dst_key = (service, dst_ip)
-            dst_key = dst_ip
-            src_key = src_ip
-            src_dport_key = (src_ip, dst_port)
-
-            # Increment counts for the packet's flow properties
-            self.service_src_count[service_src_key] += 1
-            self.service_dst_count[service_dst_key] += 1
-            self.dst_count[dst_key] += 1
-            self.src_count[src_key] += 1
-            self.src_dport_count[src_dport_key] += 1
-
-            # Attach computed counters to the flow record
-            self.flowtable.at[flow_idx, 'ct_srv_src'] = self.service_src_count[service_src_key]
-            self.flowtable.at[flow_idx, 'ct_srv_dst'] = self.service_dst_count[service_dst_key]
-            self.flowtable.at[flow_idx, 'ct_dst_ltm'] = self.dst_count[dst_key]
-            self.flowtable.at[flow_idx, 'ct_src_ltm'] = self.src_count[src_key]
-            self.flowtable.at[flow_idx, 'ct_src_dport_ltm'] = self.src_dport_count[src_dport_key]
+            if(len(packet) > self.flowtable.at[flow_idx, ' Max Packet Length']):
+                self.flowtable.at[flow_idx, ' Max Packet Length'] = len(packet)
+            self.flowtable.at[flow_idx, ' Packet Length Mean'] = (self.flowtable.at[flow_idx, 'Total Length of Fwd Packets'] + self.flowtable.at[flow_idx, ' Total Length of Bwd Packets']) / (self.flowtable.at[flow_idx, ' Total Fwd Packets'] + self.flowtable.at[flow_idx, ' Total Backward Packets'])
+            self.flowtable.at[flow_idx, ' Packet Length Std'] = (((self.flowtable.at[flow_idx, 'Sum of Squared Fwd Packet Lengths'] + self.flowtable.at[flow_idx, 'Sum of Squared Bwd Packet Lengths']) / (self.flowtable.at[flow_idx, ' Total Fwd Packets'] + self.flowtable.at[flow_idx, ' Total Backward Packets'])) - (self.flowtable.at[flow_idx, ' Packet Length Mean'] ** 2)) ** 0.5
+            packet_lengths = self.flowtable.at[flow_idx, 'PacketLengthsList']
+            packet_lengths.append(len(packet))
+            self.flowtable.at[flow_idx, 'PacketLengthsList'] = packet_lengths
+            self.flowtable.at[flow_idx, ' Packet Length Variance'] = np.var(packet_lengths, ddof=0)
+            self.flowtable.at[flow_idx, ' Average Packet Size'] = self.flowtable.at[flow_idx, ' Packet Length Mean']
             
             # Step 1: Extract the specific row while keeping headers intact
-            flow_tobe_predicted = pd.DataFrame(self.flowtable.loc[[flow_idx]], columns=self.encoding_columns)
+            predictionFlow = pd.DataFrame(self.flowtable.loc[[flow_idx]], columns=self.originalColumns)
 
             # Step 2: Encode the entire DataFrame (headers + data)
-            encoded_array = self.O_encoder.transform(flow_tobe_predicted)
+            data_imputed = pd.DataFrame(self.imputer.transform(predictionFlow), columns=predictionFlow.columns)
 
-            encoded_flow = pd.DataFrame(encoded_array, columns=self.encoding_columns)
-
-            # 3. Now select the 25 features you need
-            encoded_flow_selected = encoded_flow[self.prediction_columns]
-
-            # This is your final DataFrame with the desired encoded columns
-            return encoded_flow_selected
+            return data_imputed
         except Exception as e:
             print(e)
+            tb = traceback.format_exc()
+            print("Traceback details:")
+            print(tb)
 
 class PacketSystem:
     def __init__(self, ui_main_window):
@@ -938,21 +960,24 @@ class PacketSystem:
                 formattedPacket = self.MLM_Obj.packet_to_dataframe(packet)
                 if formattedPacket is not None:
                     anomalyCheck = self.MLM_Obj.anomalyAPI.predict(formattedPacket)
-                    state = self.MLM_Obj.L_encoder.inverse_transform(anomalyCheck)
+                    state = self.MLM_Obj.encoder.inverse_transform(anomalyCheck)
                     print(state.item())
-                    if(state.item() != 'Normal'):
+                    if(state.item() != 'BENIGN'):
                         self.anomalies.append(packet)
                         timestamp = float(packet.time)
                         readable_time = datetime.fromtimestamp(timestamp).strftime("%I:%M:%S %p")
                         current_time = datetime.now().strftime("%H:%M:%S")
                         src_ip = packet["IP"].src if packet.haslayer("IP") else "N/A"
-                        dst_ip = packet["IP"].dst if packet.haslayer("IP") else "N/A"
+                        if packet.haslayer("TCP"):
+                            dport = packet["TCP"].dport
+                        elif packet.haslayer("UDP"):
+                            dport = packet["UDP"].dport
                         self.networkLog+=current_time+"/  "+"An anomaly occured"+"\n"
                         row_position = self.ui.tableWidget_4.rowCount()
                         self.ui.tableWidget_4.insertRow(row_position)
                         self.ui.tableWidget_4.setItem(row_position, 0, QTableWidgetItem(readable_time))
                         self.ui.tableWidget_4.setItem(row_position, 1, QTableWidgetItem(src_ip))
-                        self.ui.tableWidget_4.setItem(row_position, 2, QTableWidgetItem(dst_ip))
+                        self.ui.tableWidget_4.setItem(row_position, 2, QTableWidgetItem(dport))
                         self.ui.tableWidget_4.setItem(row_position, 3, QTableWidgetItem(state))
             except queue.Empty:
                 pass
@@ -1572,10 +1597,7 @@ class PacketSnifferThread(QThread):
 
     def run(self):
         try:
-            global packetInput, packetFile, packetIndex
-            
-            print(packetInput)
-            print("GOOGOO")
+            global packetInput, packetFile
             window.packets.clear()
             window.tableWidget.setRowCount(0)
             match packetInput:
@@ -1663,7 +1685,7 @@ class Naswail(QMainWindow, Ui_MainWindow):
         self.tableWidget_3.setHorizontalHeaderLabels(["Port", "Application", "IP","CPU","Memory-percent"])
         self.tableWidget_3.cellClicked.connect(self.Appsystemobj.analyze_app)
         self.tableWidget_4.setColumnCount(4)
-        self.tableWidget_4.setHorizontalHeaderLabels(["Timestamp", "Source", "Destination", "Protocol"])
+        self.tableWidget_4.setHorizontalHeaderLabels(["Timestamp", "Src IP", "Dst Port", "Attack"])
         #self.tableWidget_4.cellClicked.connect(self.Appsystemobj.analyze_app)
         self.pushButton_5.clicked.connect(self.toggleCapture)
         self.pushButton_6.clicked.connect(self.toggleCapture)
@@ -1934,11 +1956,11 @@ class Naswail(QMainWindow, Ui_MainWindow):
             self.tableWidget_4.setRowCount(0)
             packetFile = ""
             self.sniffer_thread.quit()  
-            self.sniffer_thread.wait()  
+            self.sniffer_thread.wait()
             self.sniffer_thread.start() 
         except Exception as e:
             print(f"Error in resetInput function: {e}")
- 
+
 if __name__ == "__main__":
     app = QApplication(sys.argv)
     window = Naswail()
