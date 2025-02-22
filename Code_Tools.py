@@ -6,6 +6,7 @@ import multiprocessing
 import psutil
 import os
 import ipaddress
+import threading
 from datetime import datetime, timedelta
 from sklearn.svm import OneClassSVM
 from PyQt6.QtWidgets import *
@@ -22,16 +23,48 @@ from matplotlib.figure import Figure
 import matplotlib.pyplot as plt
 from datetime import datetime, timedelta
 from UI_Tools import Ui_Naswail_Tool
+class NetworkActivity:
+    def __init__(self,ui):
+        self.packetsysobj=None
+        self.ui=ui
+        self.filecontent=""
+    def set_packetobj(self, packetsysobj):
+        self.packetsysobj=packetsysobj
+    def display(self):
+        try:
+            self.packetsysobj.Update_Network_Summary()
+            self.filecontent=""
+            formatted_content=[]
+            for list_of_activity  in self.packetsysobj.list_of_activity:
+                    loa=list_of_activity.activity
+                    formatted_content.append(loa) 
+                    self.filecontent+=loa+"\n"
 
-class RegressionPrediction:
+            model = QStringListModel()
+            model.setStringList(formatted_content)
+            self.ui.listView_2.setModel(model)
+            self.ui.listView_2.setStyleSheet("QListView { font-size: 16px; }")
+        except Exception as e:
+            print(e) 
+    def save_activity(self):
+        try:
+            with open("Activity.txt", "w") as file:
+                file.write(self.filecontent)
+        except Exception as e:
+            print(e)
+
+class RegressionPrediction(threading.Thread):
     def __init__(self,ui, packets, time_series):
+        super().__init__()
         self.ui=ui
         self.futureTraffic = []
         self.r2 = 0
         self.noHours = None
         self.packets = packets
-        self.model = LinearRegression()
         self.time_series = time_series
+        self.model = LinearRegression()
+        #print(self.packets)
+        self.start()  
         
     def pred_traffic(self):
         #Train Regression Model
@@ -63,8 +96,6 @@ class RegressionPrediction:
                 self.r2 = r2_score(y_test, y_pred)
 
                 print(self.r2)
-                self.display()
-                self.display_graph()
         except Exception as e:
             print(e)
 
@@ -73,7 +104,6 @@ class RegressionPrediction:
             if(self.ui.lineEdit.text() is None or self.ui.lineEdit.text() is object):
                 self.ui.lineEdit.setText("0")
             self.noHours = int(self.ui.lineEdit.text())
-            self.pred_traffic()
         except Exception as e:
             print(e)
     
@@ -145,6 +175,10 @@ class RegressionPrediction:
         except Exception as e:
             print(e)
 
+    def run(self):
+        print("Thread is running...")
+        self.pred_traffic()
+
 class SuspiciousAnalysis:
     def __init__(self,ui, anomalies, packet):
         self.ui=ui
@@ -193,21 +227,21 @@ class SuspiciousAnalysis:
 
     def decode_packet(self, row, column):
         try:
-            if not self.packetobj.filterapplied:  # Check if the filter is not applied
+            if not self.packetobj.filterapplied:  
                 packet = self.packetobj.packets[row]
                 
-                # Get the raw content of the packet
+                
                 raw_content = bytes(packet)
                 
-                # Prepare the formatted content with hex and ASCII
+                
                 formatted_content = []
-                for i in range(0, len(raw_content), 16):  # Process 16 bytes per line
+                for i in range(0, len(raw_content), 16):  #  16 bytes per line
                     chunk = raw_content[i:i + 16]
                     
                     # Hexadecimal representation
                     hex_part = " ".join(f"{byte:02x}" for byte in chunk)
                     
-                    # ASCII representation (printable characters or dots for non-printable ones)
+                    # ASCII representation 
                     ascii_part = "".join(
                         chr(byte) if 32 <= byte <= 126 else "." for byte in chunk
                     )
@@ -215,7 +249,7 @@ class SuspiciousAnalysis:
                     # Combine hex and ASCII parts
                     formatted_content.append(f"{hex_part:<48}  {ascii_part}")
                 
-                # Create a QStringListModel and set it to the listView_2
+               
                 model = QStringListModel()
                 model.setStringList(formatted_content)
                 self.ui.listView_4.setModel(model)
@@ -244,8 +278,7 @@ class SuspiciousAnalysis:
 
     def apply_filter(self):
         try:
-            """Filter packets based on selected protocols, source/destination IPs, and ComboBox selection."""
-            # Map checkbox states to protocol names
+            
             protocol_filters = {
                 "udp": self.ui.checkBox_21.isChecked(),
                 "tcp": self.ui.checkBox_22.isChecked(),
@@ -260,32 +293,32 @@ class SuspiciousAnalysis:
             }
             
 
-            # Check if all protocol filters are unchecked and both src and dst filters are empty
+            
             src_filter = self.ui.lineEdit_8.text().strip()
             dst_filter = self.ui.lineEdit_9.text().strip()
 
-                # Check if all protocol filters are unchecked and both src and dst filters are empty
+                
             if not any(protocol_filters.values()) and not src_filter and not dst_filter:
                     print("No protocols selected, and both source and destination filters are empty.")
                     self.filterapplied=False
                     self.ui.tableWidget.setRowCount(0)
                     self.process_packet_index=0
                     self.pcap_process_packet_index=0
-                    return  # Or handle this case appropriately
+                    return  
                 #
             self.filterapplied = True
 
-            # Determine which protocols to filter
+            
             selected_protocols = [protocol for protocol, checked in protocol_filters.items() if checked]
-            # Get the source and destination IP filters
+            
             src_filter = self.ui.lineEdit_8.text().strip()
             dst_filter = self.ui.lineEdit_9.text().strip()
-            # Get ComboBox selection
+            
             combo_selection = self.ui.comboBox_3.currentText()  # 'Inside' or 'Outside'
-            # Clear the table before adding filtered packets
+            
             self.ui.tableWidget.setRowCount(0)
 
-            # Filter packets
+            
             self.filtered_packets = []
             x = self.anomalies
             
@@ -294,11 +327,11 @@ class SuspiciousAnalysis:
                 dst_ip = packet["IP"].dst if packet.haslayer("IP") else "N/A"
                 protocol = self.packetobj.get_protocol(packet)
 
-                # Determine if source/destination IPs are local
+                
                 src_is_local = self.packetobj.is_local_ip(src_ip)
                 dst_is_local = self.packetobj.is_local_ip(dst_ip)
 
-                # Check if the packet matches the selected protocols
+                
                 layer = "UDP" if packet.haslayer("UDP") else "TCP" if packet.haslayer("TCP") else "Other"
                 protocol_match = protocol in selected_protocols if selected_protocols else True
                 if "udp" in selected_protocols and layer == "UDP":
@@ -325,20 +358,20 @@ class SuspiciousAnalysis:
                 else:
                     ip_match = True  # Default: no filter based on inside/outside
 
-                # Include packet if it matches all criteria
+                
                 if protocol_match and src_match and dst_match and ip_match:
 
                     self.filtered_packets.append(packet)
                     macsrc = packet["Ethernet"].src if packet.haslayer("Ethernet") else "N/A"
                     macdst = packet["Ethernet"].dst if packet.haslayer("Ethernet") else "N/A"
-                    # Extract packet length
+                
                     packet_length = int(len(packet))
                     payload = packet["Raw"].load if packet.haslayer("Raw") else "N/A"
 
-                # Extract IP version
+                
                     ip_version = "IPv6" if packet.haslayer("IPv6") else "IPv4" if packet.haslayer("IP") else "N/A"
                     layer = "udp" if packet.haslayer("UDP") else "tcp" if packet.haslayer("TCP") else "Other"
-                    # Extract port information for TCP/UDP
+                
                     sport = None
                     dport = None
                     if packet.haslayer("TCP"):
@@ -370,8 +403,6 @@ class ErrorPacketSystem:
             self.error_packets = []
             self.packetobj=None
             self.ui=ui
-            self.filterapplied = False
-            self.filtered_packets = []
             
         
         def add_error_packet(self, packet):
@@ -391,12 +422,12 @@ class ErrorPacketSystem:
                             packet_time = datetime.fromtimestamp(float(packet.time))
                             macsrc = packet["Ethernet"].src if packet.haslayer("Ethernet") else "N/A"
                             macdst = packet["Ethernet"].dst if packet.haslayer("Ethernet") else "N/A"
-                            # Extract packet length
+                
                             packet_length = int(len(packet))
-                            # Extract IP version
+                
                             ip_version = "IPv6" if packet.haslayer("IPv6") else "IPv4" if packet.haslayer("IP") else "N/A"
                             layer = "udp" if packet.haslayer("UDP") else "tcp" if packet.haslayer("TCP") else "Other"
-                            # Extract port information for TCP/UDP
+                
                             sport = None
                             dport = None
                             if packet.haslayer("TCP"):
@@ -412,7 +443,7 @@ class ErrorPacketSystem:
                             self.ui.tableWidget_6.setItem(row_position, 2, QTableWidgetItem(dst_ip))
                             self.ui.tableWidget_6.setItem(row_position, 3, QTableWidgetItem(protocol))
                             self.ui.tableWidget_6.setItem(row_position, 4, QTableWidgetItem(layer))
-                                    # Add MAC addresses and port info to the table
+                
                             self.ui.tableWidget_6.setItem(row_position, 5, QTableWidgetItem(macsrc))
                             self.ui.tableWidget_6.setItem(row_position, 6, QTableWidgetItem(macdst))
                             self.ui.tableWidget_6.setItem(row_position, 7, QTableWidgetItem(str(sport) if sport else "N/A"))
@@ -421,41 +452,23 @@ class ErrorPacketSystem:
                             self.ui.tableWidget_6.setItem(row_position, 10, QTableWidgetItem(ip_version))
                 except Exception as e:
                     print(f"Error in display function: {e}")
-
-        def display_packet_details(self, row, column):
-            try:
-                if self.filterapplied==False:
-                    packet = self.error_packets[row]
-                    details = packet.show(dump=True)  # Get packet details as a string
-                    detailslist = details.split("\n")
-                    model = QStringListModel()
-                    model.setStringList(detailslist)
-                    self.ui.listView.setModel(model)
-                            
-                if self.filterapplied==True:
-                    packet = self.filtered_packets[row]
-                    details = packet.show(dump=True)  # Get packet details as a string
-                    detailslist = details.split("\n")
-                    model = QStringListModel()
-                    model.setStringList(detailslist)
-                    self.ui.listView.setModel(model)
-            except Exception as e:
-                print(f"Error displaying packet details: {e}")
            
 class Window_Tools(QWidget, Ui_Naswail_Tool):
     def __init__(self, main_window):
         super().__init__()
-        self.main_window = main_window  # Reference to the main window
+        self.main_window = main_window 
 
-        self.ui = Ui_Naswail_Tool()  # Create an instance of the UI class
-        self.ui.setupUi(self)  # Set up the UI for this widget
+        self.ui = Ui_Naswail_Tool()  
+        self.ui.setupUi(self)  
         self.init_ui()
         self.ErrorPacketSystemobj = ErrorPacketSystem(self.ui)
         self.RegPred = RegressionPrediction(self.ui, self.main_window.PacketSystemobj.packets, self.main_window.time_series)
         self.SuAn = SuspiciousAnalysis(self.ui, self.main_window.PacketSystemobj.anomalies, self.main_window.PacketSystemobj)
+        self.networkactobj=NetworkActivity(self.ui)
+        self.networkactobj.set_packetobj(self.main_window.PacketSystemobj)
+        self.networkactobj.display()
 
         self.ErrorPacketSystemobj.add_error_packet(self.main_window.PacketSystemobj)
-        self.ui.tableWidget_6.cellClicked.connect(self.ErrorPacketSystemobj.display_packet_details)
         self.ErrorPacketSystemobj.display()
         self.setWindowTitle("Naswail - Tools")
         self.ui.tableWidget_6.setColumnCount(11)
@@ -487,23 +500,28 @@ class Window_Tools(QWidget, Ui_Naswail_Tool):
         self.ui.checkBox_27.stateChanged.connect(self.SuAn.apply_filter)
         self.ui.checkBox_29.stateChanged.connect(self.SuAn.apply_filter)      # Other
         self.ui.pushButton_11.clicked.connect(self.SuAn.apply_filter)
-
-        # Initialize and start the timer
+        self.ui.pushButton_7.clicked.connect(self.networkactobj.display)
+        self.ui.pushButton_5.clicked.connect(self.networkactobj.save_activity)
+        
         self.timer = QTimer(self)
         self.timer.timeout.connect(self.ttTime)
         self.timer.start(1000)  # Call every 1000 milliseconds (1 second)
         self.sec = 0
-
+        
+        
+        
     def init_ui(self):
         self.showMaximized()
         self.ui.pushButton_4.clicked.connect(self.show_main_window)
         self.ui.pushButton_2.clicked.connect(self.show_analysis_window)
+        self.ui.pushButton_8.clicked.connect(self.show_incidentresponse_window)
+        
 
     def ttTime(self):
-        """Call the display method of the ErrorPacketSystem every second."""
+        
         self.ErrorPacketSystemobj.display()
         self.SuAn.display()
-        if(self.sec % 30 == 0):
+        if(self.sec % 15 == 0):
             self.RegPred.pred_traffic()
             if(self.RegPred.r2 > 0.50):
                 self.RegPred.display()
@@ -538,14 +556,25 @@ class Window_Tools(QWidget, Ui_Naswail_Tool):
             print(f"Error in resetfilter function: {e}")
 
     def show_analysis_window(self):
-        """Show the analysis window and hide this widget."""
-        self.secondary_widget = self.main_window.open_analysis()
-        self.hide()
+        try:
+            self.secondary_widget = self.main_window.open_analysis()
+            self.hide()
+        except Exception as e:
+            print(f"Error in show_analysis_window function: {e}")
+    
+    def show_incidentresponse_window(self):
+        try:
+            self.secondary_widget = self.main_window.open_incidentresponse()
+            self.hide()
+        except Exception as e:
+            print(f"Error in show_incidentresponse_window function: {e}")
 
     def show_main_window(self):
-        """Show the main window and hide this widget."""
-        self.main_window.show()
-        self.hide()
+        try:
+            self.main_window.show()
+            self.hide()
+        except Exception as e:
+            print(f"Error in show_main_window function: {e}")
 
 
 
