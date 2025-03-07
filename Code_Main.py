@@ -37,6 +37,8 @@ from UI_Main import Ui_MainWindow
 from Code_Analysis import Window_Analysis
 from Code_Tools import Window_Tools
 from Code_IncidentResponse import IncidentResponse
+import torch
+from transformers import AutoModelForMaskedLM, AutoTokenizer
 
 packetInput = 0
 packetFile = None
@@ -269,11 +271,11 @@ class SensorSystem:
                 labels.append('')
             
             colors = [
-                '#ff4d4d', '#3399ff', '#33ff33', 
-                '#ffcc00', '#cc33ff', '#00ccff', 
-                '#ff6633', '#66ff33', '#9933ff', 
-                '#ff9933', '#33ccff', '#ff33cc', 
-                '#33ffcc', '#ff3366', '#66ccff'
+                '#E0F7F5', '#B3ECE6', '#8FE0D8',  # Light turquoise variants
+                '#40E0D0', '#36C9B0', '#2DB39E',  # Base + hover/pressed states
+                '#249C8A', '#1B8676', '#126F62',  # Darker turquoise
+                '#0A594E', '#03433A', '#002D26',  # Deep teal variants
+                '#001612', '#008080', '#00CED1'    # Darkest tones + accent variations
             ]
             fig, ax = plt.subplots(figsize=(6, 6))  
             
@@ -407,20 +409,120 @@ class PacketSystem:
         self.typeOFchartToPlot=0
         self.packetfile = 1
         self.local_packets = []
-        self.le = LabelEncoder()#label goes from string to num
-        self.train = pd.read_csv('TrainATest2.csv', low_memory=False)
-        self.X_train, self.y_train, self.X_test, self.y_test = self.preprocess(self.train)
-        self.classes = self.train.columns[:-1].to_numpy()
-        self.anmodel = RandomForestClassifier()
-        self.anmodel.fit(self.X_train, self.y_train)
-        self.train_predictions = self.anmodel.predict(self.X_test)
-        acc = accuracy_score(self.y_test, self.train_predictions)
-        print("Accuracy: {:.4%}".format(acc))
+        self.snort_alerts = defaultdict(list)
+        self.snort_rules = self.load_snort_rule_names("C:\\Snort\\rules\\custom.rules")
+        self.log_thread = threading.Thread(target=self.monitor_snort_logs, args=("C:\\Snort\\log\\alert.ids",), daemon=True)
+        self.log_thread.start()
         self.list_of_activity=[]
         ##############
+        # snort -i 5 -c C:\Snort\etc\snort.conf -l C:\Snort\log -A fast
+        # type C:\Snort\log\alert.ids
+        # echo. > C:\Snort\log\alert.ids
+        # ping -n 4 8.8.8.8
 
     def set_sensor_system(self, sensor_obj):
         self.sensor_obj = sensor_obj
+
+    def load_snort_rule_names(self, rule_file):
+        """Loads Snort rule SIDs and their corresponding attack labels."""
+        sid_to_attack = {}
+
+        with open(rule_file, 'r') as f:
+            for line in f:
+                if line.startswith("alert"):
+                    sid = None
+                    attack_name = "Unknown"
+
+                    # Extract SID
+                    sid_match = re.search(r"sid:", line)
+                    if sid_match:
+                        sid = int(line[sid_match.end():sid_match.end()+7])
+                        # match = re.search(r'\b\w+\b', line[sid_match.end():])
+                        # if match:
+                        #     start_pos = line[:match.start()].rfind(' ') + 1
+                        #     end_pos = sid_match.start() + match.end()
+                        #     sid = int(line[start_pos:end_pos])
+
+                    # Extract attack label from msg field
+                    msg_match = re.search(r'msg:"', line)
+                    if msg_match:
+                        match = re.search(r'\b\w+\b', line[msg_match.end():])
+                        if match:
+                            end_pos = line[msg_match.end():].find('"')
+                            attack_name = line[msg_match.end():msg_match.end() + end_pos]
+
+                    if sid is not None:
+                        sid_to_attack[sid] = attack_name  # Map SID to attack label
+
+        return sid_to_attack
+
+    def monitor_snort_logs(self, log_file):
+        """Tails Snort's alert_fast log file and extracts attack labels."""
+        with open(log_file, "r") as f:
+            f.seek(0, 2)  # Move to end of file (process only new alerts)
+            while True:
+                line = f.readline()
+                if not line:
+                    time.sleep(0.1)  # Avoid CPU overuse
+                    continue
+
+                try:
+                    src_ip = dst_ip = sport = dport = None
+                    attack_label = "Unknown"
+                    # Extract SID from alert log (format: "[**] [SID:REV] Attack Name [**]")
+                    sid_match = re.search(r"\[\*\*\] \[(\d+):", line)
+                    if sid_match:
+                        match = re.search(r'\b\w+\b', line[sid_match.end():])
+                        if match:
+                            end_pos = line[sid_match.end():].find(':')
+                        sid = int(line[sid_match.end():sid_match.end() + end_pos])
+                        if sid in self.snort_rules:
+                            attack_label = self.snort_rules[sid]
+
+                        # Extract source and destination IPs
+                        ip_match = re.search(r"\d+\.\d+\.\d+\.\d+", line)
+                        if ip_match:
+                            end_space = line[ip_match.end()-1:].find(' ')
+                            end_colon = line[ip_match.end()-1:].find(':')
+                            end_pos = min(pos for pos in [end_space, end_colon] if pos != -1)
+                            if end_pos == end_space:
+                                src_ip = line[ip_match.start():ip_match.end() + end_pos - 1]
+                                end_pos = line[ip_match.end() + 4:].find('\n')
+                                dst_ip = line[ip_match.end() + 4:ip_match.end() + 4 + end_pos]
+                            elif end_pos == end_colon:
+                                src_ip = line[ip_match.start():ip_match.end() + end_pos - 1]
+                                end_sport = line[ip_match.end() + end_pos + 1:].find(' ')
+                                sport = line[ip_match.end() + end_pos:ip_match.end() + end_pos + end_sport + 1]
+                                sdst = ip_match.end() + end_pos + end_sport + 5
+                                end_pos = line[sdst:].find(':')
+                                dst_ip = line[sdst:sdst + end_pos]
+                                end_dport = line[sdst:].find('\n')
+                                dport = line[sdst + end_pos + 1 : sdst + end_dport]
+
+                            if (src_ip, sport, dst_ip, dport) not in self.snort_alerts:
+                                self.snort_alerts[(src_ip, sport, dst_ip, dport)].append(attack_label)
+                                print(f"Detected: {attack_label} from {src_ip}, {sport} to {dst_ip}, {dport}")
+                                for packet in self.qued_packets:
+                                    msrc_ip = packet["IP"].src if packet.haslayer("IP") else "N/A"
+                                    mdst_ip = packet["IP"].dst if packet.haslayer("IP") else "N/A"
+                                    if msrc_ip == src_ip and mdst_ip == dst_ip:
+                                            self.anomalies.append(packet)
+                                            current_time = datetime.now().strftime("%H:%M:%S")
+                                            self.networkLog+=current_time+"/  "+"An anomaly occured"+"\n"
+                                            row_position = self.ui.tableWidget_4.rowCount()
+                                            self.ui.tableWidget_4.insertRow(row_position)
+                                            self.ui.tableWidget_4.setItem(row_position, 0, QTableWidgetItem(current_time))
+                                            self.ui.tableWidget_4.setItem(row_position, 1, QTableWidgetItem(src_ip))
+                                            self.ui.tableWidget_4.setItem(row_position, 2, QTableWidgetItem(dst_ip))
+                                            self.ui.tableWidget_4.setItem(row_position, 3, QTableWidgetItem(str(self.snort_alerts[(src_ip, sport, dst_ip, dport)][0])))
+                                                    
+
+                except Exception as e:
+                    print(f"Error processing log line: {e}")
+                    tb = traceback.format_exc()
+                    print("Traceback details:")
+                    print(tb)
+                    continue
     def block_ip(self,ip):
         system = platform.system()
         
@@ -451,82 +553,89 @@ class PacketSystem:
         else:
             print("Unsupported OS")
     def draw_gauge(self):
-        if self.sensor_obj.senFlag == 1 or self.sensor_obj.singleSenFlag == 1:
-            self.typeOFchartToPlot=1
+        try:
+
+            if self.sensor_obj.senFlag == 1 or self.sensor_obj.singleSenFlag == 1:
+                self.typeOFchartToPlot=1
+                
+            if self.typeOFchartToPlot == 1:
+                self.ui.graphicsView_2.setScene(None)
+                self.sensor_obj.show_donut_chart()
+                return
+            #clear first
+            view_width = self.ui.graphicsView_2.width()
+            view_height = self.ui.graphicsView_2.height()
+
+            # dpi is the size
+            dpi = 100
+            fig_width = view_width / dpi
+            fig_height = view_height / dpi
+
             
-        if self.typeOFchartToPlot == 1:
-            self.ui.graphicsView_2.setScene(None)
-            self.sensor_obj.show_donut_chart()
-            return
-        #clear first
-        view_width = self.ui.graphicsView_2.width()
-        view_height = self.ui.graphicsView_2.height()
+            fig = Figure(figsize=(fig_width, fig_height), dpi=dpi)
+            ax = fig.add_subplot(111, polar=True)
+            fig.patch.set_alpha(0)  
+            ax.set_facecolor("none")
+            start_angle = -np.pi / 2  # start angle (the left side of the gauge)
+            end_angle = np.pi / 2     # End angle the right side 180 degree
+            min_value = 0
+            max_value = 1000
+            current_value = max(min(self.rate_of_packets, max_value), min_value)  # Clamp value between 0 and 1000
+            # Compute the needle angle
+            angle = start_angle + (current_value / max_value) * (end_angle - start_angle)
+            sections = [
+    (0, 0.1667, '#40E0D0'),     # Turquoise (main accent)
+    (0.1667, 0.3333, '#36C9B0'), # Hover turquoise
+    (0.3333, 0.5, '#2DB39E'),    # Pressed turquoise
+    (0.5, 0.6667, '#5A595C'),    # Medium gray (borders)
+    (0.6667, 0.8333, '#3E3D40'), # Dark gray (inputs)
+    (0.8333, 1, '#2D2A2E')       # Darkest gray (background)
+]
+            for start, end, color in sections:
+                theta = np.linspace(start_angle + start * (end_angle - start_angle),
+                                    start_angle + end * (end_angle - start_angle), 500)
+                r = np.ones_like(theta)
+                ax.fill_between(theta, 0, r, color=color, alpha=0.5)
 
-        # dpi is the size
-        dpi = 100
-        fig_width = view_width / dpi
-        fig_height = view_height / dpi
-
-        
-        fig = Figure(figsize=(fig_width, fig_height), dpi=dpi)
-        ax = fig.add_subplot(111, polar=True)
-        fig.patch.set_alpha(0)  
-        ax.set_facecolor("none")
-        start_angle = -np.pi / 2  # start angle (the left side of the gauge)
-        end_angle = np.pi / 2     # End angle the right side 180 degree
-        min_value = 0
-        max_value = 1000
-        current_value = max(min(self.rate_of_packets, max_value), min_value)  # Clamp value between 0 and 1000
-        # Compute the needle angle
-        angle = start_angle + (current_value / max_value) * (end_angle - start_angle)
-        sections = [
-            (0, 0.1667, 'lightskyblue'),
-    (0.1667, 0.3333, 'deepskyblue'),
-    (0.3333, 0.5, 'dodgerblue'),
-    (0.5, 0.6667, 'blue'),
-    (0.6667, 0.8333, 'mediumblue'),
-    (0.8333, 1, 'darkblue')
-        ]
-        for start, end, color in sections:
-            theta = np.linspace(start_angle + start * (end_angle - start_angle),
-                                start_angle + end * (end_angle - start_angle), 500)
+            # outer black line
+            theta = np.linspace(start_angle, end_angle, 500)
             r = np.ones_like(theta)
-            ax.fill_between(theta, 0, r, color=color, alpha=0.5)
+            ax.plot(theta, r, color='black', lw=2)
 
-        # outer black line
-        theta = np.linspace(start_angle, end_angle, 500)
-        r = np.ones_like(theta)
-        ax.plot(theta, r, color='black', lw=2)
+            # draw the needle
+            ax.plot([start_angle, angle], [0, 0.9], color='black', lw=3)
 
-        # draw the needle
-        ax.plot([start_angle, angle], [0, 0.9], color='black', lw=3)
+            # add numbers to the gauge
+            for value in range(0, 1100, 100):
+                theta = start_angle + (value / max_value) * (end_angle - start_angle)
+                ax.text(theta, 1.1, str(value), horizontalalignment='center', verticalalignment='center', fontsize=8, color='black')
 
-        # add numbers to the gauge
-        for value in range(0, 1100, 100):
-            theta = start_angle + (value / max_value) * (end_angle - start_angle)
-            ax.text(theta, 1.1, str(value), horizontalalignment='center', verticalalignment='center', fontsize=8, color='black')
+            # set the limits for the polar plot to the top half only
+            ax.set_ylim(0, 1)
+            ax.set_xlim(start_angle, end_angle)
 
-        # set the limits for the polar plot to the top half only
-        ax.set_ylim(0, 1)
-        ax.set_xlim(start_angle, end_angle)
+            ax.grid(False)
+            ax.set_yticks([])
+            ax.set_xticks([])
 
-        ax.grid(False)
-        ax.set_yticks([])
-        ax.set_xticks([])
+            # Remove polar labels
+            ax.set_theta_zero_location('N')
+            ax.set_theta_direction(-1)
 
-        # Remove polar labels
-        ax.set_theta_zero_location('N')
-        ax.set_theta_direction(-1)
-
-        # Embed Matplotlib figure into QGraphicsView
-        canvas = FigureCanvas(fig)
-        canvas.setStyleSheet("background: transparent;")  # Set transparent background for canvas
-        scene = QGraphicsScene()
-        scene.addWidget(canvas)
-        self.ui.graphicsView_2.setScene(scene)
-        self.ui.graphicsView_2.setStyleSheet("background: transparent;")
-        self.ui.graphicsView_2.show()
-        plt.close(fig)
+            # Embed Matplotlib figure into QGraphicsView
+            canvas = FigureCanvas(fig)
+            canvas.setStyleSheet("background: transparent;")  # Set transparent background for canvas
+            scene = QGraphicsScene()
+            scene.addWidget(canvas)
+            self.ui.graphicsView_2.setScene(scene)
+            self.ui.graphicsView_2.setStyleSheet("background: transparent;")
+            self.ui.graphicsView_2.show()
+            plt.close(fig)
+            
+        except Exception as e:
+            tb=traceback.format_exc()
+            print(tb)
+            print(f"Error drawing gauge: {e}")
 
     def put_packet_in_queue(self, packet):
         try:
@@ -804,10 +913,7 @@ class PacketSystem:
                             "}\n"
                             "")
                     self.new_packet_features.append([packet_length, timestamp, protocol])
-                    formattedPacket = self.packet_to_dataframe(packet, self.classes)
-                    formattedPacket2 = self.encodePacket(formattedPacket)
-                    anomalyCheck = self.anmodel.predict(formattedPacket2)
-                    if(anomalyCheck.item()):
+                    if (src_ip, sport, dst_ip, dport) in self.snort_alerts:
                         self.anomalies.append(packet)
                         current_time = datetime.now().strftime("%H:%M:%S")
                         self.networkLog+=current_time+"/  "+"An anomaly occured"+"\n"
@@ -816,7 +922,7 @@ class PacketSystem:
                         self.ui.tableWidget_4.setItem(row_position, 0, QTableWidgetItem(readable_time))
                         self.ui.tableWidget_4.setItem(row_position, 1, QTableWidgetItem(src_ip))
                         self.ui.tableWidget_4.setItem(row_position, 2, QTableWidgetItem(dst_ip))
-                        self.ui.tableWidget_4.setItem(row_position, 3, QTableWidgetItem(protocol))
+                        self.ui.tableWidget_4.setItem(row_position, 3, QTableWidgetItem(str(self.snort_alerts[(src_ip, sport, dst_ip, dport)][0])))
                     row_position = self.ui.tableWidget.rowCount()
                     self.ui.tableWidget.insertRow(row_position)
                     self.ui.tableWidget.setItem(row_position, 0, QTableWidgetItem(readable_time))
@@ -1395,7 +1501,7 @@ class Naswail(QMainWindow, Ui_MainWindow):
         self.tableWidget_3.setHorizontalHeaderLabels(["Port", "Application", "IP","CPU","Memory-percent"])
         self.tableWidget_3.cellClicked.connect(self.Appsystemobj.analyze_app)
         self.tableWidget_4.setColumnCount(4)
-        self.tableWidget_4.setHorizontalHeaderLabels(["Timestamp", "Source", "Destination", "Protocol"])
+        self.tableWidget_4.setHorizontalHeaderLabels(["Timestamp", "Source", "Destination", "Attack Type"])
         #self.tableWidget_4.cellClicked.connect(self.Appsystemobj.analyze_app)
         self.pushButton_5.clicked.connect(self.toggleCapture)
         self.pushButton_6.clicked.connect(self.toggleCapture)
@@ -1671,9 +1777,28 @@ class Naswail(QMainWindow, Ui_MainWindow):
             self.sniffer_thread.start() 
         except Exception as e:
             print(f"Error in resetInput function: {e}")
+def is_admin():
+        try:
+            return ctypes.windll.shell32.IsUserAnAdmin()
+        except:
+            return False
+
+def run_command_as_admin():
+    # Command to execute
+    cmd_command = 'snort -i 4 -c C:\\Snort\\etc\\snort.conf -l C:\\Snort\\log -A fast'
+    
+    # Run in a new persistent command prompt window
+    subprocess.Popen(
+        ['cmd.exe', '/k', cmd_command],
+        creationflags=subprocess.CREATE_NEW_CONSOLE
+    )
  
 if __name__ == "__main__":
     app = QApplication(sys.argv)
     window = Naswail()
+    if is_admin():
+        # Already running as admin, execute the command
+        run_command_as_admin()
+    
     window.show()
     sys.exit(app.exec())
