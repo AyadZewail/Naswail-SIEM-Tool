@@ -1514,7 +1514,7 @@ class Ui_IncidentResponse(object):
         self.tab = QtWidgets.QWidget()
         self.tab.setObjectName("tab")
         self.listView = QtWidgets.QListView(parent=self.tab)
-        self.listView.setGeometry(QtCore.QRect(-5, -10, 341, 271))
+        self.listView.setGeometry(QtCore.QRect(5, 0, 331, 261))
         self.listView.setObjectName("listView")
         self.pushButton = QtWidgets.QPushButton(parent=self.tab)
         self.pushButton.setGeometry(QtCore.QRect(360, 180, 93, 28))
