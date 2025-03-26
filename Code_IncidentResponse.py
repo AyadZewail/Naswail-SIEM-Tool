@@ -14,10 +14,105 @@ import matplotlib.pyplot as plt
 from scapy.all import *
 from scapy.layers.dns import DNS
 from scapy.layers.inet import IP, TCP, UDP
-from scapy.layers.http import HTTPRequest  
-from scapy.layers.inet import IP, TCP, UDP,ICMP
-from scapy.layers.dns import DNS
+from scapy.layers.http import HTTPRequest
+from scapy.layers.l2 import Ether
+import base64
+import urllib.parse
+import binascii
+import gzip
+import codecs
 from UI_IncidentResponse import Ui_IncidentResponse
+import torch
+from transformers import AutoTokenizer, AutoModelForMaskedLM
+from transformers import pipeline
+from keybert import KeyBERT
+from transformers import AutoTokenizer, AutoModelForCausalLM
+from transformers import AutoTokenizer, AutoModelForCausalLM
+import json
+import re
+import requests
+import time
+import torch
+from transformers import AutoTokenizer, AutoModelForCausalLM
+import json
+import re
+
+
+
+#!/usr/bin/env python
+import json
+import re
+import gzip
+import os
+
+
+# ======= Modified Stop Criteria =======
+
+class KaggleLLMClient:
+    def __init__(self, ngrok_url):
+        self.api_url = f"{ngrok_url}/generate"
+        
+    def send_prompt(self, prompt):
+        try:
+            response = requests.post(
+                self.api_url,
+                json={"prompt": prompt},
+                timeout=300
+            )
+            return response.json()['response']
+        except Exception as e:
+            return f"Error: {str(e)}"
+class Autopilot:
+    def __init__(self):
+        #self.command_prompt()
+        self.setup()
+    def setup(self):
+        start_time = time.time()
+        NGROK_URL = "https://801c-34-75-114-176.ngrok-free.app"  
+        client = KaggleLLMClient(NGROK_URL)
+        
+        prompt_text = """Recent monitoring identified malicious activities from IP 192.241.67.82...
+                    Immediate blocking is required to prevent network compromise..."""
+        
+        response = client.send_prompt(prompt_text)
+        print("Model Response:", response)
+        
+        # Calculate and display total time
+        end_time = time.time()
+        print(f"\nTotal execution time: {end_time - start_time:.2f} seconds")
+    def block_ip(self, ip):
+        print(f"Blocking IP: {ip}")
+        print("u did it")
+        # Add actual IP blocking logic here
+
+    def extract_and_fix_json(self, model_output):
+        try:
+            # Extract the relevant JSON portion
+            text = model_output.split("<|assistant|>")[-1].strip()
+            
+            # Use regex to find function and parameters
+            function_match = re.search(r'"function\s*:\s*"([^"]+)"', text)
+            ip_match = re.search(r'\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}', text)
+
+            if function_match and ip_match:
+                return {
+                    "function": function_match.group(1).strip(),
+                    "parameters": ip_match.group(0)
+                }
+            
+            # Fallback: Attempt JSON parsing with syntax fixes
+            text = re.sub(r'(\w+)\s*:', r'"\1":', text)  # Add quotes around keys
+            text = re.sub(r':\s*"([^"]*?)(?=,|}|$)', r': "\1"', text)  # Fix missing quotes
+            text = re.sub(r',\s*}', '}', text)  # Fix trailing commas
+            
+            return json.loads(text)
+        except json.JSONDecodeError:
+            # Final fallback: Search for IP in raw text
+            ip_match = re.search(r'\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}', text)
+            return {"function": "block_ip", "parameters": ip_match.group(0)} if ip_match else None
+        except Exception as e:
+            print(f"JSON parsing error: {str(e)}")
+            return None
 
 class AnomalousPackets():
     def __init__(self, ui, anomalies, packet):
@@ -26,44 +121,148 @@ class AnomalousPackets():
         self.packetobj = packet
         self.filterapplied = False
         self.filtered_packets = []
+        
+        self.preprocess_threat_for_AI("A Distributed Denial-of-Service (DDoS) attack overwhelms a network, service, or server with excessive traffic, disrupting legitimate user access. To effectively mitigate such attacks, consider the following strategies:Develop a DDoS Response Plan:Establish a comprehensive incident response plan that outlines roles, responsibilities, and procedures to follow during a DDoS attack. This proactive preparation ensures swift and coordinated action.esecurityplanet.comImplement Network Redundancies:Distribute resources across multiple data centers and networks to prevent single points of failure. This approach enhances resilience against DDoS attacks by ensuring that if one location is targeted, others can maintain operations. ")
 
-    def display(self):
+    def display(self, main_window):
         try:
             if self.filterapplied == False:
                 self.ui.tableWidget.setRowCount(0)
                 for packet in self.anomalies:
-                    src_ip = packet["IP"].src if packet.haslayer("IP") else "N/A"
-                    dst_ip = packet["IP"].dst if packet.haslayer("IP") else "N/A"
-                    protocol = self.packetobj.get_protocol(packet)
-                    macsrc = packet["Ethernet"].src if packet.haslayer("Ethernet") else "N/A"
-                    macdst = packet["Ethernet"].dst if packet.haslayer("Ethernet") else "N/A"
-                    # Extract packet length
-                    packet_length = int(len(packet))
-                    payload = packet["Raw"].load if packet.haslayer("Raw") else "N/A"          
-                    # Extract port information for TCP/UDP
+                    src_ip = packet["IP"].src if packet.haslayer(IP) else "N/A"
+                    dst_ip = packet["IP"].dst if packet.haslayer(IP) else "N/A"
                     sport = None
                     dport = None
                     if packet.haslayer("TCP"):
-                            sport = packet["TCP"].sport
-                            dport = packet["TCP"].dport
+                        sport = packet["TCP"].sport
+                        dport = packet["TCP"].dport
                     elif packet.haslayer("UDP"):
-                            sport = packet["UDP"].sport
-                            dport = packet["UDP"].dport
+                        sport = packet["UDP"].sport
+                        dport = packet["UDP"].dport
+                    protocol = self.packetobj.get_protocol(packet)
 
                     row_position = self.ui.tableWidget.rowCount()
                     self.ui.tableWidget.insertRow(row_position)
+                    attack_family = main_window.tableWidget_4.item(row_position, 3).text()
                     self.ui.tableWidget.setItem(row_position, 0, QTableWidgetItem(datetime.fromtimestamp(float(packet.time)).strftime("%I:%M:%S %p")))
                     self.ui.tableWidget.setItem(row_position, 1, QTableWidgetItem(src_ip))
                     self.ui.tableWidget.setItem(row_position, 2, QTableWidgetItem(dst_ip))
-                    self.ui.tableWidget.setItem(row_position, 3, QTableWidgetItem(macsrc))
-                    self.ui.tableWidget.setItem(row_position, 4, QTableWidgetItem(macdst))
-                    self.ui.tableWidget.setItem(row_position, 5, QTableWidgetItem(str(sport)))
-                    self.ui.tableWidget.setItem(row_position, 6, QTableWidgetItem(str(dport)))
-                    self.ui.tableWidget.setItem(row_position, 7, QTableWidgetItem(protocol))
-                    self.ui.tableWidget.setItem(row_position, 8, QTableWidgetItem(str(packet_length)))
-                    self.ui.tableWidget.setItem(row_position, 9, QTableWidgetItem(str(payload)))
+                    self.ui.tableWidget.setItem(row_position, 3, QTableWidgetItem(str(sport)))
+                    self.ui.tableWidget.setItem(row_position, 4, QTableWidgetItem(str(dport)))
+                    self.ui.tableWidget.setItem(row_position, 5, QTableWidgetItem(protocol))
+                    self.ui.tableWidget.setItem(row_position, 6, QTableWidgetItem(attack_family))
         except Exception as e:
             print(e)
+
+    def decode_payload(self, payload):
+        import warnings
+        warnings.filterwarnings("ignore", category=UserWarning, module="your_font_module")
+        if isinstance(payload, bytes):
+            payload = payload.decode(errors="ignore")  #UTF-8 decoding
+        
+        decoded_versions = set()
+        decoded_versions.add(payload)
+
+        #Base64 Decoding
+        try:
+            payload_stripped = ''.join(filter(lambda x: x in "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=", payload))
+            decoded_b64 = base64.b64decode(payload_stripped).decode(errors="ignore")
+            decoded_versions.add(decoded_b64)
+        except (binascii.Error, UnicodeDecodeError):
+            pass
+
+        #URL Decoding
+        decoded_url = urllib.parse.unquote(payload)
+        decoded_versions.add(decoded_url)
+
+        #Hex Decoding
+        try:
+            decoded_hex = bytes.fromhex(payload).decode(errors="ignore")
+            decoded_versions.add(decoded_hex)
+        except (ValueError, UnicodeDecodeError):
+            pass
+
+        #ROT13 Decoding
+        decoded_rot13 = codecs.decode(payload, "rot_13")
+        decoded_versions.add(decoded_rot13)
+
+        #Gzip Decompression
+        try:
+            decoded_gzip = gzip.decompress(payload.encode()).decode(errors="ignore")
+            decoded_versions.add(decoded_gzip)
+        except (OSError, UnicodeDecodeError):
+            pass
+
+        # Return the most readable version
+        return max(decoded_versions, key=len)
+    
+    def extractThreatIntelligence(self, row):
+        try:
+            target = self.anomalies[row]
+            src_ip = target[IP].src if target.haslayer(IP) else "N/A"
+            dst_ip = target[IP].dst if target.haslayer(IP) else "N/A"
+            protocol = self.packetobj.get_protocol(target)
+            macsrc = target[Ether].src if target.haslayer(Ether) else "N/A"
+            macdst = target[Ether].dst if target.haslayer(Ether) else "N/A"
+            packet_length = int(len(target))
+            payload = target["Raw"].load if target.haslayer("Raw") else "N/A"
+            decoded_payload = self.decode_payload(payload)
+            sport = None
+            dport = None
+            if target.haslayer("TCP"):
+                sport = target["TCP"].sport
+                dport = target["TCP"].dport
+            elif target.haslayer("UDP"):
+                sport = target["UDP"].sport
+                dport = target["UDP"].dport
+            flow_key = tuple(sorted([(src_ip, sport), (dst_ip, dport)])) + (protocol,)
+
+            self.ui.tableWidget_3.setRowCount(0)
+            row_position = 0
+            self.ui.tableWidget_3.insertRow(row_position)
+            self.ui.tableWidget_3.setItem(row_position, 0, QTableWidgetItem("Attack Name"))
+            self.ui.tableWidget_3.setItem(row_position, 1, QTableWidgetItem())
+            row_position += 1
+            self.ui.tableWidget_3.insertRow(row_position)
+            self.ui.tableWidget_3.setItem(row_position, 0, QTableWidgetItem("CVE ID"))
+            self.ui.tableWidget_3.setItem(row_position, 1, QTableWidgetItem())
+            row_position += 1
+            self.ui.tableWidget_3.insertRow(row_position)
+            self.ui.tableWidget_3.setItem(row_position, 0, QTableWidgetItem("Flow Key"))
+            self.ui.tableWidget_3.setItem(row_position, 1, QTableWidgetItem(str(flow_key)))
+            row_position += 1
+            self.ui.tableWidget_3.insertRow(row_position)
+            self.ui.tableWidget_3.setItem(row_position, 0, QTableWidgetItem("Decoded Payload"))
+            self.ui.tableWidget_3.setItem(row_position, 1, QTableWidgetItem(str(decoded_payload)))
+        except Exception as e:
+            print(e)
+    def preprocess_threat_for_AI(self,threat_text):
+        kw_model = KeyBERT("all-MiniLM-L6-v2")
+        
+        # Extract key phrases from the threat text.
+        # - keyphrase_ngram_range=(1, 2) tells the model to consider single words and two-word phrases.
+        # - stop_words='english' removes common words that don't add much meaning.
+        # - top_n=3 extracts the top three keywords/phrases.
+        keywords = kw_model.extract_keywords(threat_text, keyphrase_ngram_range=(1, 20), stop_words='english', top_n=20)
+        
+        # 'keywords' is a list of tuples where each tuple contains a keyphrase and its relevance score.
+        # For example, it might return: [('block port', 0.80), ('source port', 0.65), ...]
+        # We select the top-scoring keyphrase as the command.
+        command = keywords[0][0] if keywords else threat_text
+        
+        # Optionally, you can add post-processing to ensure the command is in a desired format.
+        # For example, lowercasing or removing extraneous words.
+        command = command.lower().strip()
+        
+        # Print the extracted command.
+        print("Command:", command)
+        return command
+
+
+
+        
+
+
 
 
 class Blacklist():
@@ -200,14 +399,22 @@ class IncidentResponse(QWidget, Ui_IncidentResponse):
         self.anomalousPacketsObj = AnomalousPackets(self.ui, self.main_window.PacketSystemobj.anomalies, self.main_window.PacketSystemobj)
         self.blacklistObj = Blacklist(self.ui, self.main_window.PacketSystemobj.blacklist,self.main_window.PacketSystemobj)
         self.portBlockingObj = PortBlocking(self.ui, self.main_window.PacketSystemobj.blocked_ports,self.main_window.PacketSystemobj)
-
-        self.ui.tableWidget.setColumnCount(10)
+        self.autopilotobj=Autopilot()
+        self.ui.tableWidget.setColumnCount(7)
         self.ui.tableWidget.setHorizontalHeaderLabels(
-            ["Timestamp", "Source IP", "Destination IP", "MAC Src", "MAC Dst", "Src Port", "Dst Port", "Protocol", "Length", "Payload"]
+            ["Timestamp", "Source IP", "Destination IP", "Src Port", "Dst Port", "Protocol", "Attack"]
         )
+        self.ui.tableWidget.cellClicked.connect(self.anomalousPacketsObj.extractThreatIntelligence)
 
         self.ui.tableWidget_2.setColumnCount(2)
         self.ui.tableWidget_2.setHorizontalHeaderLabels(["Port Number", "Status"])
+        
+        self.ui.tableWidget_3.horizontalHeader().setVisible(False)
+        self.ui.tableWidget_3.verticalHeader().setVisible(False)
+        self.ui.tableWidget_3.setRowCount(10)
+        self.ui.tableWidget_3.setColumnCount(2)
+        self.ui.tableWidget_3.setColumnWidth(0, 120)
+        self.ui.tableWidget_3.setColumnWidth(1, 351)
 
         self.ui.pushButton.clicked.connect(lambda: self.blacklistObj.updateBlacklist(1))
         self.ui.pushButton_9.clicked.connect(lambda: self.blacklistObj.updateBlacklist(0))
@@ -216,7 +423,7 @@ class IncidentResponse(QWidget, Ui_IncidentResponse):
         self.ui.pushButton_11.clicked.connect(lambda: self.portBlockingObj.updateBlockedPorts(0))
 
     def ttTime(self):
-        self.anomalousPacketsObj.display()
+        self.anomalousPacketsObj.display(self.main_window)
     
     def show_analysis_window(self):
         try:
