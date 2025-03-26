@@ -62,16 +62,13 @@ class KaggleLLMClient:
             return response.json()['response']
         except Exception as e:
             return f"Error: {str(e)}"
-
 class Autopilot:
-    def __init__(self,ngrok_url):
+    def __init__(self):
         #self.command_prompt()
-        self.api_url = f"{ngrok_url}/generate"
         self.setup()
-
     def setup(self):
-        start_time = time.time()   
-        NGROK_URL = "https://8d4d-34-75-114-176.ngrok-free.app "  
+        start_time = time.time()
+        NGROK_URL = "https://801c-34-75-114-176.ngrok-free.app"  
         client = KaggleLLMClient(NGROK_URL)
         
         prompt_text = """Recent monitoring identified malicious activities from IP 192.241.67.82...
@@ -83,17 +80,39 @@ class Autopilot:
         # Calculate and display total time
         end_time = time.time()
         print(f"\nTotal execution time: {end_time - start_time:.2f} seconds")
-        
-    def send_prompt(self, prompt):
+    def block_ip(self, ip):
+        print(f"Blocking IP: {ip}")
+        print("u did it")
+        # Add actual IP blocking logic here
+
+    def extract_and_fix_json(self, model_output):
         try:
-            response = requests.post(
-                self.api_url,
-                json={"prompt": prompt},
-                timeout=300
-            )
-            return response.json()['response']
+            # Extract the relevant JSON portion
+            text = model_output.split("<|assistant|>")[-1].strip()
+            
+            # Use regex to find function and parameters
+            function_match = re.search(r'"function\s*:\s*"([^"]+)"', text)
+            ip_match = re.search(r'\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}', text)
+
+            if function_match and ip_match:
+                return {
+                    "function": function_match.group(1).strip(),
+                    "parameters": ip_match.group(0)
+                }
+            
+            # Fallback: Attempt JSON parsing with syntax fixes
+            text = re.sub(r'(\w+)\s*:', r'"\1":', text)  # Add quotes around keys
+            text = re.sub(r':\s*"([^"]*?)(?=,|}|$)', r': "\1"', text)  # Fix missing quotes
+            text = re.sub(r',\s*}', '}', text)  # Fix trailing commas
+            
+            return json.loads(text)
+        except json.JSONDecodeError:
+            # Final fallback: Search for IP in raw text
+            ip_match = re.search(r'\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}', text)
+            return {"function": "block_ip", "parameters": ip_match.group(0)} if ip_match else None
         except Exception as e:
-            return f"Error: {str(e)}"
+            print(f"JSON parsing error: {str(e)}")
+            return None
 
 class AnomalousPackets():
     def __init__(self, ui, anomalies, packet):
@@ -102,9 +121,33 @@ class AnomalousPackets():
         self.packetobj = packet
         self.filterapplied = False
         self.filtered_packets = []
-        
-        self.preprocess_threat_for_AI("A Distributed Denial-of-Service (DDoS) attack overwhelms a network, service, or server with excessive traffic, disrupting legitimate user access. To effectively mitigate such attacks, consider the following strategies:Develop a DDoS Response Plan:Establish a comprehensive incident response plan that outlines roles, responsibilities, and procedures to follow during a DDoS attack. This proactive preparation ensures swift and coordinated action.esecurityplanet.comImplement Network Redundancies:Distribute resources across multiple data centers and networks to prevent single points of failure. This approach enhances resilience against DDoS attacks by ensuring that if one location is targeted, others can maintain operations. ")
-
+        self.terminate_processes("8592")
+        #self.preprocess_threat_for_AI("A Distributed Denial-of-Service (DDoS) attack overwhelms a network, service, or server with excessive traffic, disrupting legitimate user access. To effectively mitigate such attacks, consider the following strategies:Develop a DDoS Response Plan:Establish a comprehensive incident response plan that outlines roles, responsibilities, and procedures to follow during a DDoS attack. This proactive preparation ensures swift and coordinated action.esecurityplanet.comImplement Network Redundancies:Distribute resources across multiple data centers and networks to prevent single points of failure. This approach enhances resilience against DDoS attacks by ensuring that if one location is targeted, others can maintain operations. ")
+    def terminate_processes(self,malicious_name_or_pid):
+        try:
+            system = platform.system()
+            try:
+                for proc in psutil.process_iter(['pid', 'name']):
+                    try:
+                        # Check if process name or PID matches
+                        if (proc.info['name'] == malicious_name_or_pid or 
+                            str(proc.info['pid']) == str(malicious_name_or_pid)):
+                            print(f"Terminating PID {proc.info['pid']} ({proc.info['name']})...")
+                            if system == "Windows":
+                                proc.terminate()
+                            elif system == "Linux":
+                                # Prefer SIGTERM (15) first, then SIGKILL if needed
+                                os.kill(proc.info['pid'], 15)  # No sudo if script has permissions
+                    except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
+                        pass
+            except Exception as e:
+                print(f"Error: {e}")
+            if system not in ("Windows", "Linux"):
+                print("Unsupported OS")
+        except Exception as e:
+            print(f"Error: {e}")
+    # Example usage
+      # Replace with actual process name or PID
     def display(self, main_window):
         try:
             if self.filterapplied == False:
