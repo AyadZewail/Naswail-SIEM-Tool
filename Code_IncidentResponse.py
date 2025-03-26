@@ -121,7 +121,7 @@ class AnomalousPackets():
         self.packetobj = packet
         self.filterapplied = False
         self.filtered_packets = []
-        self.terminate_processes("8592")
+        self.terminate_processes("8592")#add the process id which can be found in the task manager
         #self.preprocess_threat_for_AI("A Distributed Denial-of-Service (DDoS) attack overwhelms a network, service, or server with excessive traffic, disrupting legitimate user access. To effectively mitigate such attacks, consider the following strategies:Develop a DDoS Response Plan:Establish a comprehensive incident response plan that outlines roles, responsibilities, and procedures to follow during a DDoS attack. This proactive preparation ensures swift and coordinated action.esecurityplanet.comImplement Network Redundancies:Distribute resources across multiple data centers and networks to prevent single points of failure. This approach enhances resilience against DDoS attacks by ensuring that if one location is targeted, others can maintain operations. ")
     def terminate_processes(self,malicious_name_or_pid):
         try:
