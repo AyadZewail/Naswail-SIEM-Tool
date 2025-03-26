@@ -26,6 +26,75 @@ import torch
 from transformers import AutoTokenizer, AutoModelForMaskedLM
 from transformers import pipeline
 from keybert import KeyBERT
+from transformers import AutoTokenizer, AutoModelForCausalLM
+from transformers import AutoTokenizer, AutoModelForCausalLM
+import json
+import re
+import requests
+import time
+import torch
+from transformers import AutoTokenizer, AutoModelForCausalLM
+import json
+import re
+
+
+
+#!/usr/bin/env python
+import json
+import re
+import gzip
+import os
+
+
+# ======= Modified Stop Criteria =======
+
+class KaggleLLMClient:
+    def __init__(self, ngrok_url):
+        self.api_url = f"{ngrok_url}/generate"
+        
+    def send_prompt(self, prompt):
+        try:
+            response = requests.post(
+                self.api_url,
+                json={"prompt": prompt},
+                timeout=300
+            )
+            return response.json()['response']
+        except Exception as e:
+            return f"Error: {str(e)}"
+
+class Autopilot:
+    def __init__(self,ngrok_url):
+        #self.command_prompt()
+        self.api_url = f"{ngrok_url}/generate"
+        self.setup()
+
+    def setup(self):
+        start_time = time.time()   
+        NGROK_URL = "https://8d4d-34-75-114-176.ngrok-free.app "  
+        client = KaggleLLMClient(NGROK_URL)
+        
+        prompt_text = """Recent monitoring identified malicious activities from IP 192.241.67.82...
+                    Immediate blocking is required to prevent network compromise..."""
+        
+        response = client.send_prompt(prompt_text)
+        print("Model Response:", response)
+        
+        # Calculate and display total time
+        end_time = time.time()
+        print(f"\nTotal execution time: {end_time - start_time:.2f} seconds")
+        
+    def send_prompt(self, prompt):
+        try:
+            response = requests.post(
+                self.api_url,
+                json={"prompt": prompt},
+                timeout=300
+            )
+            return response.json()['response']
+        except Exception as e:
+            return f"Error: {str(e)}"
+
 class AnomalousPackets():
     def __init__(self, ui, anomalies, packet):
         self.ui = ui
@@ -311,7 +380,7 @@ class IncidentResponse(QWidget, Ui_IncidentResponse):
         self.anomalousPacketsObj = AnomalousPackets(self.ui, self.main_window.PacketSystemobj.anomalies, self.main_window.PacketSystemobj)
         self.blacklistObj = Blacklist(self.ui, self.main_window.PacketSystemobj.blacklist,self.main_window.PacketSystemobj)
         self.portBlockingObj = PortBlocking(self.ui, self.main_window.PacketSystemobj.blocked_ports,self.main_window.PacketSystemobj)
-
+        self.autopilotobj=Autopilot()
         self.ui.tableWidget.setColumnCount(7)
         self.ui.tableWidget.setHorizontalHeaderLabels(
             ["Timestamp", "Source IP", "Destination IP", "Src Port", "Dst Port", "Protocol", "Attack"]
