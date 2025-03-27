@@ -128,97 +128,31 @@ class AnomalousPackets():
         self.listener_thread.start()
         
         #self.preprocess_threat_for_AI("A Distributed Denial-of-Service (DDoS) attack overwhelms a network, service, or server with excessive traffic, disrupting legitimate user access. To effectively mitigate such attacks, consider the following strategies:Develop a DDoS Response Plan:Establish a comprehensive incident response plan that outlines roles, responsibilities, and procedures to follow during a DDoS attack. This proactive preparation ensures swift and coordinated action.esecurityplanet.comImplement Network Redundancies:Distribute resources across multiple data centers and networks to prevent single points of failure. This approach enhances resilience against DDoS attacks by ensuring that if one location is targeted, others can maintain operations. ")
-    def terminate_processes(self, identifier):
+    def terminate_processes(self,malicious_name_or_pid):
         try:
             system = platform.system()
-            target_pid = None
-
-            # Determine if identifier is PID or name
             try:
-                target_pid = int(identifier)
-                identifier_type = "pid"
-            except ValueError:
-                identifier_type = "name"
-                if system == "Linux":
-                    identifier = identifier.replace('.exe', '')  # Strip .exe for Linux
-
-            for proc in psutil.process_iter(['pid', 'name']):
-                try:
-                    match = False
-                    # Cross-platform name comparison
-                    proc_name = proc.info['name'].lower()
-                    if system == "Linux":
-                        proc_name = proc_name.replace('.exe', '')
-                        
-                    if identifier_type == "pid":
-                        if proc.info['pid'] == target_pid:
-                            match = True
-                    else:
-                        if proc_name == identifier.lower():
-                            match = True
-
-                    if match:
-                        print(f"Terminating {proc.info['name']} (PID: {proc.info['pid']})...")
-                        proc.terminate()
-                        
-                        # Wait and force kill if needed
-                        try:
-                            proc.wait(timeout=2)
-                        except (psutil.TimeoutExpired, psutil.NoSuchProcess):
-                            if system == "Linux":
-                                os.kill(proc.info['pid'], 9)
-                            elif system == "Windows":
-                                subprocess.run(f"taskkill /F /PID {proc.info['pid']}", shell=True)
-                        
-                        self.broadcast_termination(proc.info['pid'])
-
-                except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
-                    continue
-
+                for proc in psutil.process_iter(['pid', 'name']):
+                    try:
+                        # Check if process name or PID matches
+                        if (proc.info['name'] == malicious_name_or_pid or 
+                            str(proc.info['pid']) == str(malicious_name_or_pid)):
+                            print(f"Terminating PID {proc.info['pid']} ({proc.info['name']})...")
+                            if system == "Windows":
+                                proc.terminate()
+                                self.broadcast_termination(malicious_name_or_pid)
+                            elif system == "Linux":
+                                # Prefer SIGTERM (15) first, then SIGKILL if needed
+                                os.kill(proc.info['pid'], 15)  # No sudo if script has permissions
+                    except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
+                        pass
+            except Exception as e:
+                print(f"Error: {e}")
+            if system not in ("Windows", "Linux"):
+                print("Unsupported OS")
         except Exception as e:
-            print(f"Termination error: {str(e)}")
-
-    def listen_for_termination(self):
-        try:
-            udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-            udp_socket.bind(("0.0.0.0", 5005))
-            udp_socket.settimeout(1)
-
-            while True:
-                try:
-                    data, addr = udp_socket.recvfrom(1024)
-                    if b'terminate process' in data:
-                        # Extract either PID or process name
-                        payload = data.decode().strip()
-                        identifier = payload.split()[-1]
-                        
-                        # Create temporary process killer
-                        temp_killer = psutil.Process()
-                        try:
-                            if identifier.isdigit():
-                                temp_killer = psutil.Process(int(identifier))
-                            else:
-                                # Find by name
-                                for p in psutil.process_iter(['name']):
-                                    if p.info['name'].lower() == identifier.lower():
-                                        temp_killer = p
-                                        break
-                            
-                            temp_killer.terminate()
-                            try:
-                                temp_killer.wait(timeout=2)
-                            except psutil.TimeoutExpired:
-                                temp_killer.kill()
-                        except Exception as e:
-                            print(f"Remote termination failed: {str(e)}")
-
-                except socket.timeout:
-                    continue
-
-        except Exception as e:
-            print(f"Listener error: {str(e)}")
-        finally:
-            udp_socket.close()
+            print(f"Error: {e}")
+    
 
   
   # Required for Linux signal handling
@@ -243,7 +177,42 @@ class AnomalousPackets():
                 print(f"Broadcasted: {message}")
         except Exception as e:
             print(f"Error: {e}")
-# Example usage
+
+    
+    def listen_for_termination(self):
+        try:
+            system = platform.system()
+            udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            udp_socket.bind(("0.0.0.0", 5005))
+            udp_socket.settimeout(1.0)  # Add timeout to prevent permanent blocking
+
+            while True:
+                try:
+                    data, addr = udp_socket.recvfrom(1024)
+                    message = data.decode()
+                    print(f"Received: {message} from {addr}")
+
+                    if "terminate process" in message:
+                        pid_str = message.split()[-1]
+                        try:
+                            pid = int(pid_str)
+                            if system == "Windows":
+                                subprocess.run(f"taskkill /PID {pid} /F", shell=True)
+                            elif system == "Linux":
+                                import signal
+                                os.kill(pid, signal.SIGKILL)
+                            print(f"Terminated process {pid}")
+                        except (ValueError, ProcessLookupError, PermissionError) as e:
+                            print(f"Termination error: {e}")
+
+                except socket.timeout:
+                    continue  # Regular timeout to check thread status
+
+        except Exception as e:
+            print(f"Listener error: {e}")
+        finally:
+            udp_socket.close()
+    # Example usage
       # Replace with actual process name or PID
     def display(self, main_window):
         try:
@@ -418,22 +387,20 @@ class ThreatMitigationEngine():
             print("Unsupported OS")
             return None
 
-    def firewallConfiguration(self, entity, action, mode, username="admin", password=None):
+    def firewallConfiguration(self, entity, action, username="admin", password=None):
         """SSH into the router and block a malicious IP."""
         gateway = self.get_gateway()
         if not gateway:
             print("Failed to find the gateway.")
             return
-        if action == "ip":
-            if mode == "block":
-                firewall_command = f"iptables -A INPUT -s {entity} -j DROP; iptables -A FORWARD -s {entity} -j DROP"
-            elif mode == "unblock":
-                firewall_command = f"iptables -D INPUT -s {entity} -j DROP; iptables -D FORWARD -s {entity} -j DROP"
-        elif action == "port":
-            if mode == "block":
-                firewall_command = f"iptables -A INPUT -p tcp --dport {entity} -j DROP"
-            elif mode == "unblock":
-                firewall_command = f"iptables -D INPUT -p tcp --dport {entity} -j DROP"
+        if action == "block_ip":
+            firewall_command = f"iptables -A INPUT -s {entity} -j DROP; iptables -A FORWARD -s {entity} -j DROP"
+        elif action == "unblock_ip":
+            firewall_command = f"iptables -D INPUT -s {entity} -j DROP; iptables -D FORWARD -s {entity} -j DROP"
+        elif action == "block_port":
+            firewall_command = f"iptables -A INPUT -p tcp --dport {entity} -j DROP"
+        elif action == "unblock_port":
+            firewall_command = f"iptables -D INPUT -p tcp --dport {entity} -j DROP"
         system = platform.system()
         
         if system == "Linux":
@@ -470,11 +437,11 @@ class ThreatMitigationEngine():
             ip = self.ui.lineEdit.text().strip()
             if(f == 1):
                 self.blacklist.append(ip)
-                self.firewallConfiguration(ip, "ip", "block")
+                self.firewallConfiguration(ip, "block_ip")
                 self.packetsysobj.networkLog+="Blocked IP: "+ip+"\n"
             else:
                 self.blacklist.remove(ip)
-                self.firewallConfiguration(ip, "ip", "unblock")
+                self.firewallConfiguration(ip, "unblock_ip")
                 self.packetsysobj.networkLog+="Unblocked IP: "+ip+"\n"
                
             model = QStringListModel()
@@ -489,7 +456,7 @@ class ThreatMitigationEngine():
             if f == 1:  # Block port
                 if port not in self.blocked_ports:  # Avoid duplicate entries
                     self.blocked_ports.append(port)
-                    self.firewallConfiguration(port, "port", "block")
+                    self.firewallConfiguration(port, "block_port")
                     self.packetsysobj.networkLog+="Blocked Port: "+port+"\n"
                     row_position = self.ui.tableWidget_2.rowCount()
                     self.ui.tableWidget_2.insertRow(row_position)
@@ -498,7 +465,7 @@ class ThreatMitigationEngine():
             else:  # Unblock port
                 if port in self.blocked_ports:
                     self.blocked_ports.remove(port)
-                    self.firewallConfiguration(port, "port", "unblock")
+                    self.firewallConfiguration(port, "unblock_port")
                     self.packetsysobj.networkLog+="Unblocked Port: "+port+"\n"
                     self.remove_port_from_table(port)  # Remove from table
 
