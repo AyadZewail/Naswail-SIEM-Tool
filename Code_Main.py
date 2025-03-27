@@ -38,6 +38,7 @@ from Code_Analysis import Window_Analysis
 from Code_Tools import Window_Tools
 from Code_IncidentResponse import IncidentResponse
 import torch
+import paramiko
 from transformers import AutoModelForMaskedLM, AutoTokenizer
 
 packetInput = 0
@@ -373,6 +374,134 @@ class NetworkActivity:#helper class
         def __init__(self):
             self.mac_of_device = ''
             self.actvity = ''  
+
+class ThreatMitigationEngine():
+    def __init__(self, ui_main_window, packetsysobj):
+        self.ui = ui_main_window
+        self.blacklist = packetsysobj.blacklist
+        # self.blocked_ports = packetsysobj.blocked_ports
+        self.packetsysobj = packetsysobj
+        self.networkLog=packetsysobj.networkLog
+
+    def get_gateway(self):
+        """Retrieve the current default gateway dynamically."""
+        system = platform.system()
+        
+        if system == "Linux":
+            try:
+                result = subprocess.check_output("ip route | grep default", shell=True).decode()
+                gateway = result.split()[2]
+                return gateway
+            except Exception as e:
+                print(f"Error retrieving Linux gateway: {e}")
+                return None
+
+        elif system == "Windows":
+            try:
+                result = subprocess.check_output("powershell -Command \"(Get-NetRoute -DestinationPrefix 0.0.0.0/0).NextHop\"", shell=True).decode().strip()
+                return result
+            except Exception as e:
+                print(f"Error retrieving Windows gateway: {e}")
+                return None
+        else:
+            print("Unsupported OS")
+            return None
+
+    def firewallConfiguration(self, entity, action, mode, username="admin", password=None):
+        """SSH into the router and block a malicious IP."""
+        gateway = self.get_gateway()
+        if not gateway:
+            print("Failed to find the gateway.")
+            return
+        if action == "ip":
+            if mode == "block":
+                firewall_command = f"iptables -A INPUT -s {entity} -j DROP; iptables -A FORWARD -s {entity} -j DROP"
+            elif mode == "unblock":
+                firewall_command = f"iptables -D INPUT -s {entity} -j DROP; iptables -D FORWARD -s {entity} -j DROP"
+        elif action == "port":
+            if mode == "block":
+                firewall_command = f"iptables -A INPUT -p tcp --dport {entity} -j DROP"
+            elif mode == "unblock":
+                firewall_command = f"iptables -D INPUT -p tcp --dport {entity} -j DROP"
+        system = platform.system()
+        
+        if system == "Linux":
+            try:
+                ssh_command = f"sshpass -p {password} ssh {username}@{gateway} '{firewall_command}'"
+                subprocess.run(ssh_command, shell=True, check=True)
+                print(f"Blocked {entity} on router firewall (Linux).")
+            except Exception as e:
+                print(f"Error blocking IP on Linux router: {e}")
+
+        elif system == "Windows":
+            try:
+                client = paramiko.SSHClient()
+                client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+                client.connect(gateway, username=username, password=password)
+
+                stdin, stdout, stderr = client.exec_command(firewall_command)
+                output = stdout.read().decode()
+                error = stderr.read().decode()
+
+                if error:
+                    print(f"Error blocking IP on Windows router: {error}")
+                else:
+                    print(f"Blocked {entity} on router firewall (Windows).")
+
+                client.close()
+            except Exception as e:
+                print(f"Error connecting via SSH on Windows: {e}")
+        else:
+            print("Unsupported OS")
+
+    def updateBlacklist(self, f):
+        try:
+            ip = self.ui.lineEdit_6.text().strip()
+            if(f == 1):
+                self.blacklist.append(ip)
+                self.firewallConfiguration(ip, "ip", "block")
+                self.networkLog+="Blocked IP: "+ip+"\n"
+                
+            else:
+                self.blacklist.remove(ip)
+                self.firewallConfiguration(ip, "ip", "unblock")
+                self.networkLog+="Unblocked IP: "+ip+"\n"
+               
+
+            model = QStringListModel()
+            model.setStringList(self.blacklist)
+            self.ui.listView_4.setModel(model)
+        except Exception as e:
+            print(f"Error updating blacklist: {e}")
+    
+    def updateBlockedPorts(self, f):
+        try:
+            port = self.ui.lineEdit_2.text().strip()
+            if f == 1:  # Block port
+                if port not in self.blocked_ports:  # Avoid duplicate entries
+                    self.blocked_ports.append(port)
+                    self.firewallConfiguration(port, "port", "block")
+                    self.packetsysobj.networkLog+="Blocked Port: "+port+"\n"
+                    row_position = self.ui.tableWidget_2.rowCount()
+                    self.ui.tableWidget_2.insertRow(row_position)
+                    self.ui.tableWidget_2.setItem(row_position, 0, QTableWidgetItem(str(port)))
+                    self.ui.tableWidget_2.setItem(row_position, 1, QTableWidgetItem("Blocked"))
+            else:  # Unblock port
+                if port in self.blocked_ports:
+                    self.blocked_ports.remove(port)
+                    self.firewallConfiguration(port, "port", "unblock")
+                    self.packetsysobj.networkLog+="Unblocked Port: "+port+"\n"
+                    self.remove_port_from_table(port)  # Remove from table
+
+        except Exception as e:
+            print(f"Error updating port blocked: {e}")
+
+    def remove_port_from_table(self, port):
+        for row in range(self.ui.tableWidget_2.rowCount()):
+            if self.ui.tableWidget_2.item(row, 0) and self.ui.tableWidget_2.item(row, 0).text() == str(port):
+                self.ui.tableWidget_2.removeRow(row)
+                break  # Stop after removing the first matching row
+
 class PacketSystem:
     def __init__(self, ui_main_window):
         self.ui = ui_main_window
@@ -648,25 +777,6 @@ class PacketSystem:
                 self.qued_packets.append(packet)            
         except Exception as e:
             print(f"Error putting packet in queue: {e}")
-    def updateBlacklist(self, f):
-        try:
-            ip = self.ui.lineEdit_6.text().strip()
-            if(f == 1):
-                self.blacklist.append(ip)
-                self.block_ip(ip)
-                self.networkLog+="Blocked IP: "+ip+"\n"
-                
-            else:
-                self.blacklist.remove(ip)
-                self.unblock_ip(ip)
-                self.networkLog+="Unblocked IP: "+ip+"\n"
-               
-
-            model = QStringListModel()
-            model.setStringList(self.blacklist)
-            self.ui.listView_4.setModel(model)
-        except Exception as e:
-            print(f"Error updating blacklist: {e}")
     def Update_Network_Summary(self):
         try:
             self.list_of_activity.clear()
@@ -831,10 +941,6 @@ class PacketSystem:
                 self.ui.tableWidget.setItem(row_position, 8, QTableWidgetItem("Blocked"))
                 self.ui.tableWidget.setItem(row_position, 9, QTableWidgetItem("Blocked"))
                 self.ui.tableWidget.setItem(row_position, 10, QTableWidgetItem("Blocked"))
-               # if src_ip in self.blacklist:
-                 #   self.block_ip(src_ip)
-                #else:
-                    #self.block_ip(dst_ip)
             else:
                 self.packets.append(packet)
                 if len(self.packets) >=15000:
@@ -1473,6 +1579,8 @@ class Naswail(QMainWindow, Ui_MainWindow):
         self.PacketSystemobj = PacketSystem(self)
         self.SensorSystemobj = SensorSystem(self)
         self.Appsystemobj = ApplicationsSystem(self)
+        self.threatMitEngine = ThreatMitigationEngine(self, self.PacketSystemobj)
+
     
         self.SensorSystemobj.set_packet_system(self.PacketSystemobj)
         self.PacketSystemobj.set_sensor_system(self.SensorSystemobj)
@@ -1511,8 +1619,8 @@ class Naswail(QMainWindow, Ui_MainWindow):
         self.actionLive_Capture.triggered.connect(self.resetInput)
         self.buttonBox_2.clicked.connect(lambda _: self.SensorSystemobj.updateSensor(1))
         self.buttonBox_2.rejected.connect(lambda _: self.SensorSystemobj.updateSensor(2))
-        self.pushButton_10.clicked.connect(lambda _: self.PacketSystemobj.updateBlacklist(1))
-        self.pushButton_11.clicked.connect(lambda _: self.PacketSystemobj.updateBlacklist(2))
+        self.pushButton_10.clicked.connect(lambda _: self.threatMitEngine.updateBlacklist(1))
+        self.pushButton_11.clicked.connect(lambda _: self.threatMitEngine.updateBlacklist(2))
         self.pushButton_12.clicked.connect(lambda _:self.PacketSystemobj.save_log_to_file())
         self.pushButton_apply.clicked.connect(self.PacketSystemobj.design_and_send_packet)
        

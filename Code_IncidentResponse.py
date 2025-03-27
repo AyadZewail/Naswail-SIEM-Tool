@@ -37,7 +37,7 @@ from transformers import AutoTokenizer, AutoModelForCausalLM
 import json
 import re
 import socket
-import os
+import paramiko
 
 
 #!/usr/bin/env python
@@ -355,23 +355,95 @@ class AnomalousPackets():
 
 
 
-class Blacklist():
-    def __init__(self, ui, blacklist,packetsysobj):
+class ThreatMitigationEngine():
+    def __init__(self, ui, blacklist, blocked_ports, packetsysobj):
         self.ui = ui
         self.blacklist = blacklist
+        self.blocked_ports = blocked_ports
         self.packetsysobj = packetsysobj
-        self.log=packetsysobj.networkLog
+        self.networkLog = packetsysobj.networkLog
 
+    def get_gateway(self):
+        """Retrieve the current default gateway dynamically."""
+        system = platform.system()
+        
+        if system == "Linux":
+            try:
+                result = subprocess.check_output("ip route | grep default", shell=True).decode()
+                gateway = result.split()[2]
+                return gateway
+            except Exception as e:
+                print(f"Error retrieving Linux gateway: {e}")
+                return None
+
+        elif system == "Windows":
+            try:
+                result = subprocess.check_output("powershell -Command \"(Get-NetRoute -DestinationPrefix 0.0.0.0/0).NextHop\"", shell=True).decode().strip()
+                return result
+            except Exception as e:
+                print(f"Error retrieving Windows gateway: {e}")
+                return None
+        else:
+            print("Unsupported OS")
+            return None
+
+    def firewallConfiguration(self, entity, action, mode, username="admin", password=None):
+        """SSH into the router and block a malicious IP."""
+        gateway = self.get_gateway()
+        if not gateway:
+            print("Failed to find the gateway.")
+            return
+        if action == "ip":
+            if mode == "block":
+                firewall_command = f"iptables -A INPUT -s {entity} -j DROP; iptables -A FORWARD -s {entity} -j DROP"
+            elif mode == "unblock":
+                firewall_command = f"iptables -D INPUT -s {entity} -j DROP; iptables -D FORWARD -s {entity} -j DROP"
+        elif action == "port":
+            if mode == "block":
+                firewall_command = f"iptables -A INPUT -p tcp --dport {entity} -j DROP"
+            elif mode == "unblock":
+                firewall_command = f"iptables -D INPUT -p tcp --dport {entity} -j DROP"
+        system = platform.system()
+        
+        if system == "Linux":
+            try:
+                ssh_command = f"sshpass -p {password} ssh {username}@{gateway} '{firewall_command}'"
+                subprocess.run(ssh_command, shell=True, check=True)
+                print(f"Blocked {entity} on router firewall (Linux).")
+            except Exception as e:
+                print(f"Error blocking IP on Linux router: {e}")
+
+        elif system == "Windows":
+            try:
+                client = paramiko.SSHClient()
+                client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+                client.connect(gateway, username=username, password=password)
+
+                stdin, stdout, stderr = client.exec_command(firewall_command)
+                output = stdout.read().decode()
+                error = stderr.read().decode()
+
+                if error:
+                    print(f"Error blocking IP on Windows router: {error}")
+                else:
+                    print(f"Blocked {entity} on router firewall (Windows).")
+
+                client.close()
+            except Exception as e:
+                print(f"Error connecting via SSH on Windows: {e}")
+        else:
+            print("Unsupported OS")
+    
     def updateBlacklist(self, f):
         try:
             ip = self.ui.lineEdit.text().strip()
             if(f == 1):
                 self.blacklist.append(ip)
-                self.block_ip(ip)
+                self.firewallConfiguration(ip, "ip", "block")
                 self.packetsysobj.networkLog+="Blocked IP: "+ip+"\n"
             else:
                 self.blacklist.remove(ip)
-                self.unblock_ip(ip)
+                self.firewallConfiguration(ip, "ip", "unblock")
                 self.packetsysobj.networkLog+="Unblocked IP: "+ip+"\n"
                
             model = QStringListModel()
@@ -379,50 +451,14 @@ class Blacklist():
             self.ui.listView.setModel(model)
         except Exception as e:
             print(f"Error updating blacklist: {e}")
-
-    def block_ip(self,ip):
-        system = platform.system()
-        
-        if system == "Windows":
-            print(f"Blocking {ip} on Windows Firewall")
-            os.system(f'netsh advfirewall firewall add rule name="Block {ip}" dir=in action=block remoteip={ip}')
-            os.system(f'netsh advfirewall firewall add rule name="Block {ip}" dir=out action=block remoteip={ip}')
-        
-        elif system == "Linux":
-            print(f"Blocking {ip} using iptables")
-            subprocess.run(["sudo", "iptables", "-A", "INPUT", "-s", ip, "-j", "DROP"])
-            subprocess.run(["sudo", "iptables", "-A", "OUTPUT", "-d", ip, "-j", "DROP"])
-        
-        else:
-            print("Unsupported OS")
-    def unblock_ip(self,ip):
-        system = platform.system()
-        
-        if system == "Windows":
-            print(f"Unblocking {ip} from Windows Firewall")
-            os.system(f'netsh advfirewall firewall delete rule name="Block {ip}"')
-
-        elif system == "Linux":
-            print(f"Unblocking {ip} from iptables")
-            subprocess.run(["sudo", "iptables", "-D", "INPUT", "-s", ip, "-j", "DROP"])
-            subprocess.run(["sudo", "iptables", "-D", "OUTPUT", "-d", ip, "-j", "DROP"])
-        
-        else:
-            print("Unsupported OS")
-
-class PortBlocking():
-    def __init__(self, ui, blocked_ports,packetsysobj):
-        self.ui = ui
-        self.blocked_ports = blocked_ports
-        self.packetsysobj = packetsysobj
-        self.log=packetsysobj.networkLog
+    
     def updateBlockedPorts(self, f):
         try:
             port = self.ui.lineEdit_2.text().strip()
             if f == 1:  # Block port
                 if port not in self.blocked_ports:  # Avoid duplicate entries
                     self.blocked_ports.append(port)
-                    self.block_port(port)
+                    self.firewallConfiguration(port, "port", "block")
                     self.packetsysobj.networkLog+="Blocked Port: "+port+"\n"
                     row_position = self.ui.tableWidget_2.rowCount()
                     self.ui.tableWidget_2.insertRow(row_position)
@@ -431,7 +467,7 @@ class PortBlocking():
             else:  # Unblock port
                 if port in self.blocked_ports:
                     self.blocked_ports.remove(port)
-                    self.unblock_port(port)
+                    self.firewallConfiguration(port, "port", "unblock")
                     self.packetsysobj.networkLog+="Unblocked Port: "+port+"\n"
                     self.remove_port_from_table(port)  # Remove from table
 
@@ -439,36 +475,10 @@ class PortBlocking():
             print(f"Error updating port blocked: {e}")
 
     def remove_port_from_table(self, port):
-        
         for row in range(self.ui.tableWidget_2.rowCount()):
             if self.ui.tableWidget_2.item(row, 0) and self.ui.tableWidget_2.item(row, 0).text() == str(port):
                 self.ui.tableWidget_2.removeRow(row)
                 break  # Stop after removing the first matching row
-
-    def block_port(self,port):
-        os_name = platform.system()
-
-        if os_name == "Windows":
-            os.system(f'netsh advfirewall firewall add rule name="BlockPort{port}" dir=in action=block protocol=TCP localport={port}')
-            print(f"Blocked port {port} on Windows.")
-        elif os_name == "Linux":
-            os.system(f"sudo iptables -A INPUT -p tcp --dport {port} -j DROP")
-            print(f"Blocked port {port} on Linux.")
-        else:
-            print("Unsupported OS.")
-
-    def unblock_port(self,port):
-        os_name = platform.system()
-
-        if os_name == "Windows":
-            os.system(f'netsh advfirewall firewall delete rule name="BlockPort{port}" protocol=TCP localport={port}')
-            print(f"Unblocked port {port} on Windows.")
-            
-        elif os_name == "Linux":
-            os.system(f"sudo iptables -D INPUT -p tcp --dport {port} -j DROP")
-            print(f"Unblocked port {port} on Linux.")
-        else:
-            print("Unsupported OS.")
 
 class IncidentResponse(QWidget, Ui_IncidentResponse):
     def __init__(self, main_window):
@@ -487,8 +497,7 @@ class IncidentResponse(QWidget, Ui_IncidentResponse):
         self.sec = 0
 
         self.anomalousPacketsObj = AnomalousPackets(self.ui, self.main_window.PacketSystemobj.anomalies, self.main_window.PacketSystemobj)
-        self.blacklistObj = Blacklist(self.ui, self.main_window.PacketSystemobj.blacklist,self.main_window.PacketSystemobj)
-        self.portBlockingObj = PortBlocking(self.ui, self.main_window.PacketSystemobj.blocked_ports,self.main_window.PacketSystemobj)
+        self.threatMitEngine = ThreatMitigationEngine(self.ui, self.main_window.PacketSystemobj.blacklist, self.main_window.PacketSystemobj.blocked_ports, self.main_window.PacketSystemobj)
         self.autopilotobj=Autopilot()
         self.ui.tableWidget.setColumnCount(7)
         self.ui.tableWidget.setHorizontalHeaderLabels(
@@ -506,11 +515,11 @@ class IncidentResponse(QWidget, Ui_IncidentResponse):
         self.ui.tableWidget_3.setColumnWidth(0, 120)
         self.ui.tableWidget_3.setColumnWidth(1, 351)
 
-        self.ui.pushButton.clicked.connect(lambda: self.blacklistObj.updateBlacklist(1))
-        self.ui.pushButton_9.clicked.connect(lambda: self.blacklistObj.updateBlacklist(0))
+        self.ui.pushButton.clicked.connect(lambda: self.threatMitEngine.updateBlacklist(1))
+        self.ui.pushButton_9.clicked.connect(lambda: self.threatMitEngine.updateBlacklist(0))
 
-        self.ui.pushButton_10.clicked.connect(lambda: self.portBlockingObj.updateBlockedPorts(1))
-        self.ui.pushButton_11.clicked.connect(lambda: self.portBlockingObj.updateBlockedPorts(0))
+        self.ui.pushButton_10.clicked.connect(lambda: self.threatMitEngine.updateBlockedPorts(1))
+        self.ui.pushButton_11.clicked.connect(lambda: self.threatMitEngine.updateBlockedPorts(0))
 
     def ttTime(self):
         self.anomalousPacketsObj.display(self.main_window)
