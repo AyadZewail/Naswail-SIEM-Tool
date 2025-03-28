@@ -407,29 +407,34 @@ class ThreatMitigationEngine():
             print("Unsupported OS")
             return None
 
-    def firewallConfiguration(self, entity, action, username="admin", password=None):
+    def block_ip(self, ip):
+        firewall_command = f"iptables -A INPUT -s {ip} -j DROP; iptables -A FORWARD -s {ip} -j DROP"
+        self.firewallConfiguration(ip, firewall_command)
+    def unblock_ip(self, ip):
+        firewall_command = f"iptables -D INPUT -s {ip} -j DROP; iptables -D FORWARD -s {ip} -j DROP"
+        self.firewallConfiguration(ip, firewall_command)
+    def block_port(self, port):
+        firewall_command = f"iptables -A INPUT -p tcp --dport {port} -j DROP"
+        self.firewallConfiguration(port, firewall_command)
+    def unblock_port(self, port):
+        firewall_command = f"iptables -D INPUT -p tcp --dport {port} -j DROP"
+        self.firewallConfiguration(port, firewall_command)
+    
+    def firewallConfiguration(self, entity, firewall_command, username="admin", password=None):
         """SSH into the router and block a malicious IP."""
         gateway = self.get_gateway()
         if not gateway:
             print("Failed to find the gateway.")
             return
-        if action == "block_ip":
-            firewall_command = f"iptables -A INPUT -s {entity} -j DROP; iptables -A FORWARD -s {entity} -j DROP"
-        elif action == "unblock_ip":
-            firewall_command = f"iptables -D INPUT -s {entity} -j DROP; iptables -D FORWARD -s {entity} -j DROP"
-        elif action == "block_port":
-            firewall_command = f"iptables -A INPUT -p tcp --dport {entity} -j DROP"
-        elif action == "unblock_port":
-            firewall_command = f"iptables -D INPUT -p tcp --dport {entity} -j DROP"
         system = platform.system()
         
         if system == "Linux":
             try:
                 ssh_command = f"sshpass -p {password} ssh {username}@{gateway} '{firewall_command}'"
                 subprocess.run(ssh_command, shell=True, check=True)
-                print(f"Blocked {entity} on router firewall (Linux).")
+                print(f"handeled {entity} on router firewall (Linux).")
             except Exception as e:
-                print(f"Error blocking IP on Linux router: {e}")
+                print(f"Error handling {entity} on Linux router: {e}")
 
         elif system == "Windows":
             try:
@@ -442,9 +447,9 @@ class ThreatMitigationEngine():
                 error = stderr.read().decode()
 
                 if error:
-                    print(f"Error blocking IP on Windows router: {error}")
+                    print(f"Error handling {entity} on Windows router: {error}")
                 else:
-                    print(f"Blocked {entity} on router firewall (Windows).")
+                    print(f"handeled {entity} on router firewall (Windows).")
 
                 client.close()
             except Exception as e:
@@ -457,12 +462,12 @@ class ThreatMitigationEngine():
             ip = self.ui.lineEdit_6.text().strip()
             if(f == 1):
                 self.blacklist.append(ip)
-                self.firewallConfiguration(ip, "block_ip")
+                self.block_ip(ip)
                 self.networkLog+="Blocked IP: "+ip+"\n"
                 
             else:
                 self.blacklist.remove(ip)
-                self.firewallConfiguration(ip, "unblock_ip")
+                self.unblock_ip(ip)
                 self.networkLog+="Unblocked IP: "+ip+"\n"
                
 
@@ -478,7 +483,7 @@ class ThreatMitigationEngine():
             if f == 1:  # Block port
                 if port not in self.blocked_ports:  # Avoid duplicate entries
                     self.blocked_ports.append(port)
-                    self.firewallConfiguration(port, "block_port")
+                    self.block_port(port)
                     self.packetsysobj.networkLog+="Blocked Port: "+port+"\n"
                     row_position = self.ui.tableWidget_2.rowCount()
                     self.ui.tableWidget_2.insertRow(row_position)
@@ -487,7 +492,7 @@ class ThreatMitigationEngine():
             else:  # Unblock port
                 if port in self.blocked_ports:
                     self.blocked_ports.remove(port)
-                    self.firewallConfiguration(port, "unblock_port")
+                    self.unblock_port(port)
                     self.packetsysobj.networkLog+="Unblocked Port: "+port+"\n"
                     self.remove_port_from_table(port)  # Remove from table
 
@@ -650,7 +655,7 @@ class PacketSystem:
                     print("Traceback details:")
                     print(tb)
                     continue
-    def block_ip(self,ip):
+    def block_ip_host(self,ip):
         system = platform.system()
         
         if system == "Windows":
@@ -665,7 +670,7 @@ class PacketSystem:
         
         else:
             print("Unsupported OS")
-    def unblock_ip(self,ip):
+    def unblock_ip_host(self,ip):
         system = platform.system()
         
         if system == "Windows":
