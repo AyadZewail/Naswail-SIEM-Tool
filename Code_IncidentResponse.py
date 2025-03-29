@@ -122,97 +122,11 @@ class AnomalousPackets():
         self.packetobj = packet
         self.filterapplied = False
         self.filtered_packets = []
-        self.terminate_processes("firefox.exe")#add the process id which can be found in the task manager
-        threading.Thread(target=self.terminate_processes, args=("8592",), daemon=True).start()
-        self.listener_thread = threading.Thread(target=self.listen_for_termination, daemon=True)
-        self.listener_thread.start()
+        
         
         #self.preprocess_threat_for_AI("A Distributed Denial-of-Service (DDoS) attack overwhelms a network, service, or server with excessive traffic, disrupting legitimate user access. To effectively mitigate such attacks, consider the following strategies:Develop a DDoS Response Plan:Establish a comprehensive incident response plan that outlines roles, responsibilities, and procedures to follow during a DDoS attack. This proactive preparation ensures swift and coordinated action.esecurityplanet.comImplement Network Redundancies:Distribute resources across multiple data centers and networks to prevent single points of failure. This approach enhances resilience against DDoS attacks by ensuring that if one location is targeted, others can maintain operations. ")
-    def terminate_processes(self,malicious_name_or_pid):
-        try:
-            system = platform.system()
-            try:
-                for proc in psutil.process_iter(['pid', 'name']):
-                    try:
-                        # Check if process name or PID matches
-                        if (proc.info['name'] == malicious_name_or_pid or 
-                            str(proc.info['pid']) == str(malicious_name_or_pid)):
-                            print(f"Terminating PID {proc.info['pid']} ({proc.info['name']})...")
-                            if system == "Windows":
-                                proc.terminate()
-                                self.broadcast_termination(malicious_name_or_pid)
-                            elif system == "Linux":
-                                # Prefer SIGTERM (15) first, then SIGKILL if needed
-                                os.kill(proc.info['pid'], 15)  # No sudo if script has permissions
-                    except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
-                        pass
-            except Exception as e:
-                print(f"Error: {e}")
-            if system not in ("Windows", "Linux"):
-                print("Unsupported OS")
-        except Exception as e:
-            print(f"Error: {e}")
     
-
-  
-  # Required for Linux signal handling
-
-    def broadcast_termination(self, pid):
-        try:
-            system = platform.system()
-            if system == "Windows":
-                message = f"terminate process {pid}"
-                udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-                udp_socket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-                udp_socket.sendto(message.encode(), ("255.255.255.255", 5005))
-                udp_socket.close()
-                print(f"Broadcasted: {message}")
-            elif system == "Linux":
-                message = f"terminate process {pid}"
-                udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-                udp_socket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-                # Use generic broadcast address (same as Windows)
-                udp_socket.sendto(message.encode(), ("255.255.255.255", 5005))
-                udp_socket.close()
-                print(f"Broadcasted: {message}")
-        except Exception as e:
-            print(f"Error: {e}")
-
-    
-    def listen_for_termination(self):
-        try:
-            system = platform.system()
-            udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-            udp_socket.bind(("0.0.0.0", 5005))
-            udp_socket.settimeout(1.0)  # Add timeout to prevent permanent blocking
-
-            while True:
-                try:
-                    data, addr = udp_socket.recvfrom(1024)
-                    message = data.decode()
-                    print(f"Received: {message} from {addr}")
-
-                    if "terminate process" in message:
-                        pid_str = message.split()[-1]
-                        try:
-                            pid = int(pid_str)
-                            if system == "Windows":
-                                subprocess.run(f"taskkill /PID {pid} /F", shell=True)
-                            elif system == "Linux":
-                                import signal
-                                os.kill(pid, signal.SIGKILL)
-                            print(f"Terminated process {pid}")
-                        except (ValueError, ProcessLookupError, PermissionError) as e:
-                            print(f"Termination error: {e}")
-
-                except socket.timeout:
-                    continue  # Regular timeout to check thread status
-
-        except Exception as e:
-            print(f"Listener error: {e}")
-        finally:
-            udp_socket.close()
-    # Example usage
+# Example usage
       # Replace with actual process name or PID
     def display(self, main_window):
         try:
@@ -362,7 +276,215 @@ class ThreatMitigationEngine():
         self.blocked_ports = blocked_ports
         self.packetsysobj = packetsysobj
         self.networkLog = packetsysobj.networkLog
+        #self.terminate_processes("firefox.exe")#add the process id which can be found in the task manager
+        threading.Thread(target=self.terminate_processes, args=("8592",), daemon=True).start()
+        self.listener_thread = threading.Thread(target=self.listen_for_termination, daemon=True)
+        self.listener_thread.start()
+    
 
+    def set_rate_limit(self, rate, ip):
+        try:
+            system = platform.system()
+            if system == "Linux":
+                rate_str = f"{rate}/sec"
+                # Use FORWARD chain to control traffic passing through the router
+                subprocess.run([
+                    "sudo", "iptables", "-A", "FORWARD", "-s", ip,
+                    "-m", "hashlimit",
+                    "--hashlimit-name", f"rate_{ip}",
+                    "--hashlimit-above", rate_str,
+                    "--hashlimit-mode", "srcip",
+                    "-j", "DROP"
+                ], check=True)
+                print(f"Rate limit set for {ip} on FORWARD chain.")   
+            elif system == "Windows":
+                print("Router mode is only supported on Linux.")
+                rate = int(rate)
+                rate=rate*1000
+                if rate < 8000:
+                    raise ValueError("ThrottleRate must be ≥ 8000 bits/sec (8Kbps)")
+
+                ps_script = f'''
+    $ErrorActionPreference = "Stop"
+    Try {{
+        Remove-NetQosPolicy -Name "Throttle_{ip}" -Confirm:$false -ErrorAction SilentlyContinue
+        New-NetQosPolicy -Name "Throttle_{ip}" `
+            -IPSrcPrefixMatchCondition "{ip}/32" `
+            -ThrottleRateActionBitsPerSecond {rate} `
+            -NetworkProfile All `
+            
+            
+        Get-NetQosPolicy -Name "Throttle_{ip}"
+    }} Catch {{
+        Write-Error $_.Exception.Message
+        exit 1
+    }}
+    '''
+
+                result = subprocess.run(
+                    ["powershell", "-Command", ps_script],
+                    check=True,
+                    capture_output=True,
+                    text=True
+                )
+                print(result.stdout)
+            else:
+                print("Unsupported OS")
+        except subprocess.CalledProcessError as e:
+            print(f"PowerShell Error ({e.returncode}):")
+            print(e.stderr if e.stderr else "No error details")
+        except Exception as e:
+            print(f"General error: {str(e)}")
+
+    def reset_rate_limit(self,ip):
+        try:
+            system = platform.system()
+            if system == "Linux":
+                # Remove iptables rules added with hashlimit
+                # Example original rule: iptables -A INPUT -s {ip} -m hashlimit ... -j ACCEPT
+                # To delete, match the exact rule (use --hashlimit-name to simplify cleanup)
+                subprocess.run(
+                    ["sudo", "iptables", "-D", "INPUT", "-s", ip, "-m", "hashlimit", 
+                    "--hashlimit-name", "rate_limit", "-j", "ACCEPT"],
+                    check=True
+                )
+                # Drop rule (if added)
+                subprocess.run(
+                    ["sudo", "iptables", "-D", "INPUT", "-s", ip, "-j", "DROP"],
+                    check=False  # Allow failure if the rule doesn't exist
+                )
+            elif system == "Windows":
+                # Remove QoS policy (if it exists)
+                ps_script = f'''
+                $policy = Get-NetQosPolicy -Name "Throttle_{ip}" -ErrorAction SilentlyContinue
+                if ($policy) {{ Remove-NetQosPolicy -Name "Throttle_{ip}" -Confirm:$false }}
+                '''
+                subprocess.run(["powershell", "-Command", ps_script], check=True)
+            else:
+                print("Unsupported OS")
+        except subprocess.CalledProcessError as e:
+            print(f"Failed to reset rules for {ip}. The rule may not exist.")
+        except Exception as e:
+            print(f"Unexpected error: {e}")
+            print(traceback.format_exc())
+
+    # Example: Limit 192.168.1.100 to 1Mbps
+  
+    def terminate_processes(self, identifier):
+        try:
+            system = platform.system()
+            target_pid = None
+
+            # Determine if identifier is PID or name
+            try:
+                target_pid = int(identifier)
+                identifier_type = "pid"
+            except ValueError:
+                identifier_type = "name"
+                if system == "Linux":
+                    identifier = identifier.replace('.exe', '')  # Strip .exe for Linux
+
+            for proc in psutil.process_iter(['pid', 'name']):
+                try:
+                    match = False
+                    # Cross-platform name comparison
+                    proc_name = proc.info['name'].lower()
+                    if system == "Linux":
+                        proc_name = proc_name.replace('.exe', '')
+                        
+                    if identifier_type == "pid":
+                        if proc.info['pid'] == target_pid:
+                            match = True
+                    else:
+                        if proc_name == identifier.lower():
+                            match = True
+
+                    if match:
+                        print(f"Terminating {proc.info['name']} (PID: {proc.info['pid']})...")
+                        proc.terminate()
+                        
+                        # Wait and force kill if needed
+                        try:
+                            proc.wait(timeout=2)
+                        except (psutil.TimeoutExpired, psutil.NoSuchProcess):
+                            if system == "Linux":
+                                os.kill(proc.info['pid'], 9)
+                            elif system == "Windows":
+                                subprocess.run(f"taskkill /F /PID {proc.info['pid']}", shell=True)
+                        
+                        self.broadcast_termination(proc.info['pid'])
+
+                except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
+                    continue
+
+        except Exception as e:
+            print(f"Termination error: {str(e)}")
+
+    def listen_for_termination(self):
+        try:
+            udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            udp_socket.bind(("0.0.0.0", 5005))
+            udp_socket.settimeout(1)
+
+            while True:
+                try:
+                    data, addr = udp_socket.recvfrom(1024)
+                    if b'terminate process' in data:
+                        # Extract either PID or process name
+                        payload = data.decode().strip()
+                        identifier = payload.split()[-1]
+                        
+                        # Create temporary process killer
+                        temp_killer = psutil.Process()
+                        try:
+                            if identifier.isdigit():
+                                temp_killer = psutil.Process(int(identifier))
+                            else:
+                                # Find by name
+                                for p in psutil.process_iter(['name']):
+                                    if p.info['name'].lower() == identifier.lower():
+                                        temp_killer = p
+                                        break
+                            
+                            temp_killer.terminate()
+                            try:
+                                temp_killer.wait(timeout=2)
+                            except psutil.TimeoutExpired:
+                                temp_killer.kill()
+                        except Exception as e:
+                            print(f"Remote termination failed: {str(e)}")
+
+                except socket.timeout:
+                    continue
+
+        except Exception as e:
+            print(f"Listener error: {str(e)}")
+        finally:
+            udp_socket.close()
+
+  
+  # Required for Linux signal handling
+
+    def broadcast_termination(self, pid):
+        try:
+            system = platform.system()
+            if system == "Windows":
+                message = f"terminate process {pid}"
+                udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+                udp_socket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+                udp_socket.sendto(message.encode(), ("255.255.255.255", 5005))
+                udp_socket.close()
+                print(f"Broadcasted: {message}")
+            elif system == "Linux":
+                message = f"terminate process {pid}"
+                udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+                udp_socket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+                # Use generic broadcast address (same as Windows)
+                udp_socket.sendto(message.encode(), ("255.255.255.255", 5005))
+                udp_socket.close()
+                print(f"Broadcasted: {message}")
+        except Exception as e:
+            print(f"Error: {e}")
     def get_gateway(self):
         """Retrieve the current default gateway dynamically."""
         system = platform.system()
@@ -387,25 +509,22 @@ class ThreatMitigationEngine():
             print("Unsupported OS")
             return None
 
-    def block_ip(self, ip):
-        firewall_command = f"iptables -A INPUT -s {ip} -j DROP; iptables -A FORWARD -s {ip} -j DROP"
-        self.firewallConfiguration(ip, firewall_command)
-    def unblock_ip(self, ip):
-        firewall_command = f"iptables -D INPUT -s {ip} -j DROP; iptables -D FORWARD -s {ip} -j DROP"
-        self.firewallConfiguration(ip, firewall_command)
-    def block_port(self, port):
-        firewall_command = f"iptables -A INPUT -p tcp --dport {port} -j DROP"
-        self.firewallConfiguration(port, firewall_command)
-    def unblock_port(self, port):
-        firewall_command = f"iptables -D INPUT -p tcp --dport {port} -j DROP"
-        self.firewallConfiguration(port, firewall_command)
-
-    def firewallConfiguration(self, entity, firewall_command, username="admin", password=None):
+    def firewallConfiguration(self, entity, action, mode, username="admin", password=None):
         """SSH into the router and block a malicious IP."""
         gateway = self.get_gateway()
         if not gateway:
             print("Failed to find the gateway.")
             return
+        if action == "ip":
+            if mode == "block":
+                firewall_command = f"iptables -A INPUT -s {entity} -j DROP; iptables -A FORWARD -s {entity} -j DROP"
+            elif mode == "unblock":
+                firewall_command = f"iptables -D INPUT -s {entity} -j DROP; iptables -D FORWARD -s {entity} -j DROP"
+        elif action == "port":
+            if mode == "block":
+                firewall_command = f"iptables -A INPUT -p tcp --dport {entity} -j DROP"
+            elif mode == "unblock":
+                firewall_command = f"iptables -D INPUT -p tcp --dport {entity} -j DROP"
         system = platform.system()
         
         if system == "Linux":
@@ -442,11 +561,11 @@ class ThreatMitigationEngine():
             ip = self.ui.lineEdit.text().strip()
             if(f == 1):
                 self.blacklist.append(ip)
-                self.block_ip(ip)
+                self.firewallConfiguration(ip, "ip", "block")
                 self.packetsysobj.networkLog+="Blocked IP: "+ip+"\n"
             else:
                 self.blacklist.remove(ip)
-                self.unblock_ip(ip)
+                self.firewallConfiguration(ip, "ip", "unblock")
                 self.packetsysobj.networkLog+="Unblocked IP: "+ip+"\n"
                
             model = QStringListModel()
@@ -461,7 +580,7 @@ class ThreatMitigationEngine():
             if f == 1:  # Block port
                 if port not in self.blocked_ports:  # Avoid duplicate entries
                     self.blocked_ports.append(port)
-                    self.block_port(port)
+                    self.firewallConfiguration(port, "port", "block")
                     self.packetsysobj.networkLog+="Blocked Port: "+port+"\n"
                     row_position = self.ui.tableWidget_2.rowCount()
                     self.ui.tableWidget_2.insertRow(row_position)
@@ -470,7 +589,7 @@ class ThreatMitigationEngine():
             else:  # Unblock port
                 if port in self.blocked_ports:
                     self.blocked_ports.remove(port)
-                    self.unblock_port(port)
+                    self.firewallConfiguration(port, "port", "unblock")
                     self.packetsysobj.networkLog+="Unblocked Port: "+port+"\n"
                     self.remove_port_from_table(port)  # Remove from table
 
@@ -523,7 +642,42 @@ class IncidentResponse(QWidget, Ui_IncidentResponse):
 
         self.ui.pushButton_10.clicked.connect(lambda: self.threatMitEngine.updateBlockedPorts(1))
         self.ui.pushButton_11.clicked.connect(lambda: self.threatMitEngine.updateBlockedPorts(0))
-
+        self.ui.terminateButton.clicked.connect(self.action_terminate)
+        self.ui.applyLimitButton.clicked.connect(self.action_apply_limit)
+        self.ui.resetbutton.clicked.connect(self.action_reset_limit)
+        self.pid=""#terminatd processes
+        self.ips_limited=[]
+    def action_reset_limit(self):
+        try:
+            ip=self.ui.ipLineEdit.text()
+            self.threatMitEngine.reset_rate_limit   (ip)
+            self.ips_limited.pop(self.ips_limited.index(ip))
+            model=QStringListModel()
+            model.setStringList(self.ips_limited)
+            self.ui.limitedIPsList.setModel(model)
+        except Exception as e:
+            print(e)
+    def action_apply_limit(self):
+        try:
+            self.threatMitEngine.set_rate_limit(self.ui.rateLineEdit.text(),self.ui.ipLineEdit.text())
+            self.ips_limited.append(self.ui.ipLineEdit.text())
+            model=QStringListModel()
+            model.setStringList(self.ips_limited)
+            self.ui.limitedIPsList.setModel(model)
+            
+        except Exception as e:
+            print(e)
+    def action_terminate(self):
+        try:
+            self.pid+=self.ui.processLineEdit.text()+"\n"
+            self.threatMitEngine.terminate_processes(self.pid)
+            model = QStringListModel()
+            model.setStringList([self.pid])
+            self.ui.terminatedList.setModel(model)
+        except Exception as e:
+            print(e)
+            tb=traceback.format_exc()
+            print(tb)
     def ttTime(self):
         self.anomalousPacketsObj.display(self.main_window)
     
