@@ -170,6 +170,72 @@ class Ui_IncidentResponse(object):
         self.tabWidget.setGeometry(QtCore.QRect(774, 500, 581, 291))
         self.tabWidget.setObjectName("tabWidget")
         self.tab = QtWidgets.QWidget()
+        # Create the new tab
+        self.terminateTab = QtWidgets.QWidget()
+        self.terminateTab.setObjectName("terminateTab")
+
+        # Create the layout
+        self.terminateLayout = QtWidgets.QHBoxLayout(self.terminateTab)
+
+        # Left side: Label and ListView
+        self.leftLayout = QtWidgets.QVBoxLayout()
+        self.terminatedLabel = QtWidgets.QLabel("Terminated Process")
+        self.terminatedList = QtWidgets.QListView()
+        self.leftLayout.addWidget(self.terminatedLabel)
+        self.leftLayout.addWidget(self.terminatedList)
+
+        # Right side: Label, LineEdit, and Button
+        self.rightLayout = QtWidgets.QVBoxLayout()
+        self.processLabel = QtWidgets.QLabel("Name of Process to Terminate")
+        self.processLineEdit = QtWidgets.QLineEdit()
+        self.terminateButton = QtWidgets.QPushButton("Terminate")
+        self.rightLayout.addWidget(self.processLabel)
+        self.rightLayout.addWidget(self.processLineEdit)
+        self.rightLayout.addWidget(self.terminateButton)
+                # Create the new tab
+        self.rateLimitTab = QtWidgets.QWidget()
+        self.rateLimitTab.setObjectName("rateLimitTab")
+
+        # Create the layout
+        self.rateLimitLayout = QtWidgets.QHBoxLayout(self.rateLimitTab)
+
+        # Left side: Label and ListView
+        self.leftRateLayout = QtWidgets.QVBoxLayout()
+        self.limitedIPsLabel = QtWidgets.QLabel("Limited IPs")
+        self.limitedIPsList = QtWidgets.QListView()
+        self.leftRateLayout.addWidget(self.limitedIPsLabel)
+        self.leftRateLayout.addWidget(self.limitedIPsList)
+
+        # Right side: Labels, LineEdits, and Button
+        self.rightRateLayout = QtWidgets.QVBoxLayout()
+        self.ipLabel = QtWidgets.QLabel("IP Address to Limit")
+        self.ipLineEdit = QtWidgets.QLineEdit()
+        self.rateLabel = QtWidgets.QLabel("Rate Limit (Kbits per Second no less than 8 is allowed)")
+        self.rateLineEdit = QtWidgets.QLineEdit()
+        self.applyLimitButton = QtWidgets.QPushButton("Apply Limit")
+        self.resetbutton=QtWidgets.QPushButton("Reset Limits")
+
+        # Add widgets to right layout
+        self.rightRateLayout.addWidget(self.ipLabel)
+        self.rightRateLayout.addWidget(self.ipLineEdit)
+        self.rightRateLayout.addWidget(self.rateLabel)
+        self.rightRateLayout.addWidget(self.rateLineEdit)
+        self.rightRateLayout.addWidget(self.applyLimitButton)
+        self.rightRateLayout.addWidget(self.resetbutton)
+
+        # Add left and right layouts to the main layout
+        self.rateLimitLayout.addLayout(self.leftRateLayout)
+        self.rateLimitLayout.addLayout(self.rightRateLayout)
+
+        # Add the tab to the QTabWidget
+        
+        # Add left and right layouts to the main layout
+        self.terminateLayout.addLayout(self.leftLayout)
+        self.terminateLayout.addLayout(self.rightLayout)
+
+        # Add the tab to the QTabWidget
+        
+        
         self.tab.setObjectName("tab")
         self.listView = QtWidgets.QListView(parent=self.tab)
         self.listView.setGeometry(QtCore.QRect(5, 0, 331, 261))
@@ -282,7 +348,8 @@ class Ui_IncidentResponse(object):
         self.label_4.setText(_translate("Form", " Auto-Pilot Acitvity Log"))
         self.label_5.setText(_translate("Form", "Attack Intelligence"))
         self.label_6.setText(_translate("Form", "Suspecious Packets"))
-
+        self.tabWidget.addTab(self.terminateTab, "Terminate Process")
+        self.tabWidget.addTab(self.rateLimitTab, "Packet Rate Limiting")
 
 if __name__ == "__main__":
     import sys
