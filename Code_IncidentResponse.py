@@ -34,6 +34,7 @@ import requests
 import time
 import torch
 from transformers import AutoTokenizer, AutoModelForCausalLM
+import geoip2.database
 import json
 import re
 import socket
@@ -115,6 +116,49 @@ class Autopilot:
             print(f"JSON parsing error: {str(e)}")
             return None
 
+class WorkerSignals(QObject):
+    finished = pyqtSignal(str)  # Emits final result
+    error = pyqtSignal(str)     # Emits error messages
+
+# Async task runner
+class SubprocessWorker(QRunnable):
+    def __init__(self, attack_name):
+        super().__init__()
+        self.attack_name = attack_name
+        self.signals = WorkerSignals()
+
+    @pyqtSlot()
+    def run(self):
+        try:
+            result = subprocess.run(
+                [
+                    r"venv-python12\Scripts\python",
+                    "scrapInstructions.py",
+                    f"{self.attack_name} mitigation and response"
+                ],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+                shell=False
+            )
+            output = ""
+            if result.stdout:
+                stdout_lines = result.stdout.strip().split("\n")
+                # Find the line containing the header
+                header_index = next(
+                    (i for i, line in enumerate(stdout_lines) 
+                    if "Extracted Mitigation Strategy:" in line),
+                    -1
+                )
+                
+                if header_index != -1:
+                    # Get all lines AFTER the header (including potential multi-line content)
+                    mitigation_lines = stdout_lines[header_index+1:]
+                    output = " ".join(line.strip() for line in mitigation_lines if line.strip())
+            self.signals.finished.emit(output)
+        except Exception as e:
+            self.signals.error.emit(str(e))
+
 class AnomalousPackets():
     def __init__(self, ui, anomalies, packet):
         self.ui = ui
@@ -122,6 +166,8 @@ class AnomalousPackets():
         self.packetobj = packet
         self.filterapplied = False
         self.filtered_packets = []
+        self.threadpool = QThreadPool()
+        self.geoip_db_path = "GeoLite2-City.mmdb"
         
         
         #self.preprocess_threat_for_AI("A Distributed Denial-of-Service (DDoS) attack overwhelms a network, service, or server with excessive traffic, disrupting legitimate user access. To effectively mitigate such attacks, consider the following strategies:Develop a DDoS Response Plan:Establish a comprehensive incident response plan that outlines roles, responsibilities, and procedures to follow during a DDoS attack. This proactive preparation ensures swift and coordinated action.esecurityplanet.comImplement Network Redundancies:Distribute resources across multiple data centers and networks to prevent single points of failure. This approach enhances resilience against DDoS attacks by ensuring that if one location is targeted, others can maintain operations. ")
@@ -147,14 +193,14 @@ class AnomalousPackets():
 
                     row_position = self.ui.tableWidget.rowCount()
                     self.ui.tableWidget.insertRow(row_position)
-                    attack_family = main_window.tableWidget_4.item(row_position, 3).text()
+                    self.attack_family = main_window.tableWidget_4.item(row_position, 3).text()
                     self.ui.tableWidget.setItem(row_position, 0, QTableWidgetItem(datetime.fromtimestamp(float(packet.time)).strftime("%I:%M:%S %p")))
                     self.ui.tableWidget.setItem(row_position, 1, QTableWidgetItem(src_ip))
                     self.ui.tableWidget.setItem(row_position, 2, QTableWidgetItem(dst_ip))
                     self.ui.tableWidget.setItem(row_position, 3, QTableWidgetItem(str(sport)))
                     self.ui.tableWidget.setItem(row_position, 4, QTableWidgetItem(str(dport)))
                     self.ui.tableWidget.setItem(row_position, 5, QTableWidgetItem(protocol))
-                    self.ui.tableWidget.setItem(row_position, 6, QTableWidgetItem(attack_family))
+                    self.ui.tableWidget.setItem(row_position, 6, QTableWidgetItem(self.attack_family))
         except Exception as e:
             print(e)
 
@@ -200,8 +246,22 @@ class AnomalousPackets():
         # Return the most readable version
         return max(decoded_versions, key=len)
     
+    def get_location(self, ip):
+        try:
+            with geoip2.database.Reader(self.geoip_db_path) as reader:
+                response = reader.city(ip)
+                country = response.country.name 
+                return country
+        except geoip2.errors.AddressNotFoundError:
+            return 'Egypt'
+    
     def extractThreatIntelligence(self, row):
         try:
+            attack_name = self.attack_family
+            worker = SubprocessWorker(attack_name)
+            worker.signals.finished.connect(self.on_result)
+            worker.signals.error.connect(self.on_error)
+            self.threadpool.start(worker)
             target = self.anomalies[row]
             src_ip = target[IP].src if target.haslayer(IP) else "N/A"
             dst_ip = target[IP].dst if target.haslayer(IP) else "N/A"
@@ -238,8 +298,25 @@ class AnomalousPackets():
             self.ui.tableWidget_3.insertRow(row_position)
             self.ui.tableWidget_3.setItem(row_position, 0, QTableWidgetItem("Decoded Payload"))
             self.ui.tableWidget_3.setItem(row_position, 1, QTableWidgetItem(str(decoded_payload)))
+            row_position += 1
+            self.ui.tableWidget_3.insertRow(row_position)
+            self.ui.tableWidget_3.setItem(row_position, 0, QTableWidgetItem("Origin Country"))
+            self.ui.tableWidget_3.setItem(row_position, 1, QTableWidgetItem(self.get_location(src_ip)))
+            row_position += 1
+            self.ui.tableWidget_3.insertRow(row_position)
+            self.ui.tableWidget_3.setItem(row_position, 0, QTableWidgetItem("Instruction"))
+            self.ui.tableWidget_3.setItem(row_position, 1, QTableWidgetItem("Searching"))
         except Exception as e:
             print(e)
+    
+    def on_result(self, output):
+        print("✅ Result:", output)
+        self.ui.tableWidget_3.setItem(5, 1, QTableWidgetItem(output))
+        
+    def on_error(self, error_msg):
+        print("❌ Error:", error_msg)
+        self.ui.tableWidget_3.setItem(5, 1, QTableWidgetItem(error_msg))
+
     def preprocess_threat_for_AI(self,threat_text):
         kw_model = KeyBERT("all-MiniLM-L6-v2")
         
@@ -630,6 +707,9 @@ class IncidentResponse(QWidget, Ui_IncidentResponse):
         self.ui.tableWidget_2.setColumnCount(2)
         self.ui.tableWidget_2.setHorizontalHeaderLabels(["Port Number", "Status"])
         
+        self.ui.tableWidget_3.setWordWrap(True)
+        self.ui.tableWidget_3.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        self.ui.tableWidget_3.verticalHeader().setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
         self.ui.tableWidget_3.horizontalHeader().setVisible(False)
         self.ui.tableWidget_3.verticalHeader().setVisible(False)
         self.ui.tableWidget_3.setRowCount(10)
