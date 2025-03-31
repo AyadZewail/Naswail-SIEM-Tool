@@ -532,6 +532,63 @@ class Ui_MainWindow(object):
         self.actionExport_Packets.setObjectName("actionExport_Packets")
         self.actionLive_Capture = QtGui.QAction(parent=MainWindow)
         self.actionLive_Capture.setObjectName("actionLive_Capture")
+       
+        # Notification Bell Button
+        self.notificationButton = QtWidgets.QPushButton(parent=self.centralwidget)
+        self.notificationButton.setText("🔔")
+        self.notificationButton.setFixedSize(40, 30)
+        self.notificationButton.setObjectName("notificationButton")
+        self.notificationButton.setStyleSheet("""
+                QPushButton {
+                background-color: #40E0D0;
+                color: #2D2A2E;
+                border: 1px solid #40E0D0;
+                border-radius: 15px;
+                font-size: 16px;
+                }
+                QPushButton:hover {
+                background-color: #36C9B0;
+                border: 1px solid #36C9B0;
+                }
+                QPushButton:pressed {
+                background-color: #2DB39E;
+                border: 1px solid #2DB39E;
+                }
+        """)
+        
+        # Notification Dropdown Menu
+        self.notificationMenu = QtWidgets.QMenu(parent=MainWindow)
+        self.notificationMenu.setStyleSheet("""
+                QMenu {
+                background-color: #3E3D40;
+                color: #FFFFFF;
+                border: 1px solid #5A595C;
+                border-radius: 5px;
+                padding: 5px;
+                }
+        """)
+        
+        # Notification List
+        self.notificationList = QtWidgets.QListWidget()
+        self.notificationList.setFixedSize(300, 200)
+        self.notificationList.setStyleSheet("""
+                QListWidget {
+                background-color: #3E3D40;
+                border: none;
+                font-size: 14px;
+                }
+        """)
+        
+        # Add list to menu
+        notificationWidgetAction = QtWidgets.QWidgetAction(self.notificationMenu)
+        notificationWidgetAction.setDefaultWidget(self.notificationList)
+        self.notificationMenu.addAction(notificationWidgetAction)
+        
+        # Connect button to menu
+        
+        self.horizontalLayout.addSpacing(10)
+        # Add to your layout (example using main window's layout)
+        self.horizontalLayout.addWidget(self.notificationButton)
         self.menuHome.addAction(self.actionImport_Packets)
         self.menuHome.addAction(self.actionExport_Packets)
         self.menuHome.addAction(self.actionLive_Capture)
