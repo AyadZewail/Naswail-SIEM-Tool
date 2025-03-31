@@ -65,56 +65,45 @@ class KaggleLLMClient:
         except Exception as e:
             return f"Error: {str(e)}"
 class Autopilot:
-    def __init__(self):
-        #self.command_prompt()
-        self.setup()
-    def setup(self):
+    def __init__(self, MitEng):
+        self.MitEng = MitEng
+        
+    def setup(self, prompt):
         start_time = time.time()
-        NGROK_URL = "https://801c-34-75-114-176.ngrok-free.app"  
+        NGROK_URL = "https://d356-35-196-22-161.ngrok-free.app"
         client = KaggleLLMClient(NGROK_URL)
         
-        prompt_text = """Recent monitoring identified malicious activities from IP 192.241.67.82...
-                    Immediate blocking is required to prevent network compromise..."""
+        prompt_text = prompt
         
         response = client.send_prompt(prompt_text)
         print("Model Response:", response)
+        self.extract_function_and_params(response)
         
         # Calculate and display total time
         end_time = time.time()
         print(f"\nTotal execution time: {end_time - start_time:.2f} seconds")
-    def block_ip(self, ip):
-        print(f"Blocking IP: {ip}")
-        print("u did it")
-        # Add actual IP blocking logic here
 
-    def extract_and_fix_json(self, model_output):
+    def extract_function_and_params(self, model_output):
         try:
-            # Extract the relevant JSON portion
-            text = model_output.split("<|assistant|>")[-1].strip()
+            match = re.search(r'\{.*\}', model_output, re.DOTALL)
+            if not match:
+                return None
             
-            # Use regex to find function and parameters
-            function_match = re.search(r'"function\s*:\s*"([^"]+)"', text)
-            ip_match = re.search(r'\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}', text)
+            json_text = match.group(0)
+            data = json.loads(json_text)
 
-            if function_match and ip_match:
-                return {
-                    "function": function_match.group(1).strip(),
-                    "parameters": ip_match.group(0)
-                }
-            
-            # Fallback: Attempt JSON parsing with syntax fixes
-            text = re.sub(r'(\w+)\s*:', r'"\1":', text)  # Add quotes around keys
-            text = re.sub(r':\s*"([^"]*?)(?=,|}|$)', r': "\1"', text)  # Fix missing quotes
-            text = re.sub(r',\s*}', '}', text)  # Fix trailing commas
-            
-            return json.loads(text)
+            values = list(data.values()) if isinstance(data, dict) else None
+            if values:
+                self.execute_function(self.MitEng, values[0], *values[1:])
         except json.JSONDecodeError:
-            # Final fallback: Search for IP in raw text
-            ip_match = re.search(r'\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}', text)
-            return {"function": "block_ip", "parameters": ip_match.group(0)} if ip_match else None
-        except Exception as e:
-            print(f"JSON parsing error: {str(e)}")
             return None
+
+    def execute_function(self, obj, function_name, *args, **kwargs):
+        func = getattr(obj, function_name, None)
+        if callable(func):
+            return func(*args, **kwargs)
+        else:
+            print(f"Function '{function_name}' not found.")
 
 class WorkerSignals(QObject):
     finished = pyqtSignal(str)  # Emits final result
@@ -160,8 +149,9 @@ class SubprocessWorker(QRunnable):
             self.signals.error.emit(str(e))
 
 class AnomalousPackets():
-    def __init__(self, ui, anomalies, packet):
+    def __init__(self, ui, anomalies, packet, AI):
         self.ui = ui
+        self.AIobj = AI
         self.anomalies = anomalies
         self.packetobj = packet
         self.filterapplied = False
@@ -263,7 +253,7 @@ class AnomalousPackets():
             worker.signals.error.connect(self.on_error)
             self.threadpool.start(worker)
             target = self.anomalies[row]
-            src_ip = target[IP].src if target.haslayer(IP) else "N/A"
+            self.src_ip = target[IP].src if target.haslayer(IP) else "N/A"
             dst_ip = target[IP].dst if target.haslayer(IP) else "N/A"
             protocol = self.packetobj.get_protocol(target)
             macsrc = target[Ether].src if target.haslayer(Ether) else "N/A"
@@ -272,14 +262,14 @@ class AnomalousPackets():
             payload = target["Raw"].load if target.haslayer("Raw") else "N/A"
             decoded_payload = self.decode_payload(payload)
             sport = None
-            dport = None
+            self.dport = None
             if target.haslayer("TCP"):
                 sport = target["TCP"].sport
-                dport = target["TCP"].dport
+                self.dport = target["TCP"].dport
             elif target.haslayer("UDP"):
                 sport = target["UDP"].sport
-                dport = target["UDP"].dport
-            flow_key = tuple(sorted([(src_ip, sport), (dst_ip, dport)])) + (protocol,)
+                self.dport = target["UDP"].dport
+            flow_key = tuple(sorted([(self.src_ip, sport), (dst_ip, self.dport)])) + (protocol,)
 
             self.ui.tableWidget_3.setRowCount(0)
             row_position = 0
@@ -301,7 +291,7 @@ class AnomalousPackets():
             row_position += 1
             self.ui.tableWidget_3.insertRow(row_position)
             self.ui.tableWidget_3.setItem(row_position, 0, QTableWidgetItem("Origin Country"))
-            self.ui.tableWidget_3.setItem(row_position, 1, QTableWidgetItem(self.get_location(src_ip)))
+            self.ui.tableWidget_3.setItem(row_position, 1, QTableWidgetItem(self.get_location(self.src_ip)))
             row_position += 1
             self.ui.tableWidget_3.insertRow(row_position)
             self.ui.tableWidget_3.setItem(row_position, 0, QTableWidgetItem("Instruction"))
@@ -312,6 +302,9 @@ class AnomalousPackets():
     def on_result(self, output):
         print("✅ Result:", output)
         self.ui.tableWidget_3.setItem(5, 1, QTableWidgetItem(output))
+        output = ''.join(filter(None, [self.src_ip, str(self.dport) if self.dport else None]))
+        self.AIobj.setup(output)
+
         
     def on_error(self, error_msg):
         print("❌ Error:", error_msg)
@@ -695,9 +688,9 @@ class IncidentResponse(QWidget, Ui_IncidentResponse):
         self.timer.start(1000)  # Call every 1000 milliseconds (1 second)
         self.sec = 0
 
-        self.anomalousPacketsObj = AnomalousPackets(self.ui, self.main_window.PacketSystemobj.anomalies, self.main_window.PacketSystemobj)
         self.threatMitEngine = ThreatMitigationEngine(self.ui, self.main_window.PacketSystemobj.blacklist, self.main_window.PacketSystemobj.blocked_ports, self.main_window.PacketSystemobj)
-        self.autopilotobj=Autopilot()
+        self.autopilotobj=Autopilot(self.threatMitEngine)
+        self.anomalousPacketsObj = AnomalousPackets(self.ui, self.main_window.PacketSystemobj.anomalies, self.main_window.PacketSystemobj, self.autopilotobj)
         self.ui.tableWidget.setColumnCount(7)
         self.ui.tableWidget.setHorizontalHeaderLabels(
             ["Timestamp", "Source IP", "Destination IP", "Src Port", "Dst Port", "Protocol", "Attack"]
