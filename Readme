@@ -94,7 +94,7 @@ pip install -U kaleido
 ✅ **Real-time Packet Capture** – Monitor live network traffic.  
 ✅ **PCAP File Support** – Import and analyze stored packet data.  
 ✅ **Advanced Filtering** – Filter packets by **protocol, IP, port, time, and more**.  
-✅ **Machine Learning-Based Anomaly Detection** – Uses **Random Forest** for anomaly detection.  
+✅ **Snort-Based Anomaly Detection** – Uses **Random Forest** for anomaly detection.  
 ✅ **Network Traffic Prediction** – Uses **Linear Regression** to forecast trends (*takes a few seconds*).  
 ✅ **3D Network Topology Visualization** – Interactive network mapping.  
 ✅ **Geolocation-Based Traffic Analysis** – Maps IP-based geolocations.  
