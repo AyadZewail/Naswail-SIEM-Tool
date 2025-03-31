@@ -38,9 +38,8 @@ from Code_Analysis import Window_Analysis
 from Code_Tools import Window_Tools
 from Code_IncidentResponse import IncidentResponse
 import torch
-import paramiko
 from transformers import AutoModelForMaskedLM, AutoTokenizer
-
+from PyQt6 import QtCore, QtGui, QtWidgets
 packetInput = 0
 packetFile = None
 clearRead = 0 
@@ -374,137 +373,6 @@ class NetworkActivity:#helper class
         def __init__(self):
             self.mac_of_device = ''
             self.actvity = ''  
-
-class ThreatMitigationEngine():
-    def __init__(self, ui_main_window, packetsysobj):
-        self.ui = ui_main_window
-        self.blacklist = packetsysobj.blacklist
-        # self.blocked_ports = packetsysobj.blocked_ports
-        self.packetsysobj = packetsysobj
-        self.networkLog=packetsysobj.networkLog
-
-    def get_gateway(self):
-        """Retrieve the current default gateway dynamically."""
-        system = platform.system()
-        
-        if system == "Linux":
-            try:
-                result = subprocess.check_output("ip route | grep default", shell=True).decode()
-                gateway = result.split()[2]
-                return gateway
-            except Exception as e:
-                print(f"Error retrieving Linux gateway: {e}")
-                return None
-
-        elif system == "Windows":
-            try:
-                result = subprocess.check_output("powershell -Command \"(Get-NetRoute -DestinationPrefix 0.0.0.0/0).NextHop\"", shell=True).decode().strip()
-                return result
-            except Exception as e:
-                print(f"Error retrieving Windows gateway: {e}")
-                return None
-        else:
-            print("Unsupported OS")
-            return None
-
-    def block_ip(self, ip):
-        firewall_command = f"iptables -A INPUT -s {ip} -j DROP; iptables -A FORWARD -s {ip} -j DROP"
-        self.firewallConfiguration(ip, firewall_command)
-    def unblock_ip(self, ip):
-        firewall_command = f"iptables -D INPUT -s {ip} -j DROP; iptables -D FORWARD -s {ip} -j DROP"
-        self.firewallConfiguration(ip, firewall_command)
-    def block_port(self, port):
-        firewall_command = f"iptables -A INPUT -p tcp --dport {port} -j DROP"
-        self.firewallConfiguration(port, firewall_command)
-    def unblock_port(self, port):
-        firewall_command = f"iptables -D INPUT -p tcp --dport {port} -j DROP"
-        self.firewallConfiguration(port, firewall_command)
-    
-    def firewallConfiguration(self, entity, firewall_command, username="admin", password=None):
-        """SSH into the router and block a malicious IP."""
-        gateway = self.get_gateway()
-        if not gateway:
-            print("Failed to find the gateway.")
-            return
-        system = platform.system()
-        
-        if system == "Linux":
-            try:
-                ssh_command = f"sshpass -p {password} ssh {username}@{gateway} '{firewall_command}'"
-                subprocess.run(ssh_command, shell=True, check=True)
-                print(f"handeled {entity} on router firewall (Linux).")
-            except Exception as e:
-                print(f"Error handling {entity} on Linux router: {e}")
-
-        elif system == "Windows":
-            try:
-                client = paramiko.SSHClient()
-                client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-                client.connect(gateway, username=username, password=password)
-
-                stdin, stdout, stderr = client.exec_command(firewall_command)
-                output = stdout.read().decode()
-                error = stderr.read().decode()
-
-                if error:
-                    print(f"Error handling {entity} on Windows router: {error}")
-                else:
-                    print(f"handeled {entity} on router firewall (Windows).")
-
-                client.close()
-            except Exception as e:
-                print(f"Error connecting via SSH on Windows: {e}")
-        else:
-            print("Unsupported OS")
-
-    def updateBlacklist(self, f):
-        try:
-            ip = self.ui.lineEdit_6.text().strip()
-            if(f == 1):
-                self.blacklist.append(ip)
-                self.block_ip(ip)
-                self.networkLog+="Blocked IP: "+ip+"\n"
-                
-            else:
-                self.blacklist.remove(ip)
-                self.unblock_ip(ip)
-                self.networkLog+="Unblocked IP: "+ip+"\n"
-               
-
-            model = QStringListModel()
-            model.setStringList(self.blacklist)
-            self.ui.listView_4.setModel(model)
-        except Exception as e:
-            print(f"Error updating blacklist: {e}")
-    
-    def updateBlockedPorts(self, f):
-        try:
-            port = self.ui.lineEdit_2.text().strip()
-            if f == 1:  # Block port
-                if port not in self.blocked_ports:  # Avoid duplicate entries
-                    self.blocked_ports.append(port)
-                    self.block_port(port)
-                    self.packetsysobj.networkLog+="Blocked Port: "+port+"\n"
-                    row_position = self.ui.tableWidget_2.rowCount()
-                    self.ui.tableWidget_2.insertRow(row_position)
-                    self.ui.tableWidget_2.setItem(row_position, 0, QTableWidgetItem(str(port)))
-                    self.ui.tableWidget_2.setItem(row_position, 1, QTableWidgetItem("Blocked"))
-            else:  # Unblock port
-                if port in self.blocked_ports:
-                    self.blocked_ports.remove(port)
-                    self.unblock_port(port)
-                    self.packetsysobj.networkLog+="Unblocked Port: "+port+"\n"
-                    self.remove_port_from_table(port)  # Remove from table
-
-        except Exception as e:
-            print(f"Error updating port blocked: {e}")
-
-    def remove_port_from_table(self, port):
-        for row in range(self.ui.tableWidget_2.rowCount()):
-            if self.ui.tableWidget_2.item(row, 0) and self.ui.tableWidget_2.item(row, 0).text() == str(port):
-                self.ui.tableWidget_2.removeRow(row)
-                break  # Stop after removing the first matching row
-
 class PacketSystem:
     def __init__(self, ui_main_window):
         self.ui = ui_main_window
@@ -655,7 +523,7 @@ class PacketSystem:
                     print("Traceback details:")
                     print(tb)
                     continue
-    def block_ip_host(self,ip):
+    def block_ip(self,ip):
         system = platform.system()
         
         if system == "Windows":
@@ -670,7 +538,7 @@ class PacketSystem:
         
         else:
             print("Unsupported OS")
-    def unblock_ip_host(self,ip):
+    def unblock_ip(self,ip):
         system = platform.system()
         
         if system == "Windows":
@@ -780,6 +648,25 @@ class PacketSystem:
                 self.qued_packets.append(packet)            
         except Exception as e:
             print(f"Error putting packet in queue: {e}")
+    def updateBlacklist(self, f):
+        try:
+            ip = self.ui.lineEdit_6.text().strip()
+            if(f == 1):
+                self.blacklist.append(ip)
+                self.block_ip(ip)
+                self.networkLog+="Blocked IP: "+ip+"\n"
+                
+            else:
+                self.blacklist.remove(ip)
+                self.unblock_ip(ip)
+                self.networkLog+="Unblocked IP: "+ip+"\n"
+               
+
+            model = QStringListModel()
+            model.setStringList(self.blacklist)
+            self.ui.listView_4.setModel(model)
+        except Exception as e:
+            print(f"Error updating blacklist: {e}")
     def Update_Network_Summary(self):
         try:
             self.list_of_activity.clear()
@@ -944,6 +831,10 @@ class PacketSystem:
                 self.ui.tableWidget.setItem(row_position, 8, QTableWidgetItem("Blocked"))
                 self.ui.tableWidget.setItem(row_position, 9, QTableWidgetItem("Blocked"))
                 self.ui.tableWidget.setItem(row_position, 10, QTableWidgetItem("Blocked"))
+               # if src_ip in self.blacklist:
+                 #   self.block_ip(src_ip)
+                #else:
+                    #self.block_ip(dst_ip)
             else:
                 self.packets.append(packet)
                 if len(self.packets) >=15000:
@@ -1582,8 +1473,6 @@ class Naswail(QMainWindow, Ui_MainWindow):
         self.PacketSystemobj = PacketSystem(self)
         self.SensorSystemobj = SensorSystem(self)
         self.Appsystemobj = ApplicationsSystem(self)
-        self.threatMitEngine = ThreatMitigationEngine(self, self.PacketSystemobj)
-
     
         self.SensorSystemobj.set_packet_system(self.PacketSystemobj)
         self.PacketSystemobj.set_sensor_system(self.SensorSystemobj)
@@ -1622,8 +1511,8 @@ class Naswail(QMainWindow, Ui_MainWindow):
         self.actionLive_Capture.triggered.connect(self.resetInput)
         self.buttonBox_2.clicked.connect(lambda _: self.SensorSystemobj.updateSensor(1))
         self.buttonBox_2.rejected.connect(lambda _: self.SensorSystemobj.updateSensor(2))
-        self.pushButton_10.clicked.connect(lambda _: self.threatMitEngine.updateBlacklist(1))
-        self.pushButton_11.clicked.connect(lambda _: self.threatMitEngine.updateBlacklist(2))
+        self.pushButton_10.clicked.connect(lambda _: self.PacketSystemobj.updateBlacklist(1))
+        self.pushButton_11.clicked.connect(lambda _: self.PacketSystemobj.updateBlacklist(2))
         self.pushButton_12.clicked.connect(lambda _:self.PacketSystemobj.save_log_to_file())
         self.pushButton_apply.clicked.connect(self.PacketSystemobj.design_and_send_packet)
        
@@ -1656,31 +1545,83 @@ class Naswail(QMainWindow, Ui_MainWindow):
         self.pushButton_2.clicked.connect(self.open_analysis)
         self.pushButton_3.clicked.connect(self.open_tool)
         self.pushButton_13.clicked.connect(self.open_incidentresponse)
-        self.lineEdit.setStyleSheet("""
-            QLineEdit {
-                background-color: grey
+        #notifications
+       
+        self.notificationButton.clicked.connect(self.show_notifications)
+        self.notificationList.itemClicked.connect(self.show_notification_details)
+        details="ayad has a tendency to goof quite hard these days, so he is a bit busy"
+        title="Ayad be goofing"
+        full_details=""" come on man its too ez btruh i just like the way i fight children i hate kids ama kidnap them"""
+        self.add_notification(title,details,full_details)
+        
+    def show_notifications(self):
+    
+        self.notificationMenu.exec(
+        self.notificationButton.mapToGlobal(
+        QtCore.QPoint(0, self.notificationButton.height())
+        )
+        )
+
+    def show_notification_details(self, item):
+        """Show detailed view of clicked notification"""
+        # Get stored data
+        notification_data = item.data(QtCore.Qt.ItemDataRole.UserRole)
+        
+        detail_dialog = QtWidgets.QDialog(parent=self.centralwidget)
+        detail_dialog.setWindowTitle("Notification Details")
+        detail_dialog.setFixedSize(400, 400)
+        
+        layout = QtWidgets.QVBoxLayout()
+        
+        detail_text = QtWidgets.QTextEdit()
+        detail_text.setReadOnly(True)
+        detail_text.setStyleSheet("""
+            QTextEdit {
+                background-color: #3E3D40;
+                color: #FFFFFF;
+                border: 1px solid #5A595C;
+                border-radius: 5px;
+                padding: 10px;
+                font-size: 14px;
             }
         """)
-        self.lineEdit_2.setStyleSheet("""
-            QLineEdit {
-                background-color: grey
-            }
+        
+        # Set actual content from stored data
+        detail_text.setText(f"""
+        {notification_data.get('title', 'Notification')}
+        
+        Time: {notification_data.get('timestamp', 'Unknown')}
+        Severity: {notification_data.get('severity', 'Medium')}
+        
+        Details:
+        {notification_data.get('details', 'No details available')}
+        
+        Full Report:
+        {notification_data.get('full_details', 'No additional information')}
         """)
-        self.lineEdit_3.setStyleSheet("""
-            QLineEdit {
-                background-color: grey
-            }
-        """)
-        self.lineEdit_4.setStyleSheet("""
-            QLineEdit {
-                background-color: grey
-            }
-        """)
-        self.lineEdit_5.setStyleSheet("""
-            QLineEdit {
-                background-color: grey
-            }
-        """)
+        
+        close_btn = QtWidgets.QPushButton("Close")
+        close_btn.clicked.connect(detail_dialog.close)
+        
+        layout.addWidget(detail_text)
+        layout.addWidget(close_btn)
+        detail_dialog.setLayout(layout)
+        detail_dialog.exec()
+
+    def add_notification(self, title, details="", full_details=""):
+        """Add notification with structured data"""
+        item = QtWidgets.QListWidgetItem(title)
+        
+        # Store data as dictionary
+        item.setData(QtCore.Qt.ItemDataRole.UserRole, {
+            'title': title,
+            'details': details,
+            'full_details': full_details,
+            'timestamp': QtCore.QDateTime.currentDateTime().toString(),
+            'severity': 'High'  # Add your severity logic here
+        })
+    
+        self.notificationList.addItem(item)
     def open_tool(self):
         try:
             self.secondary_widget2 = Window_Tools(self)
