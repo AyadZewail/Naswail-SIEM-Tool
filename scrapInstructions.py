@@ -11,8 +11,8 @@ import concurrent.futures
 import contextlib
 import time
 import argparse
-import csv
 import pandas as pd
+from threading import Lock
 import torch
 from sentence_transformers import SentenceTransformer, util
 import spacy
@@ -30,13 +30,11 @@ nlp = spacy.load("en_core_web_sm", disable=["parser", "ner"])
 nlp.add_pipe("sentencizer")
 mit_emb_file = "mitigation_embeddings.pt"
 
+driver_lock = Lock()
 def extract_text(link):
-    if link.endswith(".pdf"):  
-        return f"Skipping PDF: {link}", link
-
     # Try requests + BeautifulSoup first
     try:
-        response = requests.get(link, headers={"User-Agent": "Mozilla/5.0"}, timeout=5)
+        response = requests.get(link, headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"}, timeout=5)
         if response.status_code == 200:
             soup = BeautifulSoup(response.text, "html.parser")
             paragraphs = soup.find_all("p")
@@ -49,24 +47,21 @@ def extract_text(link):
 
     # Selenium fallback for JavaScript-heavy sites
     try:
-        local_driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
-        local_driver.get(link)
-        WebDriverWait(local_driver, 5).until(EC.presence_of_element_located((By.TAG_NAME, "p")))
+        with driver_lock:
+            driver.get(link)
+            WebDriverWait(driver, 5).until(EC.presence_of_element_located((By.TAG_NAME, "p")))
 
-        paragraphs = local_driver.find_elements(By.TAG_NAME, "p")
-        text = "\n".join([p.text for p in paragraphs if p.text.strip()])
+            paragraphs = driver.find_elements(By.TAG_NAME, "p")
+            text = "\n".join([p.text for p in paragraphs if p.text.strip()])
 
-        local_driver.quit()
-        return link, text
+            return link, text
 
     except Exception as e:
         return f"Skipping {link} due to error: {e}", link
 
 def save_to_csv(data):
-    with open("output.csv", "w", newline="", encoding="utf-8") as file:
-        writer = csv.writer(file)
-        writer.writerow(["URL", "Extracted Text"])  # Header
-        writer.writerows(data)
+    df = pd.DataFrame(data, columns=["URL", "Extracted Text"])
+    df.to_csv("output.csv", index=False)
 
 def getMitigation():
     try:
@@ -96,46 +91,49 @@ action_lemmas = {token.lemma_.lower() for token in nlp(" ".join(action_verbs))}
 tech_lemmas = {token.lemma_.lower() for token in nlp(" ".join(tech_terms))}
 
 def extract_mitigation_sentences(sentences, mitigation_embeddings):
-    embeddings = model.encode(sentences, convert_to_tensor=True)
-    scores = util.pytorch_cos_sim(embeddings, mitigation_embeddings).max(dim=1)[0]
-    
-    # Filter by similarity score
-    mask = scores > 0.2
-    filtered_sentences = [sentences[i] for i in np.where(mask)[0]]
-    filtered_scores = scores[mask]
-
-    # Batch process all filtered sentences with spaCy
-    docs = list(nlp.pipe(filtered_sentences, batch_size=64))
-    
-    # Vectorized filtering using set operations
-    filtered = []
-    for sent, score, doc in zip(filtered_sentences, filtered_scores, docs):
-        sent_lemmas = {token.lemma_.lower() for token in doc}
+    try:
+        embeddings = model.encode(sentences, convert_to_tensor=True)
+        scores = util.pytorch_cos_sim(embeddings, mitigation_embeddings).max(dim=1)[0]
         
-        # Check for intersections using set operations
-        has_action = not action_lemmas.isdisjoint(sent_lemmas)
-        has_tech = not tech_lemmas.isdisjoint(sent_lemmas)
-        
-        if has_action and has_tech:
-            final_score = score + 0.3
-        else:
-            final_score = score
-        
-        filtered.append((sent, final_score))
+        # Filter by similarity score
+        mask = scores > 0.2
+        filtered_sentences = [sentences[i] for i in np.where(mask)[0]]
+        filtered_scores = scores[mask]
 
-    # Fallback to similarity-filtered results
-    if not filtered:
-        filtered = list(zip(filtered_sentences, filtered_scores))
+        # Batch process all filtered sentences with spaCy
+        docs = list(nlp.pipe(filtered_sentences, batch_size=64))
+        
+        # Vectorized filtering using set operations
+        filtered = []
+        for sent, score, doc in zip(filtered_sentences, filtered_scores, docs):
+            sent_lemmas = {token.lemma_.lower() for token in doc}
+            
+            # Check for intersections using set operations
+            has_action = not action_lemmas.isdisjoint(sent_lemmas)
+            has_tech = not tech_lemmas.isdisjoint(sent_lemmas)
+            
+            if has_action and has_tech:
+                final_score = score + 0.3
+            else:
+                final_score = score
+            
+            filtered.append((sent, final_score))
 
-    # Sort and select top entries
-    sorted_sentences = sorted(filtered, key=lambda x: x[1].item(), reverse=True)
-    top_entries = sorted_sentences[:10]
-    
-    # Prepare results
-    top_sentences = [sent for sent, _ in top_entries]
-    avg_score = torch.mean(torch.stack([s for _, s in top_entries])) if top_entries else 0.0
-    
-    return ' '.join(top_sentences), avg_score.item()
+        # Fallback to similarity-filtered results
+        if not filtered:
+            filtered = list(zip(filtered_sentences, filtered_scores))
+
+        # Sort and select top entries
+        sorted_sentences = sorted(filtered, key=lambda x: x[1].item(), reverse=True)
+        top_entries = sorted_sentences[:10]
+        
+        # Prepare results
+        top_sentences = [sent for sent, _ in top_entries]
+        avg_score = torch.mean(torch.stack([s for _, s in top_entries])) if top_entries else 0.0
+        
+        return ' '.join(top_sentences), avg_score.item()
+    except Exception as e:
+        print(e)
 
 def is_valid(url):
     return not any(ext in url for ext in ('.pdf', '.jpg', '.png')) and \
@@ -147,10 +145,24 @@ options.add_argument("--headless=new")
 options.add_argument("--disable-gpu")
 options.add_argument("--no-sandbox")
 options.add_argument("--disable-dev-shm-usage")
-options.add_argument("--disable-background-timer-throttling")
-options.add_argument("--disable-backgrounding-occluded-windows")
-options.add_argument("--disable-renderer-backgrounding")
 options.add_argument("--log-level=3")
+options.add_argument("--disable-blink-features=AutomationControlled")
+options.add_argument("--disable-extensions")
+options.add_argument("--disable-notifications")
+options.add_argument("--disable-application-cache")
+options.add_argument("--disable-logging")  # Suppress DevTools logs
+options.add_argument("--output=/dev/null")  # Silence console output (Linux/Mac)
+options.add_argument("--disk-cache-size=0")
+options.add_argument("--disable-features=DiskCache")
+options.add_argument("--blink-settings=imagesEnabled=false")  # Disable images
+options.add_argument("--dns-prefetch-disable")
+options.add_argument("--disable-popup-blocking")
+options.add_argument("--disable-component-update")
+prefs = {"profile.managed_default_content_settings.images": 2}
+options.add_experimental_option("prefs", prefs)
+options.add_experimental_option('excludeSwitches', ['enable-logging'])
+user_agent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+options.add_argument(f"user-agent={user_agent}")
 options.page_load_strategy = "eager"
 
 service = Service(ChromeDriverManager().install())
