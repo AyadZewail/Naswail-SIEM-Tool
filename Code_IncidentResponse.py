@@ -9,7 +9,7 @@ import ipaddress
 from PyQt6 import uic
 from PyQt6.QtWidgets import *
 from PyQt6.QtCore import *
-from PyQt6.QtGui import QPainter, QPixmap
+from PyQt6.QtGui import *
 import matplotlib.pyplot as plt
 from scapy.all import *
 from scapy.layers.dns import DNS
@@ -65,16 +65,18 @@ class KaggleLLMClient:
         except Exception as e:
             return f"Error: {str(e)}"
 class Autopilot:
-    def __init__(self, MitEng):
+    def __init__(self, MitEng, LogAP):
         self.MitEng = MitEng
+        self.logModel = LogAP
         
     def setup(self, prompt):
         start_time = time.time()
-        NGROK_URL = "https://d356-35-196-22-161.ngrok-free.app"
+        NGROK_URL = "https://e6b3-34-121-157-225.ngrok-free.app"
         client = KaggleLLMClient(NGROK_URL)
         
         prompt_text = prompt
         
+        self.logModel.log_step("Prompting LLM...")
         response = client.send_prompt(prompt_text)
         print("Model Response:", response)
         self.extract_function_and_params(response)
@@ -94,6 +96,7 @@ class Autopilot:
 
             values = list(data.values()) if isinstance(data, dict) else None
             if values:
+                self.logModel.log_step(f"Executing {values[0]} for {values[1:]}")
                 self.execute_function(self.MitEng, values[0], *values[1:])
         except json.JSONDecodeError:
             return None
@@ -101,8 +104,10 @@ class Autopilot:
     def execute_function(self, obj, function_name, *args, **kwargs):
         func = getattr(obj, function_name, None)
         if callable(func):
+            self.logModel.log_step(f"Threat Mitigated Successfully")
             return func(*args, **kwargs)
         else:
+            self.logModel.log_step(f"Failed to Mitigate Threat; Analyst Intervention Required")
             print(f"Function '{function_name}' not found.")
 
 class WorkerSignals(QObject):
@@ -149,7 +154,7 @@ class SubprocessWorker(QRunnable):
             self.signals.error.emit(str(e))
 
 class AnomalousPackets():
-    def __init__(self, ui, anomalies, packet, AI):
+    def __init__(self, ui, anomalies, packet, AI, log):
         self.ui = ui
         self.AIobj = AI
         self.anomalies = anomalies
@@ -158,8 +163,7 @@ class AnomalousPackets():
         self.filtered_packets = []
         self.threadpool = QThreadPool()
         self.geoip_db_path = "GeoLite2-City.mmdb"
-        
-        
+        self.logModel = log
         #self.preprocess_threat_for_AI("A Distributed Denial-of-Service (DDoS) attack overwhelms a network, service, or server with excessive traffic, disrupting legitimate user access. To effectively mitigate such attacks, consider the following strategies:Develop a DDoS Response Plan:Establish a comprehensive incident response plan that outlines roles, responsibilities, and procedures to follow during a DDoS attack. This proactive preparation ensures swift and coordinated action.esecurityplanet.comImplement Network Redundancies:Distribute resources across multiple data centers and networks to prevent single points of failure. This approach enhances resilience against DDoS attacks by ensuring that if one location is targeted, others can maintain operations. ")
     
 # Example usage
@@ -248,6 +252,7 @@ class AnomalousPackets():
     def extractThreatIntelligence(self, row):
         try:
             attack_name = self.attack_family
+            self.stime = time.time()
             worker = SubprocessWorker(attack_name)
             worker.signals.finished.connect(self.on_result)
             worker.signals.error.connect(self.on_error)
@@ -270,6 +275,10 @@ class AnomalousPackets():
                 sport = target["UDP"].sport
                 self.dport = target["UDP"].dport
             flow_key = tuple(sorted([(self.src_ip, sport), (dst_ip, self.dport)])) + (protocol,)
+            attack_entry = f"{datetime.fromtimestamp(float(target.time)).strftime("%I:%M:%S %p")} - {self.attack_family} - {str(flow_key)}"
+            self.logModel.log_attack(attack_entry)
+            self.logModel.log_step("Performing web scraping...")
+            
 
             self.ui.tableWidget_3.setRowCount(0)
             row_position = 0
@@ -301,6 +310,10 @@ class AnomalousPackets():
     
     def on_result(self, output):
         print("✅ Result:", output)
+        self.etime = time.time()
+        print(f"##########################\nTotal Runtime for Scraping: {self.stime - self.etime:.2f} seconds\n")
+        self.logModel.log_step("Recieved instructions (expand to see)")
+        self.logModel.log_details(output)
         self.ui.tableWidget_3.setItem(5, 1, QTableWidgetItem(output))
         output = ''.join(filter(None, [self.src_ip, str(self.dport) if self.dport else None]))
         self.AIobj.setup(output)
@@ -333,11 +346,22 @@ class AnomalousPackets():
         return command
 
 
+class LogWindow(QMainWindow):
+    def __init__(self, model):
+        self.logModel = model
+        self.attack_entry = None
+        self.child = None
 
-        
+    def log_attack(self, entry):
+        self.attack_entry = QStandardItem(entry)
+        self.logModel.appendRow(self.attack_entry)
 
+    def log_step(self, description):
+        self.child = QStandardItem(description)
+        self.attack_entry.appendRow(self.child)
 
-
+    def log_details(self, description):
+        self.child.appendRow(QStandardItem(description))
 
 class ThreatMitigationEngine():
     def __init__(self, ui, blacklist, blocked_ports, packetsysobj):
@@ -579,22 +603,28 @@ class ThreatMitigationEngine():
             print("Unsupported OS")
             return None
 
-    def firewallConfiguration(self, entity, action, mode, username="admin", password=None):
+    def block_ip(self, ip):
+        firewall_command = f"iptables -A INPUT -s {ip} -j DROP; iptables -A FORWARD -s {ip} -j DROP"
+        self.firewallConfiguration(ip, firewall_command)
+
+    def unblock_ip(self, ip):
+        firewall_command = f"iptables -D INPUT -s {ip} -j DROP; iptables -D FORWARD -s {ip} -j DROP"
+        self.firewallConfiguration(ip, firewall_command)
+
+    def block_port(self, port):
+        firewall_command = f"iptables -A INPUT -p tcp --dport {port} -j DROP"
+        self.firewallConfiguration(port, firewall_command)
+    
+    def unblock_port(self, port):
+        firewall_command = f"iptables -D INPUT -p tcp --dport {port} -j DROP"
+        self.firewallConfiguration(port, firewall_command)
+    
+    def firewallConfiguration(self, entity, firewall_command, username="admin", password=None):
         """SSH into the router and block a malicious IP."""
         gateway = self.get_gateway()
         if not gateway:
             print("Failed to find the gateway.")
             return
-        if action == "ip":
-            if mode == "block":
-                firewall_command = f"iptables -A INPUT -s {entity} -j DROP; iptables -A FORWARD -s {entity} -j DROP"
-            elif mode == "unblock":
-                firewall_command = f"iptables -D INPUT -s {entity} -j DROP; iptables -D FORWARD -s {entity} -j DROP"
-        elif action == "port":
-            if mode == "block":
-                firewall_command = f"iptables -A INPUT -p tcp --dport {entity} -j DROP"
-            elif mode == "unblock":
-                firewall_command = f"iptables -D INPUT -p tcp --dport {entity} -j DROP"
         system = platform.system()
         
         if system == "Linux":
@@ -609,7 +639,7 @@ class ThreatMitigationEngine():
             try:
                 client = paramiko.SSHClient()
                 client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-                client.connect(gateway, username=username, password=password)
+                client.connect(gateway, username = username, password = password)
 
                 stdin, stdout, stderr = client.exec_command(firewall_command)
                 output = stdout.read().decode()
@@ -631,11 +661,11 @@ class ThreatMitigationEngine():
             ip = self.ui.lineEdit.text().strip()
             if(f == 1):
                 self.blacklist.append(ip)
-                self.firewallConfiguration(ip, "ip", "block")
+                self.block_ip(ip)
                 self.packetsysobj.networkLog+="Blocked IP: "+ip+"\n"
             else:
                 self.blacklist.remove(ip)
-                self.firewallConfiguration(ip, "ip", "unblock")
+                self.unblock_ip(ip)
                 self.packetsysobj.networkLog+="Unblocked IP: "+ip+"\n"
                
             model = QStringListModel()
@@ -650,7 +680,7 @@ class ThreatMitigationEngine():
             if f == 1:  # Block port
                 if port not in self.blocked_ports:  # Avoid duplicate entries
                     self.blocked_ports.append(port)
-                    self.firewallConfiguration(port, "port", "block")
+                    self.block_port(port)
                     self.packetsysobj.networkLog+="Blocked Port: "+port+"\n"
                     row_position = self.ui.tableWidget_2.rowCount()
                     self.ui.tableWidget_2.insertRow(row_position)
@@ -659,7 +689,7 @@ class ThreatMitigationEngine():
             else:  # Unblock port
                 if port in self.blocked_ports:
                     self.blocked_ports.remove(port)
-                    self.firewallConfiguration(port, "port", "unblock")
+                    self.unblock_port(port)
                     self.packetsysobj.networkLog+="Unblocked Port: "+port+"\n"
                     self.remove_port_from_table(port)  # Remove from table
 
@@ -688,9 +718,14 @@ class IncidentResponse(QWidget, Ui_IncidentResponse):
         self.timer.start(1000)  # Call every 1000 milliseconds (1 second)
         self.sec = 0
 
+        self.model = QStandardItemModel()
+        self.model.setHeaderData(0, Qt.Orientation.Horizontal, "Attack Log")
+        self.ui.treeView.setModel(self.model)
+        
+        self.logAutopilot = LogWindow(self.model)
         self.threatMitEngine = ThreatMitigationEngine(self.ui, self.main_window.PacketSystemobj.blacklist, self.main_window.PacketSystemobj.blocked_ports, self.main_window.PacketSystemobj)
-        self.autopilotobj=Autopilot(self.threatMitEngine)
-        self.anomalousPacketsObj = AnomalousPackets(self.ui, self.main_window.PacketSystemobj.anomalies, self.main_window.PacketSystemobj, self.autopilotobj)
+        self.autopilotobj=Autopilot(self.threatMitEngine, self.logAutopilot)
+        self.anomalousPacketsObj = AnomalousPackets(self.ui, self.main_window.PacketSystemobj.anomalies, self.main_window.PacketSystemobj, self.autopilotobj, self.logAutopilot)
         self.ui.tableWidget.setColumnCount(7)
         self.ui.tableWidget.setHorizontalHeaderLabels(
             ["Timestamp", "Source IP", "Destination IP", "Src Port", "Dst Port", "Protocol", "Attack"]
