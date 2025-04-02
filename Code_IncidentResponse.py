@@ -39,8 +39,6 @@ import json
 import re
 import socket
 import paramiko
-
-
 #!/usr/bin/env python
 import json
 import re
@@ -51,8 +49,9 @@ import os
 # ======= Modified Stop Criteria =======
 
 class KaggleLLMClient:
-    def __init__(self, ngrok_url):
+    def __init__(self, ngrok_url, LogAP):
         self.api_url = f"{ngrok_url}/generate"
+        self.logModel = LogAP
         
     def send_prompt(self, prompt):
         try:
@@ -63,6 +62,7 @@ class KaggleLLMClient:
             )
             return response.json()['response']
         except Exception as e:
+            self.logModel.log_step(f"Failed to Prompt LLM; Analyst Intervention Required")
             return f"Error: {str(e)}"
 class Autopilot:
     def __init__(self, MitEng, LogAP):
@@ -72,7 +72,7 @@ class Autopilot:
     def setup(self, prompt):
         start_time = time.time()
         NGROK_URL = "https://e6b3-34-121-157-225.ngrok-free.app"
-        client = KaggleLLMClient(NGROK_URL)
+        client = KaggleLLMClient(NGROK_URL, self.logModel)
         
         prompt_text = prompt
         
@@ -99,6 +99,7 @@ class Autopilot:
                 self.logModel.log_step(f"Executing {values[0]} for {values[1:]}")
                 self.execute_function(self.MitEng, values[0], *values[1:])
         except json.JSONDecodeError:
+            self.logModel.log_step(f"Failed to Read LLM Instruction; Analyst Intervention Required")
             return None
 
     def execute_function(self, obj, function_name, *args, **kwargs):
@@ -321,6 +322,7 @@ class AnomalousPackets():
         
     def on_error(self, error_msg):
         print("❌ Error:", error_msg)
+        self.logModel.log_step(f"Failed to Procure Intelligence; Analyst Intervention Required")
         self.ui.tableWidget_3.setItem(5, 1, QTableWidgetItem(error_msg))
 
     def preprocess_threat_for_AI(self,threat_text):
@@ -721,6 +723,9 @@ class IncidentResponse(QWidget, Ui_IncidentResponse):
         self.model = QStandardItemModel()
         self.model.setHeaderData(0, Qt.Orientation.Horizontal, "Attack Log")
         self.ui.treeView.setModel(self.model)
+        self.ui.treeView.setWordWrap(True)
+        self.ui.treeView.setUniformRowHeights(False)
+        self.ui.treeView.expandAll()
         
         self.logAutopilot = LogWindow(self.model)
         self.threatMitEngine = ThreatMitigationEngine(self.ui, self.main_window.PacketSystemobj.blacklist, self.main_window.PacketSystemobj.blocked_ports, self.main_window.PacketSystemobj)
