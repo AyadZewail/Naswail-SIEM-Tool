@@ -1418,8 +1418,6 @@ class PacketSnifferThread(QThread):
             
             print(packetInput)
             print("GOOGOO")
-            window.packets.clear()
-            window.tableWidget.setRowCount(0)
             match packetInput:
                 case 0:
                     sniff(prn=self.emit_packet,promisc=True, store=False, stop_filter=lambda _: packetInput != 0)
@@ -1795,11 +1793,12 @@ class Naswail(QMainWindow, Ui_MainWindow):
                     self.PacketSystemobj.qued_packets.clear()
                     self.PacketSystemobj.anomalies.clear()
                     self.tableWidget_4.setRowCount(0)
-                    packetInput = 1
-                    
-                    
+                    packetInput = 1        
                 elif ext == '.csv':
                     packetInput = 2
+                
+                self.packets.clear()
+                self.tableWidget.setRowCount(0)
                 PacketSnifferThread.run(self.sniffer_thread)
             else:
                 print("No file selected")
