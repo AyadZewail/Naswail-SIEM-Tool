@@ -1,4 +1,6 @@
 import sys
+
+
 import numpy as np
 import pandas as pd
 import time
@@ -8,7 +10,8 @@ import os
 import platform
 import subprocess
 import ipaddress
-from sklearn.svm import OneClassSVM
+#sudo /home/hamada/Downloads/Naswail-SIEM-Tool-main/.venv/bin/python /home/hamada/Downloads/Naswail-SIEM-Tool-main/Code_Main.py
+
 from PyQt6.QtWidgets import *
 from PyQt6.QtCore import *
 from PyQt6.QtGui import *
@@ -20,12 +23,8 @@ from scapy.layers.http import HTTPRequest
 from scapy.layers.inet import IP, TCP, UDP,ICMP
 from scapy.layers.dns import DNS
 from statistics import mean, median, mode, stdev, variance
-from sklearn.model_selection import train_test_split, StratifiedShuffleSplit
-from sklearn.linear_model import LinearRegression
-from sklearn.tree import DecisionTreeClassifier, DecisionTreeRegressor
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.metrics import mean_squared_error, r2_score, accuracy_score
-from sklearn.preprocessing import LabelEncoder
+from sklearn.model_selection import train_test_split
+
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 from matplotlib.patches import Wedge
@@ -410,8 +409,15 @@ class PacketSystem:
         self.packetfile = 1
         self.local_packets = []
         self.snort_alerts = defaultdict(list)
-        self.snort_rules = self.load_snort_rule_names("C:\\Snort\\rules\\custom.rules")
-        self.log_thread = threading.Thread(target=self.monitor_snort_logs, args=("C:\\Snort\\log\\alert.ids",), daemon=True)
+        system = platform.system()
+        system = platform.system().lower()
+        if system == "windows":
+            self.snort_rules = self.load_snort_rule_names("C:\\Snort\\rules\\custom.rules")
+            self.log_thread = threading.Thread(target=self.monitor_snort_logs, args=("C:\\Snort\\log\\alert.ids",), daemon=True)
+        elif system == "linux":
+            self.snort_rules = self.load_snort_rule_names("/etc/snort/rules/custom.rules")
+            self.log_thread = threading.Thread(target=self.monitor_snort_logs, args=("/var/log/snort/alert",), daemon=True)
+            self.log_thread = threading.Thread(target=self.monitor_snort_logs, args=("/var/log/snort/alert",), daemon=True)
         self.log_thread.start()
         self.list_of_activity=[]
         ##############
