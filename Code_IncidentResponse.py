@@ -71,7 +71,7 @@ class Autopilot:
         
     def setup(self, prompt):
         start_time = time.time()
-        NGROK_URL = "https://e6b3-34-121-157-225.ngrok-free.app"
+        NGROK_URL = "https://a16e-34-42-210-191.ngrok-free.app"
         client = KaggleLLMClient(NGROK_URL, self.logModel)
         
         prompt_text = prompt
@@ -127,8 +127,8 @@ class SubprocessWorker(QRunnable):
         try:
             result = subprocess.run(
                 [
-                    r"venv-python12\Scripts\python",
-                    "scrapInstructions.py",
+                    r"/home/hamada/Downloads/Naswail-SIEM-Tool-main/.venv/bin/python",
+                    "/home/hamada/Downloads/Naswail-SIEM-Tool-main/scrapInstructions.py",
                     f"{self.attack_name} mitigation and response"
                 ],
                 stdout=subprocess.PIPE,
