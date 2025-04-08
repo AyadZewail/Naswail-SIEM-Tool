@@ -68,10 +68,11 @@ class Autopilot:
     def __init__(self, MitEng, LogAP):
         self.MitEng = MitEng
         self.logModel = LogAP
+        self.TTR = 0
         
-    def setup(self, prompt):
+    def setup(self, prompt, scrapetime):
         start_time = time.time()
-        NGROK_URL = "https://e6b3-34-121-157-225.ngrok-free.app"
+        NGROK_URL = "https://9267-34-45-113-164.ngrok-free.app"
         client = KaggleLLMClient(NGROK_URL, self.logModel)
         
         prompt_text = prompt
@@ -83,7 +84,9 @@ class Autopilot:
         
         # Calculate and display total time
         end_time = time.time()
-        print(f"\nTotal execution time: {end_time - start_time:.2f} seconds")
+        self.TTR = scrapetime + end_time - start_time
+        print(f"\nTotal execution time: {self.TTR:.2f} seconds")
+        self.logModel.log_step(f"Threat mitigated successfully in {self.TTR:.2f} seconds")
 
     def extract_function_and_params(self, model_output):
         try:
@@ -105,7 +108,6 @@ class Autopilot:
     def execute_function(self, obj, function_name, *args, **kwargs):
         func = getattr(obj, function_name, None)
         if callable(func):
-            self.logModel.log_step(f"Threat Mitigated Successfully")
             return func(*args, **kwargs)
         else:
             self.logModel.log_step(f"Failed to Mitigate Threat; Analyst Intervention Required")
@@ -127,8 +129,8 @@ class SubprocessWorker(QRunnable):
         try:
             result = subprocess.run(
                 [
-                    r"venv-python12\Scripts\python",
-                    "scrapInstructions.py",
+                    r"/home/hamada/Downloads/Naswail-SIEM-Tool-main/.venv/bin/python",
+                    "/home/hamada/Downloads/Naswail-SIEM-Tool-main/scrapInstructions.py",
                     f"{self.attack_name} mitigation and response"
                 ],
                 stdout=subprocess.PIPE,
@@ -312,12 +314,13 @@ class AnomalousPackets():
     def on_result(self, output):
         print("✅ Result:", output)
         self.etime = time.time()
-        print(f"##########################\nTotal Runtime for Scraping: {self.stime - self.etime:.2f} seconds\n")
+        tTime = self.etime - self.stime
+        print(f"##########################\nTotal Runtime for Scraping: {self.etime - self.stime:.2f} seconds\n")
         self.logModel.log_step("Recieved instructions (expand to see)")
         self.logModel.log_details(output)
         self.ui.tableWidget_3.setItem(5, 1, QTableWidgetItem(output))
-        output = ''.join(filter(None, [self.src_ip, str(self.dport) if self.dport else None]))
-        self.AIobj.setup(output)
+        output = ''.join(filter(None, ["ip: "+self.src_ip,"port: "+ str(self.dport) if self.dport else None]))
+        self.AIobj.setup(output, tTime)
 
         
     def on_error(self, error_msg):
