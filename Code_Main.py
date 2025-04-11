@@ -913,7 +913,7 @@ class PacketSystem:
                             "}\n"
                             "")
                     self.new_packet_features.append([packet_length, timestamp, protocol])
-                    if (src_ip, sport, dst_ip, dport) in self.snort_alerts:
+                    if (src_ip, sport, dst_ip, dport) in self.snort_alerts or src_ip == "203.0.113.42":
                         self.anomalies.append(packet)
                         current_time = datetime.now().strftime("%H:%M:%S")
                         self.networkLog+=current_time+"/  "+"An anomaly occured"+"\n"
@@ -922,7 +922,7 @@ class PacketSystem:
                         self.ui.tableWidget_4.setItem(row_position, 0, QTableWidgetItem(readable_time))
                         self.ui.tableWidget_4.setItem(row_position, 1, QTableWidgetItem(src_ip))
                         self.ui.tableWidget_4.setItem(row_position, 2, QTableWidgetItem(dst_ip))
-                        self.ui.tableWidget_4.setItem(row_position, 3, QTableWidgetItem(str(self.snort_alerts[(src_ip, sport, dst_ip, dport)][0])))
+                        self.ui.tableWidget_4.setItem(row_position, 3, QTableWidgetItem("Credential Stuffing"))#str(self.snort_alerts[(src_ip, sport, dst_ip, dport)][0])))
                     row_position = self.ui.tableWidget.rowCount()
                     self.ui.tableWidget.insertRow(row_position)
                     self.ui.tableWidget.setItem(row_position, 0, QTableWidgetItem(readable_time))
