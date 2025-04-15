@@ -1,44 +1,35 @@
 import sys
-
-
 import numpy as np
 import pandas as pd
 import time
-import multiprocessing
 import psutil
 import os
 import platform
 import subprocess
 import ipaddress
-#sudo /home/hamada/Downloads/Naswail-SIEM-Tool-main/.venv/bin/python /home/hamada/Downloads/Naswail-SIEM-Tool-main/Code_Main.py
-
+import matplotlib.pyplot as plt
 from PyQt6.QtWidgets import *
 from PyQt6.QtCore import *
 from PyQt6.QtGui import *
-import matplotlib.pyplot as plt
 from scapy.all import *
 from scapy.layers.dns import DNS
 from scapy.layers.inet import IP, TCP, UDP
 from scapy.layers.http import HTTPRequest  
 from scapy.layers.inet import IP, TCP, UDP,ICMP
 from scapy.layers.dns import DNS
-from statistics import mean, median, mode, stdev, variance
-from sklearn.model_selection import train_test_split
-
+from statistics import mean, mode, stdev
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
-from matplotlib.patches import Wedge
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
-import networkx as nx
-from math import cos, sin, pi
-from datetime import datetime, timedelta
+from math import pi
+from datetime import datetime
 from UI_Main import Ui_MainWindow
 from Code_Analysis import Window_Analysis
 from Code_Tools import Window_Tools
 from Code_IncidentResponse import IncidentResponse
-import torch
-from transformers import AutoModelForMaskedLM, AutoTokenizer
-from PyQt6 import QtCore, QtGui, QtWidgets
+from PyQt6 import QtCore, QtWidgets
+#sudo /home/hamada/Downloads/Naswail-SIEM-Tool-main/.venv/bin/python /home/hamada/Downloads/Naswail-SIEM-Tool-main/Code_Main.py
+
 packetInput = 0
 packetFile = None
 clearRead = 0 
@@ -420,11 +411,6 @@ class PacketSystem:
             self.log_thread = threading.Thread(target=self.monitor_snort_logs, args=("/var/log/snort/alert",), daemon=True)
         self.log_thread.start()
         self.list_of_activity=[]
-        ##############
-        # snort -i 5 -c C:\Snort\etc\snort.conf -l C:\Snort\log -A fast
-        # type C:\Snort\log\alert.ids
-        # echo. > C:\Snort\log\alert.ids
-        # ping -n 4 8.8.8.8
 
     def set_sensor_system(self, sensor_obj):
         self.sensor_obj = sensor_obj
@@ -1344,75 +1330,6 @@ class PacketSystem:
                         self.ui.tableWidget.setItem(row_position, 10, QTableWidgetItem(ip_version))
                 except:
                     print("fr")
-    def packet_to_dataframe(self, packet, columns):
-        try:
-            data = {col: '<unknown>' for col in columns}  # Initialize all columns with 'unknown'
-            if Raw in packet:
-                data['frame.len'] = packet.len
-            if IP in packet:
-                data['ip.len'] = packet[IP].len
-                data['ip.ttl'] = packet[IP].ttl
-                data['ip.proto'] = packet[IP].proto
-                data['ip.version'] = packet[IP].version
-            if TCP in packet:
-                data['tcp.srcport'] = packet[TCP].sport
-                data['tcp.dstport'] = packet[TCP].dport
-                data['tcp.len'] = len(packet[TCP].payload)
-                data['tcp.seq'] = packet[TCP].seq
-                data['tcp.flags.ack'] = 1 if packet[TCP].flags.A else 0
-                data['tcp.flags.fin'] = 1 if packet[TCP].flags.F else 0
-                data['tcp.flags.reset'] = 1 if packet[TCP].flags.R else 0
-                data['tcp.window_size'] = packet[TCP].window
-            if UDP in packet:
-                data['udp.srcport'] = packet[UDP].sport
-                data['udp.dstport'] = packet[UDP].dport
-                data['udp.length'] = packet[UDP].len
-            if DNS in packet:  
-                if packet[DNS].qd:  
-                    data['dns.qry.type'] = packet[DNS].qd.qtype
-                data['dns.flags.response'] = 1 if packet[DNS].qr else 0
-                data['dns.flags.recdesired'] = 1 if packet[DNS].rd else 0
-            return pd.DataFrame([data])
-        except Exception as e:
-            print(f"Error processing packet to dataframe function: {e}")
-    
-    def encodePacket(self, data):
-        try:
-            for col in data.select_dtypes(include=['object']).columns:
-                data[col] = self.le.transform(data[col].astype(str))
-            
-            return data
-        except Exception as e:
-            print(f"Error encodePacket function: {e}")
-    
-    def preprocess(self, data):
-        try:
-            drop_columns = ['frame.time_epoch', 'tcp.stream']
-            data = data.fillna('<unknown>')
-            data = data.drop(columns=[col for col in drop_columns if col in data.columns], axis=1)
-            X = data.drop(columns=['alert'], axis=1, errors='ignore')
-            y = data['alert']
-            X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-            for col in X_train.select_dtypes(include=['object']).columns:
-                X_train[col] = self.le.fit_transform(X_train[col].astype(str))
-                
-            y_train = self.le.fit_transform(y_train.astype(str))
-        
-            for col in X_test.select_dtypes(include=['object']).columns:
-                X_test[col] = X_test[col].map(lambda s: '<unknown>' if s not in self.le.classes_ else s)
-            y_test = y_test.map(lambda s: '<unknown>' if s not in self.le.classes_ else s)
-            
-            self.le.classes_ = np.append(self.le.classes_, '<unknown>')
-            for col in X_test.select_dtypes(include=['object']).columns:
-            
-                X_test[col] = self.le.transform(X_test[col].astype(str))
-            print(y_test)
-            y_test = self.le.transform(y_test.astype(str))
-
-
-            return X_train, y_train, X_test, y_test
-        except Exception as e:
-            print(f"Error encode function: {e}")
     
 class PacketSnifferThread(QThread):
     packet_captured = pyqtSignal(object)

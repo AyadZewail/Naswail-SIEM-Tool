@@ -1,26 +1,15 @@
 import sys
 import numpy as np
-import pandas as pd
-import time
-import multiprocessing
-import psutil
-import os
-import ipaddress
 import threading
 from datetime import datetime, timedelta
-from sklearn.svm import OneClassSVM
 from PyQt6.QtWidgets import *
 from PyQt6.QtCore import *
-from scapy.all import sniff, IP, TCP, UDP 
-
-from statistics import mean, median, mode, stdev, variance
+from scapy.all import sniff, IP, TCP, UDP
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LinearRegression
-from sklearn.tree import DecisionTreeRegressor
-from sklearn.metrics import mean_squared_error, r2_score
+from sklearn.metrics import r2_score
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
-import matplotlib.pyplot as plt
 from datetime import datetime, timedelta
 from UI_Tools import Ui_Naswail_Tool
 class NetworkActivity:

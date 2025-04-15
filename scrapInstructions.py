@@ -7,7 +7,6 @@ import time
 import argparse
 from sentence_transformers import SentenceTransformer, util
 import spacy
-import httpx
 import torch
 import pandas as pd
 import numpy as np

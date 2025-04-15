@@ -1,49 +1,33 @@
 import sys
-import numpy as np
-import pandas as pd
-import psutil
 import os
+import gzip
+import psutil
 import platform
 import subprocess
-import ipaddress
-from PyQt6 import uic
-from PyQt6.QtWidgets import *
-from PyQt6.QtCore import *
-from PyQt6.QtGui import *
-import matplotlib.pyplot as plt
-from scapy.all import *
-from scapy.layers.dns import DNS
-from scapy.layers.inet import IP, TCP, UDP
-from scapy.layers.http import HTTPRequest
-from scapy.layers.l2 import Ether
-import base64
-import urllib.parse
-import binascii
-import gzip
-import codecs
-from UI_IncidentResponse import Ui_IncidentResponse
-import torch
-from transformers import AutoTokenizer, AutoModelForMaskedLM
-from transformers import pipeline
-from keybert import KeyBERT
-from transformers import AutoTokenizer, AutoModelForCausalLM
-from transformers import AutoTokenizer, AutoModelForCausalLM
 import json
 import re
 import requests
 import time
-import torch
-from transformers import AutoTokenizer, AutoModelForCausalLM
 import geoip2.database
-import json
-import re
 import socket
 import paramiko
+import base64
+import urllib.parse
+import binascii
+import codecs
+from PyQt6.QtWidgets import *
+from PyQt6.QtCore import *
+from PyQt6.QtGui import *
+from scapy.all import *
+from scapy.layers.inet import IP
+from scapy.layers.l2 import Ether
+from UI_IncidentResponse import Ui_IncidentResponse
+from keybert import KeyBERT
 #!/usr/bin/env python
-import json
-import re
-import gzip
-import os
+# snort -i 4 -c C:\Snort\etc\snort.conf -l C:\Snort\log -A fast
+# type C:\Snort\log\alert.ids
+# echo. > C:\Snort\log\alert.ids
+# ping -n 4 8.8.8.8
 
 
 # ======= Modified Stop Criteria =======
@@ -125,17 +109,31 @@ class SubprocessWorker(QRunnable):
     @pyqtSlot()
     def run(self):
         try:
-            result = subprocess.run(
-                [
-                    r"/home/hamada/Downloads/Naswail-SIEM-Tool-main/.venv/bin/python",
-                    "/home/hamada/Downloads/Naswail-SIEM-Tool-main/scrapInstructions.py",
-                    f"{self.attack_name} mitigation and response"
-                ],
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                text=True,
-                shell=False
-            )
+            system = platform.system()
+            if system == "Linux":
+                result = subprocess.run(
+                    [
+                        r"/home/hamada/Downloads/Naswail-SIEM-Tool-main/.venv/bin/python",
+                        "/home/hamada/Downloads/Naswail-SIEM-Tool-main/scrapInstructions.py",
+                        f"{self.attack_name} mitigation and response"
+                    ],
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    text=True,
+                    shell=False
+                )
+            elif system == "Windows":
+                result = subprocess.run(
+                    [
+                        "python",
+                        "scrapInstructions.py",
+                        f"{self.attack_name} mitigation and response"
+                    ],
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    text=True,
+                    shell=False
+                )
             output = ""
             if result.stdout:
                 stdout_lines = result.stdout.strip().split("\n")

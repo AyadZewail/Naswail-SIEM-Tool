@@ -1,35 +1,18 @@
 import sys
 import numpy as np
-import pandas as pd
-import time
-import multiprocessing
-import psutil
-import os
-import ipaddress
 import threading
-from datetime import datetime, timedelta
-from sklearn.svm import OneClassSVM
-from PyQt6.QtWidgets import *
-from PyQt6.QtCore import *
-from PyQt6.QtGui import QPainter, QPixmap
 import plotly.graph_objects as go
 import geoip2.database
-import folium
-import re
-from folium.plugins import HeatMap
+import networkx as nx
+import matplotlib.pyplot as plt
+from datetime import datetime
+from PyQt6.QtWidgets import *
+from PyQt6.QtCore import *
+from PyQt6.QtGui import QPixmap
 from scapy.layers.inet import IP
 from scapy.all import *
-from statistics import mean, median, mode, stdev, variance
-from sklearn.model_selection import train_test_split
-from sklearn.linear_model import LinearRegression
-from sklearn.tree import DecisionTreeRegressor
-from sklearn.metrics import mean_squared_error, r2_score
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
-import networkx as nx
 from matplotlib.figure import Figure
-from bs4 import BeautifulSoup
-import matplotlib.pyplot as plt
-from datetime import datetime, timedelta
 from UI_Analysis import Ui_Naswail_Anlaysis
 from Code_Tools import Window_Tools
 from Code_IncidentResponse import IncidentResponse
