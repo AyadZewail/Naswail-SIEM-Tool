@@ -28,11 +28,12 @@ search_query = args.query  # Store query
 model = SentenceTransformer('all-MiniLM-L6-v2')
 nlp = spacy.load("en_core_web_sm", disable=["parser", "ner"])
 nlp.add_pipe("sentencizer")
-mit_emb_file = "mitigation_embeddings.pt"
+mit_emb_file = "D:\\Work\\University\\GradProject\\Naswail-SIEM-Tool\\mitigation_embeddings.pt"
 
 # Constants
 BING_SEARCH_URL = "https://www.bing.com/search"
-USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+# USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.6367.91 Safari/537.36 Edg/124.0.2478.67"
+USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.6312.86 Safari/537.36"
 HEADERS = {"User-Agent": USER_AGENT}
 MAX_CONCURRENT_REQUESTS = 5
 TIMEOUT = aiohttp.ClientTimeout(total=10)
@@ -166,7 +167,7 @@ def get_mitigation():
     try:
         mitigation_embeddings = torch.load(mit_emb_file, map_location='cpu')
     except FileNotFoundError:
-        with open("mit_refs.txt", "r") as f:
+        with open("D:\\Work\\University\\GradProject\\Naswail-SIEM-Tool\\mit_refs.txt", "r") as f:
             mitigation_refs = [line.strip() for line in f.readlines()]
         mitigation_embeddings = model.encode(mitigation_refs, convert_to_tensor=True)
         torch.save(mitigation_embeddings, mit_emb_file,
@@ -181,21 +182,20 @@ def get_mitigation():
     mitigation_sentence, score = extract_mitigation_sentences(sentences, mitigation_embeddings)
     return mitigation_sentence, score
 
-action_verbs = {"block", "reject", "disable", "enable", "apply", "restrict", "update", "deploy", "terminate", "implement"}
-tech_terms = {"port", "protocol", "CVE", "patch", "firewall", "whitelisting"}
+key_words = {"block", "blocking", "reject", "disable", "restrict", 
+            "terminate", "limit", "limiting", "rate", "rate-limiting"}
 
-action_lemmas = {token.lemma_.lower() for token in nlp(" ".join(action_verbs))}
-tech_lemmas = {token.lemma_.lower() for token in nlp(" ".join(tech_terms))}
+key_lemmas = {token.lemma_.lower() for token in nlp(" ".join(key_words))}
 
 def extract_mitigation_sentences(sentences, mitigation_embeddings):
     """Extract relevant mitigation sentences"""
     if not sentences:
-        return "No Sentences Retrieved", 0.0
+        return "No sentences were retrieved", 0.0
     
     embeddings = model.encode(sentences, convert_to_tensor=True)
     scores = util.pytorch_cos_sim(embeddings, mitigation_embeddings).max(dim=1)[0]
     
-    mask = scores > 0.2
+    mask = scores > 0.7
     filtered_sentences = [sentences[i] for i in np.where(mask)[0]]
     filtered_scores = scores[mask]
 
@@ -204,16 +204,15 @@ def extract_mitigation_sentences(sentences, mitigation_embeddings):
     filtered = []
     for sent, score, doc in zip(filtered_sentences, filtered_scores, docs):
         sent_lemmas = {token.lemma_.lower() for token in doc}
-        has_action = not action_lemmas.isdisjoint(sent_lemmas)
-        has_tech = not tech_lemmas.isdisjoint(sent_lemmas)
-        final_score = score + 0.3 if (has_action and has_tech) else score
+        has_key = not key_lemmas.isdisjoint(sent_lemmas)
+        final_score = score + 0.2 if (has_key) else score
         filtered.append((sent, final_score))
 
     if not filtered:
         filtered = list(zip(filtered_sentences, filtered_scores))
 
     sorted_sentences = sorted(filtered, key=lambda x: x[1].item(), reverse=True)
-    top_entries = sorted_sentences[:10]
+    top_entries = sorted_sentences[:1]
     
     top_sentences = [sent for sent, _ in top_entries]
     avg_score = torch.mean(torch.stack([s for _, s in top_entries])) if top_entries else 0.0
@@ -226,7 +225,7 @@ async def main():
     logger.info(f"Searching Bing for: {search_query}")
     links = await scrape_bing_results(search_query)
     end_time = time.time()
-    print(f"##########################\nScrape Runtime: {end_time - start_time:.2f} seconds\n")
+    print(f"##########################\nScraping Runtime: {end_time - start_time:.2f} seconds\n")
     
     if not links:
         logger.error("No search results found or error occurred.")

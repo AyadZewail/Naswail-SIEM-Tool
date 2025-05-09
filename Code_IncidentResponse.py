@@ -53,9 +53,9 @@ class Autopilot:
         self.MitEng = MitEng
         self.logModel = LogAP
         
-    def setup(self, prompt):
+    def setup(self, prompt, ip, port):
         start_time = time.time()
-        NGROK_URL = "https://a16e-34-42-210-191.ngrok-free.app"
+        NGROK_URL = "https://991f-34-135-175-210.ngrok-free.app"
         client = KaggleLLMClient(NGROK_URL, self.logModel)
         
         prompt_text = prompt
@@ -63,13 +63,13 @@ class Autopilot:
         self.logModel.log_step("Prompting LLM...")
         response = client.send_prompt(prompt_text)
         print("Model Response:", response)
-        self.extract_function_and_params(response)
+        self.extract_function_and_params(response, ip, port)
         
         # Calculate and display total time
         end_time = time.time()
         print(f"\nTotal execution time: {end_time - start_time:.2f} seconds")
 
-    def extract_function_and_params(self, model_output):
+    def extract_function_and_params(self, model_output, ip, port):
         try:
             match = re.search(r'\{.*\}', model_output, re.DOTALL)
             if not match:
@@ -80,6 +80,13 @@ class Autopilot:
 
             values = list(data.values()) if isinstance(data, dict) else None
             if values:
+                if values[0] == "block_ip":
+                    values.append(ip)
+                elif values[0] == "limit_rate":
+                    values.append(ip)
+                    values.append("5")
+                elif values[0] == "block_port":
+                    values.append(port)
                 self.logModel.log_step(f"Executing {values[0]} for {values[1:]}")
                 self.execute_function(self.MitEng, values[0], *values[1:])
         except json.JSONDecodeError:
@@ -110,6 +117,7 @@ class SubprocessWorker(QRunnable):
     def run(self):
         try:
             system = platform.system()
+            print(system)
             if system == "Linux":
                 result = subprocess.run(
                     [
@@ -125,7 +133,7 @@ class SubprocessWorker(QRunnable):
             elif system == "Windows":
                 result = subprocess.run(
                     [
-                        "python",
+                        r"venv-python12\Scripts\python",
                         "scrapInstructions.py",
                         f"{self.attack_name} mitigation and response"
                     ],
@@ -310,12 +318,11 @@ class AnomalousPackets():
     def on_result(self, output):
         print("✅ Result:", output)
         self.etime = time.time()
-        print(f"##########################\nTotal Runtime for Scraping: {self.stime - self.etime:.2f} seconds\n")
+        print(f"##########################\nTotal Runtime for Scraping: {self.etime - self.stime:.2f} seconds\n")
         self.logModel.log_step("Recieved instructions (expand to see)")
         self.logModel.log_details(output)
         self.ui.tableWidget_3.setItem(5, 1, QTableWidgetItem(output))
-        output = ''.join(filter(None, [self.src_ip, str(self.dport) if self.dport else None]))
-        self.AIobj.setup(output)
+        self.AIobj.setup(output, self.src_ip, self.dport)
 
         
     def on_error(self, error_msg):
@@ -376,7 +383,7 @@ class ThreatMitigationEngine():
         self.listener_thread.start()
     
 
-    def set_rate_limit(self, rate, ip):
+    def limit_rate(self, ip, rate):
         try:
             system = platform.system()
             if system == "Linux":
@@ -761,7 +768,7 @@ class IncidentResponse(QWidget, Ui_IncidentResponse):
     def action_reset_limit(self):
         try:
             ip=self.ui.ipLineEdit.text()
-            self.threatMitEngine.reset_rate_limit   (ip)
+            self.threatMitEngine.reset_rate_limit(ip)
             self.ips_limited.pop(self.ips_limited.index(ip))
             model=QStringListModel()
             model.setStringList(self.ips_limited)
@@ -770,7 +777,7 @@ class IncidentResponse(QWidget, Ui_IncidentResponse):
             print(e)
     def action_apply_limit(self):
         try:
-            self.threatMitEngine.set_rate_limit(self.ui.rateLineEdit.text(),self.ui.ipLineEdit.text())
+            self.threatMitEngine.limit_rate(self.ui.ipLineEdit.text(), self.ui.rateLineEdit.text())
             self.ips_limited.append(self.ui.ipLineEdit.text())
             model=QStringListModel()
             model.setStringList(self.ips_limited)
