@@ -12,8 +12,8 @@ from PyQt6 import QtCore, QtGui, QtWidgets
 class Ui_Naswail_Tool(object):
     def setupUi(self, Naswail_Tool):
         Naswail_Tool.setObjectName("Naswail_Tool")
-        Naswail_Tool.resize(1575, 3555)
-        Naswail_Tool.setMinimumSize(QtCore.QSize(1000, 1000))
+        Naswail_Tool.resize(1600, 900)
+        Naswail_Tool.setMinimumSize(QtCore.QSize(1200, 800))
         Naswail_Tool.setStyleSheet("/* Main Application Background */\n"
 "QWidget {\n"
 "    background-color: #2D2A2E;\n"
@@ -133,449 +133,338 @@ class Ui_Naswail_Tool(object):
 "/* Group Boxes */\n"
 "QGroupBox {\n"
 "    color: #40E0D0;\n"
+"    border: 1px solid #40E0D0;\n"
+"    border-radius: 4px;\n"
+"    margin-top: 10px;\n"
+"    padding-top: 15px;\n"
+"}\n"
+"\n"
+"QGroupBox::title {\n"
+"    subcontrol-origin: margin;\n"
+"    subcontrol-position: top center;\n"
+"    padding: 0 5px;\n"
+"}\n"
+"\n"
+"/* ComboBox */\n"
+"QComboBox {\n"
+"    background-color: #3E3D40;\n"
+"    color: #40E0D0;\n"
+"    border: 1px solid #5A595C;\n"
+"    border-radius: 4px;\n"
+"    padding: 5px;\n"
+"}\n"
+"\n"
+"QComboBox::drop-down {\n"
+"    border: none;\n"
+"}\n"
+"\n"
+"QComboBox::down-arrow {\n"
+"    image: url(:/icons/down_arrow.png);\n"
+"    width: 10px;\n"
+"    height: 10px;\n"
+"}\n"
+"\n"
+"QComboBox QAbstractItemView {\n"
+"    background-color: #3E3D40;\n"
+"    color: #40E0D0;\n"
+"    selection-background-color: #5A595C;\n"
 "}\n"
 "")
+
+        # Navigation Bar - EXACTLY as in UI_Main.py but adapted for QWidget
+        self.graphicsView = QtWidgets.QGraphicsView(parent=Naswail_Tool)
+        self.graphicsView.setGeometry(QtCore.QRect(10, 0, 71, 61))
+        self.graphicsView.setObjectName("graphicsView")
+        
+        self.label_4 = QtWidgets.QLabel(parent=Naswail_Tool)
+        self.label_4.setGeometry(QtCore.QRect(81, 3, 220, 53))
+        font = QtGui.QFont()
+        font.setFamily("Segoe UI Variable Small Semibol")
+        font.setPointSize(32)
+        font.setBold(True)
+        font.setWeight(85)
+        self.label_4.setFont(font)
+        self.label_4.setObjectName("label_4")
+        
         self.horizontalLayoutWidget = QtWidgets.QWidget(parent=Naswail_Tool)
-        self.horizontalLayoutWidget.setGeometry(QtCore.QRect(240, 0, 1301, 101))
+        self.horizontalLayoutWidget.setGeometry(QtCore.QRect(266, 10, 1031, 41))
         self.horizontalLayoutWidget.setObjectName("horizontalLayoutWidget")
+        
         self.horizontalLayout = QtWidgets.QHBoxLayout(self.horizontalLayoutWidget)
         self.horizontalLayout.setContentsMargins(0, 0, 0, 0)
         self.horizontalLayout.setObjectName("horizontalLayout")
+        
         self.pushButton_4 = QtWidgets.QPushButton(parent=self.horizontalLayoutWidget)
         self.pushButton_4.setObjectName("pushButton_4")
         self.horizontalLayout.addWidget(self.pushButton_4)
+        
         self.pushButton_8 = QtWidgets.QPushButton(parent=self.horizontalLayoutWidget)
         self.pushButton_8.setObjectName("pushButton_8")
         self.horizontalLayout.addWidget(self.pushButton_8)
+        
         self.pushButton_3 = QtWidgets.QPushButton(parent=self.horizontalLayoutWidget)
         self.pushButton_3.setObjectName("pushButton_3")
         self.horizontalLayout.addWidget(self.pushButton_3)
+        
         self.pushButton_2 = QtWidgets.QPushButton(parent=self.horizontalLayoutWidget)
         self.pushButton_2.setObjectName("pushButton_2")
         self.horizontalLayout.addWidget(self.pushButton_2)
-        self.label_4 = QtWidgets.QLabel(parent=Naswail_Tool)
-        self.label_4.setGeometry(QtCore.QRect(0, 0, 241, 101))
-        font = QtGui.QFont()
-        font.setFamily("Segoe UI Variable Small Semibol")
-        font.setPointSize(18)
-        font.setBold(True)
-        font.setWeight(75)
-        self.label_4.setFont(font)
-        self.label_4.setObjectName("label_4")
+        
+        self.horizontalLayout.addSpacing(10)
+        
+        # Notification Button (exactly like in UI_Main)
+        self.notificationButton = QtWidgets.QPushButton(parent=self.horizontalLayoutWidget)
+        self.notificationButton.setText("🔔")
+        self.notificationButton.setFixedSize(40, 30)
+        self.notificationButton.setObjectName("notificationButton")
+        self.notificationButton.setStyleSheet("""
+                QPushButton {
+                background-color: #40E0D0;
+                color: #2D2A2E;
+                border: 1px solid #40E0D0;
+                border-radius: 15px;
+                font-size: 16px;
+                }
+                QPushButton:hover {
+                background-color: #36C9B0;
+                border: 1px solid #36C9B0;
+                }
+                QPushButton:pressed {
+                background-color: #2DB39E;
+                border: 1px solid #2DB39E;
+                }
+        """)
+        self.horizontalLayout.addWidget(self.notificationButton)
+        
+        # Notification Menu - matching UI_Main
+        self.notificationMenu = QtWidgets.QMenu(parent=Naswail_Tool)
+        self.notificationMenu.setStyleSheet("""
+                QMenu {
+                background-color: #3E3D40;
+                color: #FFFFFF;
+                border: 1px solid #5A595C;
+                border-radius: 5px;
+                padding: 5px;
+                }
+        """)
+        
+        self.notificationList = QtWidgets.QListWidget()
+        self.notificationList.setFixedSize(300, 200)
+        self.notificationList.setStyleSheet("""
+                QListWidget {
+                background-color: #3E3D40;
+                border: none;
+                font-size: 14px;
+                }
+        """)
+        
+        notificationWidgetAction = QtWidgets.QWidgetAction(self.notificationMenu)
+        notificationWidgetAction.setDefaultWidget(self.notificationList)
+        self.notificationMenu.addAction(notificationWidgetAction)
+
+        # Scroll Area for Content
         self.scrollArea = QtWidgets.QScrollArea(parent=Naswail_Tool)
-        self.scrollArea.setGeometry(QtCore.QRect(-10, 70, 1531, 3401))
-        self.scrollArea.setMinimumSize(QtCore.QSize(1000, 0))
-        self.scrollArea.setLineWidth(1)
+        self.scrollArea.setGeometry(QtCore.QRect(20, 70, 1560, 800))
+        self.scrollArea.setWidgetResizable(True)
         self.scrollArea.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarPolicy.ScrollBarAlwaysOn)
         self.scrollArea.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarPolicy.ScrollBarAsNeeded)
-        self.scrollArea.setSizeAdjustPolicy(QtWidgets.QAbstractScrollArea.SizeAdjustPolicy.AdjustToContents)
-        self.scrollArea.setWidgetResizable(True)
-        self.scrollArea.setAlignment(QtCore.Qt.AlignmentFlag.AlignLeading|QtCore.Qt.AlignmentFlag.AlignLeft|QtCore.Qt.AlignmentFlag.AlignTop)
-        self.scrollArea.setObjectName("scrollArea")
+        
         self.scrollAreaWidgetContents = QtWidgets.QWidget()
-        self.scrollAreaWidgetContents.setGeometry(QtCore.QRect(0, 0, 1519, 13291))
-        self.scrollAreaWidgetContents.setMinimumSize(QtCore.QSize(1291, 13291))
-        self.scrollAreaWidgetContents.setObjectName("scrollAreaWidgetContents")
-        self.label_2 = QtWidgets.QLabel(parent=self.scrollAreaWidgetContents)
-        self.label_2.setGeometry(QtCore.QRect(40, 760, 1101, 31))
-        font = QtGui.QFont()
-        font.setFamily("Yu Gothic UI Semibold")
-        font.setPointSize(14)
-        font.setBold(True)
-        font.setWeight(75)
-        self.label_2.setFont(font)
-        self.label_2.setStyleSheet("QLabel {\n"
-"    color: white;\n"
-"}\n"
-"")
-        self.label_2.setObjectName("label_2")
-        self.tableWidget = QtWidgets.QTableWidget(parent=self.scrollAreaWidgetContents)
-        self.tableWidget.setGeometry(QtCore.QRect(80, 830, 1221, 501))
-        self.tableWidget.setObjectName("tableWidget")
-        self.tableWidget.setColumnCount(0)
-        self.tableWidget.setRowCount(0)
-        self.label_15 = QtWidgets.QLabel(parent=self.scrollAreaWidgetContents)
-        self.label_15.setGeometry(QtCore.QRect(75, 20, 1101, 31))
-        font = QtGui.QFont()
-        font.setFamily("Yu Gothic UI Semibold")
-        font.setPointSize(14)
-        font.setBold(True)
-        font.setWeight(75)
-        self.label_15.setFont(font)
-        self.label_15.setStyleSheet("QLabel {\n"
-"    color: white;\n"
-"}\n"
-"")
-        self.label_15.setObjectName("label_15")
-        self.tableWidget_3 = QtWidgets.QTableWidget(parent=self.scrollAreaWidgetContents)
-        self.tableWidget_3.setGeometry(QtCore.QRect(80, 90, 641, 501))
-        self.tableWidget_3.setObjectName("tableWidget_3")
-        self.tableWidget_3.setColumnCount(0)
-        self.tableWidget_3.setRowCount(0)
-        self.tabWidget_3 = QtWidgets.QTabWidget(parent=self.scrollAreaWidgetContents)
-        self.tabWidget_3.setGeometry(QtCore.QRect(280, 1340, 921, 311))
-        self.tabWidget_3.setObjectName("tabWidget_3")
-        self.tab_5 = QtWidgets.QWidget()
-        self.tab_5.setObjectName("tab_5")
-        self.label_22 = QtWidgets.QLabel(parent=self.tab_5)
-        self.label_22.setGeometry(QtCore.QRect(10, 0, 161, 21))
-        self.label_22.setStyleSheet("QLabel {\n"
-"    color: white;\n"
-"}\n"
-"")
-        self.label_22.setObjectName("label_22")
-        self.dateTimeEdit_5 = QtWidgets.QDateTimeEdit(parent=self.tab_5)
-        self.dateTimeEdit_5.setGeometry(QtCore.QRect(0, 110, 194, 38))
-        self.dateTimeEdit_5.setObjectName("dateTimeEdit_5")
-        self.label_23 = QtWidgets.QLabel(parent=self.tab_5)
-        self.label_23.setGeometry(QtCore.QRect(10, 80, 161, 21))
-        self.label_23.setStyleSheet("QLabel {\n"
-"    color: white;\n"
-"}\n"
-"")
-        self.label_23.setObjectName("label_23")
-        self.dateTimeEdit_6 = QtWidgets.QDateTimeEdit(parent=self.tab_5)
-        self.dateTimeEdit_6.setGeometry(QtCore.QRect(0, 30, 194, 38))
-        self.dateTimeEdit_6.setObjectName("dateTimeEdit_6")
-        self.formLayoutWidget_3 = QtWidgets.QWidget(parent=self.tab_5)
-        self.formLayoutWidget_3.setGeometry(QtCore.QRect(240, 40, 187, 220))
-        self.formLayoutWidget_3.setObjectName("formLayoutWidget_3")
-        self.formLayout_3 = QtWidgets.QFormLayout(self.formLayoutWidget_3)
-        self.formLayout_3.setContentsMargins(0, 0, 0, 0)
-        self.formLayout_3.setObjectName("formLayout_3")
-        self.checkBox_21 = QtWidgets.QCheckBox(parent=self.formLayoutWidget_3)
-        self.checkBox_21.setChecked(False)
-        self.checkBox_21.setObjectName("checkBox_21")
-        self.formLayout_3.setWidget(0, QtWidgets.QFormLayout.ItemRole.LabelRole, self.checkBox_21)
-        self.checkBox_22 = QtWidgets.QCheckBox(parent=self.formLayoutWidget_3)
-        self.checkBox_22.setObjectName("checkBox_22")
-        self.formLayout_3.setWidget(1, QtWidgets.QFormLayout.ItemRole.LabelRole, self.checkBox_22)
-        self.checkBox_23 = QtWidgets.QCheckBox(parent=self.formLayoutWidget_3)
-        self.checkBox_23.setObjectName("checkBox_23")
-        self.formLayout_3.setWidget(2, QtWidgets.QFormLayout.ItemRole.LabelRole, self.checkBox_23)
-        self.checkBox_24 = QtWidgets.QCheckBox(parent=self.formLayoutWidget_3)
-        self.checkBox_24.setObjectName("checkBox_24")
-        self.formLayout_3.setWidget(3, QtWidgets.QFormLayout.ItemRole.LabelRole, self.checkBox_24)
-        self.checkBox_25 = QtWidgets.QCheckBox(parent=self.formLayoutWidget_3)
-        self.checkBox_25.setObjectName("checkBox_25")
-        self.formLayout_3.setWidget(0, QtWidgets.QFormLayout.ItemRole.FieldRole, self.checkBox_25)
-        self.checkBox_26 = QtWidgets.QCheckBox(parent=self.formLayoutWidget_3)
-        self.checkBox_26.setObjectName("checkBox_26")
-        self.formLayout_3.setWidget(1, QtWidgets.QFormLayout.ItemRole.FieldRole, self.checkBox_26)
-        self.checkBox_27 = QtWidgets.QCheckBox(parent=self.formLayoutWidget_3)
-        self.checkBox_27.setObjectName("checkBox_27")
-        self.formLayout_3.setWidget(3, QtWidgets.QFormLayout.ItemRole.FieldRole, self.checkBox_27)
-        self.checkBox_28 = QtWidgets.QCheckBox(parent=self.formLayoutWidget_3)
-        self.checkBox_28.setObjectName("checkBox_28")
-        self.formLayout_3.setWidget(4, QtWidgets.QFormLayout.ItemRole.LabelRole, self.checkBox_28)
-        self.checkBox_29 = QtWidgets.QCheckBox(parent=self.formLayoutWidget_3)
-        self.checkBox_29.setObjectName("checkBox_29")
-        self.formLayout_3.setWidget(4, QtWidgets.QFormLayout.ItemRole.FieldRole, self.checkBox_29)
-        self.checkBox_30 = QtWidgets.QCheckBox(parent=self.formLayoutWidget_3)
-        self.checkBox_30.setObjectName("checkBox_30")
-        self.formLayout_3.setWidget(2, QtWidgets.QFormLayout.ItemRole.FieldRole, self.checkBox_30)
-        self.label_25 = QtWidgets.QLabel(parent=self.tab_5)
-        self.label_25.setGeometry(QtCore.QRect(250, 10, 171, 20))
-        self.label_25.setStyleSheet("QLabel {\n"
-"    color: white;\n"
-"}\n"
-"")
-        self.label_25.setObjectName("label_25")
-        self.lineEdit_8 = QtWidgets.QLineEdit(parent=self.tab_5)
-        self.lineEdit_8.setGeometry(QtCore.QRect(460, 40, 142, 38))
-        self.lineEdit_8.setObjectName("lineEdit_8")
-        self.label_26 = QtWidgets.QLabel(parent=self.tab_5)
-        self.label_26.setGeometry(QtCore.QRect(460, 20, 151, 20))
-        self.label_26.setStyleSheet("QLabel {\n"
-"    color: white;\n"
-"}\n"
-"")
-        self.label_26.setObjectName("label_26")
-        self.label_27 = QtWidgets.QLabel(parent=self.tab_5)
-        self.label_27.setGeometry(QtCore.QRect(460, 80, 151, 20))
-        self.label_27.setStyleSheet("QLabel {\n"
-"    color: white;\n"
-"}\n"
-"")
-        self.label_27.setObjectName("label_27")
-        self.lineEdit_9 = QtWidgets.QLineEdit(parent=self.tab_5)
-        self.lineEdit_9.setGeometry(QtCore.QRect(460, 100, 142, 38))
-        self.lineEdit_9.setObjectName("lineEdit_9")
-        self.comboBox_3 = QtWidgets.QComboBox(parent=self.tab_5)
-        self.comboBox_3.setGeometry(QtCore.QRect(460, 150, 150, 38))
-        self.comboBox_3.setObjectName("comboBox_3")
-        self.comboBox_3.addItem("")
-        self.comboBox_3.addItem("")
-        self.comboBox_3.addItem("")
-        self.label_28 = QtWidgets.QLabel(parent=self.tab_5)
-        self.label_28.setGeometry(QtCore.QRect(460, 130, 151, 20))
-        self.label_28.setStyleSheet("QLabel {\n"
-"    color: white;\n"
-"}\n"
-"")
-        self.label_28.setObjectName("label_28")
-        self.pushButton_6 = QtWidgets.QPushButton(parent=self.tab_5)
-        self.pushButton_6.setGeometry(QtCore.QRect(660, 80, 126, 41))
-        self.pushButton_6.setObjectName("pushButton_6")
-        self.pushButton_11 = QtWidgets.QPushButton(parent=self.tab_5)
-        self.pushButton_11.setGeometry(QtCore.QRect(470, 210, 126, 41))
-        self.pushButton_11.setObjectName("pushButton_11")
-        self.tabWidget_3.addTab(self.tab_5, "")
-        self.tab_7 = QtWidgets.QWidget()
-        self.tab_7.setObjectName("tab_7")
-        self.listView_4 = QtWidgets.QListView(parent=self.tab_7)
-        self.listView_4.setGeometry(QtCore.QRect(0, 0, 861, 271))
-        self.listView_4.setObjectName("listView_4")
-        self.tabWidget_3.addTab(self.tab_7, "")
-        self.tab_6 = QtWidgets.QWidget()
-        self.tab_6.setObjectName("tab_6")
-        self.listView_3 = QtWidgets.QListView(parent=self.tab_6)
-        self.listView_3.setGeometry(QtCore.QRect(0, 0, 861, 271))
-        self.listView_3.setObjectName("listView_3")
-        self.tabWidget_3.addTab(self.tab_6, "")
-        self.widget = QtWidgets.QWidget(parent=self.scrollAreaWidgetContents)
-        self.widget.setGeometry(QtCore.QRect(730, 90, 761, 341))
-        self.widget.setObjectName("widget")
-        self.label_5 = QtWidgets.QLabel(parent=self.scrollAreaWidgetContents)
-        self.label_5.setGeometry(QtCore.QRect(750, 440, 131, 21))
-        self.label_5.setObjectName("label_5")
-        self.lineEdit = QtWidgets.QLineEdit(parent=self.scrollAreaWidgetContents)
-        self.lineEdit.setGeometry(QtCore.QRect(750, 470, 113, 21))
-        self.lineEdit.setObjectName("lineEdit")
-        self.pushButton = QtWidgets.QPushButton(parent=self.scrollAreaWidgetContents)
-        self.pushButton.setGeometry(QtCore.QRect(750, 510, 84, 23))
-        self.pushButton.setObjectName("pushButton")
-        self.listView_2 = QtWidgets.QListView(parent=self.scrollAreaWidgetContents)
-        self.listView_2.setGeometry(QtCore.QRect(110, 1750, 1291, 571))
-        self.listView_2.setObjectName("listView_2")
-        self.label_19 = QtWidgets.QLabel(parent=self.scrollAreaWidgetContents)
-        self.label_19.setGeometry(QtCore.QRect(120, 1690, 1101, 31))
-        font = QtGui.QFont()
-        font.setFamily("Yu Gothic UI Semibold")
-        font.setPointSize(14)
-        font.setBold(True)
-        font.setWeight(75)
-        self.label_19.setFont(font)
-        self.label_19.setStyleSheet("QLabel {\n"
-"    color: white;\n"
-"}\n"
-"")
-        self.label_19.setObjectName("label_19")
-        self.pushButton_5 = QtWidgets.QPushButton(parent=self.scrollAreaWidgetContents)
-        self.pushButton_5.setGeometry(QtCore.QRect(210, 2350, 441, 28))
-        font = QtGui.QFont()
-        font.setPointSize(10)
-        font.setBold(True)
-        font.setWeight(75)
-        self.pushButton_5.setFont(font)
-        self.pushButton_5.setObjectName("pushButton_5")
-        self.pushButton_7 = QtWidgets.QPushButton(parent=self.scrollAreaWidgetContents)
-        self.pushButton_7.setGeometry(QtCore.QRect(730, 2350, 441, 28))
-        font = QtGui.QFont()
-        font.setPointSize(10)
-        font.setBold(True)
-        font.setWeight(75)
-        self.pushButton_7.setFont(font)
-        self.pushButton_7.setObjectName("pushButton_7")
-        self.label_18 = QtWidgets.QLabel(parent=self.scrollAreaWidgetContents)
-        self.label_18.setGeometry(QtCore.QRect(90, 2430, 1101, 31))
-        font = QtGui.QFont()
-        font.setFamily("Yu Gothic UI Semibold")
-        font.setPointSize(14)
-        font.setBold(True)
-        font.setWeight(75)
-        self.label_18.setFont(font)
-        self.label_18.setStyleSheet("QLabel {\n"
-"    color: white;\n"
-"}\n"
-"")
-        self.label_18.setObjectName("label_18")
-        self.tableWidget_6 = QtWidgets.QTableWidget(parent=self.scrollAreaWidgetContents)
-        self.tableWidget_6.setGeometry(QtCore.QRect(130, 2500, 1251, 501))
-        self.tableWidget_6.setObjectName("tableWidget_6")
-        self.tableWidget_6.setColumnCount(0)
-        self.tableWidget_6.setRowCount(0)
-        self.tabWidget = QtWidgets.QTabWidget(parent=self.scrollAreaWidgetContents)
-        self.tabWidget.setGeometry(QtCore.QRect(250, 3010, 871, 311))
-        self.tabWidget.setObjectName("tabWidget")
-        self.tab = QtWidgets.QWidget()
-        self.tab.setObjectName("tab")
-        self.label_7 = QtWidgets.QLabel(parent=self.tab)
-        self.label_7.setGeometry(QtCore.QRect(10, 0, 161, 21))
-        self.label_7.setStyleSheet("QLabel {\n"
-"    color: white;\n"
-"}\n"
-"")
-        self.label_7.setObjectName("label_7")
-        self.dateTimeEdit_2 = QtWidgets.QDateTimeEdit(parent=self.tab)
-        self.dateTimeEdit_2.setGeometry(QtCore.QRect(0, 110, 194, 38))
-        self.dateTimeEdit_2.setObjectName("dateTimeEdit_2")
-        self.label_8 = QtWidgets.QLabel(parent=self.tab)
-        self.label_8.setGeometry(QtCore.QRect(10, 80, 161, 21))
-        self.label_8.setStyleSheet("QLabel {\n"
-"    color: white;\n"
-"}\n"
-"")
-        self.label_8.setObjectName("label_8")
-        self.dateTimeEdit = QtWidgets.QDateTimeEdit(parent=self.tab)
-        self.dateTimeEdit.setGeometry(QtCore.QRect(0, 30, 194, 38))
-        self.dateTimeEdit.setObjectName("dateTimeEdit")
-        self.formLayoutWidget = QtWidgets.QWidget(parent=self.tab)
-        self.formLayoutWidget.setGeometry(QtCore.QRect(240, 40, 187, 220))
-        self.formLayoutWidget.setObjectName("formLayoutWidget")
-        self.formLayout = QtWidgets.QFormLayout(self.formLayoutWidget)
-        self.formLayout.setContentsMargins(0, 0, 0, 0)
-        self.formLayout.setObjectName("formLayout")
-        self.checkBox = QtWidgets.QCheckBox(parent=self.formLayoutWidget)
-        self.checkBox.setChecked(False)
-        self.checkBox.setObjectName("checkBox")
-        self.formLayout.setWidget(0, QtWidgets.QFormLayout.ItemRole.LabelRole, self.checkBox)
-        self.checkBox_2 = QtWidgets.QCheckBox(parent=self.formLayoutWidget)
-        self.checkBox_2.setObjectName("checkBox_2")
-        self.formLayout.setWidget(1, QtWidgets.QFormLayout.ItemRole.LabelRole, self.checkBox_2)
-        self.checkBox_3 = QtWidgets.QCheckBox(parent=self.formLayoutWidget)
-        self.checkBox_3.setObjectName("checkBox_3")
-        self.formLayout.setWidget(2, QtWidgets.QFormLayout.ItemRole.LabelRole, self.checkBox_3)
-        self.checkBox_4 = QtWidgets.QCheckBox(parent=self.formLayoutWidget)
-        self.checkBox_4.setObjectName("checkBox_4")
-        self.formLayout.setWidget(3, QtWidgets.QFormLayout.ItemRole.LabelRole, self.checkBox_4)
-        self.checkBox_5 = QtWidgets.QCheckBox(parent=self.formLayoutWidget)
-        self.checkBox_5.setObjectName("checkBox_5")
-        self.formLayout.setWidget(0, QtWidgets.QFormLayout.ItemRole.FieldRole, self.checkBox_5)
-        self.checkBox_6 = QtWidgets.QCheckBox(parent=self.formLayoutWidget)
-        self.checkBox_6.setObjectName("checkBox_6")
-        self.formLayout.setWidget(1, QtWidgets.QFormLayout.ItemRole.FieldRole, self.checkBox_6)
-        self.checkBox_8 = QtWidgets.QCheckBox(parent=self.formLayoutWidget)
-        self.checkBox_8.setObjectName("checkBox_8")
-        self.formLayout.setWidget(3, QtWidgets.QFormLayout.ItemRole.FieldRole, self.checkBox_8)
-        self.checkBox_9 = QtWidgets.QCheckBox(parent=self.formLayoutWidget)
-        self.checkBox_9.setObjectName("checkBox_9")
-        self.formLayout.setWidget(4, QtWidgets.QFormLayout.ItemRole.LabelRole, self.checkBox_9)
-        self.checkBox_10 = QtWidgets.QCheckBox(parent=self.formLayoutWidget)
-        self.checkBox_10.setObjectName("checkBox_10")
-        self.formLayout.setWidget(4, QtWidgets.QFormLayout.ItemRole.FieldRole, self.checkBox_10)
-        self.checkBox_7 = QtWidgets.QCheckBox(parent=self.formLayoutWidget)
-        self.checkBox_7.setObjectName("checkBox_7")
-        self.formLayout.setWidget(2, QtWidgets.QFormLayout.ItemRole.FieldRole, self.checkBox_7)
-        self.label = QtWidgets.QLabel(parent=self.tab)
-        self.label.setGeometry(QtCore.QRect(250, 10, 171, 20))
-        self.label.setStyleSheet("QLabel {\n"
-"    color: white;\n"
-"}\n"
-"")
-        self.label.setObjectName("label")
-        self.lineEdit_2 = QtWidgets.QLineEdit(parent=self.tab)
-        self.lineEdit_2.setGeometry(QtCore.QRect(460, 40, 142, 38))
-        self.lineEdit_2.setObjectName("lineEdit_2")
-        self.label_10 = QtWidgets.QLabel(parent=self.tab)
-        self.label_10.setGeometry(QtCore.QRect(460, 20, 151, 20))
-        self.label_10.setStyleSheet("QLabel {\n"
-"    color: white;\n"
-"}\n"
-"")
-        self.label_10.setObjectName("label_10")
-        self.label_16 = QtWidgets.QLabel(parent=self.tab)
-        self.label_16.setGeometry(QtCore.QRect(460, 80, 151, 20))
-        self.label_16.setStyleSheet("QLabel {\n"
-"    color: white;\n"
-"}\n"
-"")
-        self.label_16.setObjectName("label_16")
-        self.lineEdit_5 = QtWidgets.QLineEdit(parent=self.tab)
-        self.lineEdit_5.setGeometry(QtCore.QRect(460, 100, 142, 38))
-        self.lineEdit_5.setObjectName("lineEdit_5")
-        self.comboBox = QtWidgets.QComboBox(parent=self.tab)
-        self.comboBox.setGeometry(QtCore.QRect(460, 150, 150, 38))
-        self.comboBox.setObjectName("comboBox")
-        self.comboBox.addItem("")
-        self.comboBox.addItem("")
-        self.comboBox.addItem("")
-        self.label_3 = QtWidgets.QLabel(parent=self.tab)
-        self.label_3.setGeometry(QtCore.QRect(460, 130, 151, 20))
-        self.label_3.setStyleSheet("QLabel {\n"
-"    color: white;\n"
-"}\n"
-"")
-        self.label_3.setObjectName("label_3")
-        self.pushButton_9 = QtWidgets.QPushButton(parent=self.tab)
-        self.pushButton_9.setGeometry(QtCore.QRect(470, 210, 126, 41))
-        self.pushButton_9.setObjectName("pushButton_9")
-        self.tabWidget.addTab(self.tab, "")
-        self.tab_2 = QtWidgets.QWidget()
-        self.tab_2.setObjectName("tab_2")
-        self.listView = QtWidgets.QListView(parent=self.tab_2)
-        self.listView.setGeometry(QtCore.QRect(0, 0, 851, 261))
-        self.listView.setObjectName("listView")
-        self.tabWidget.addTab(self.tab_2, "")
+        self.scrollAreaWidgetContents.setMinimumSize(QtCore.QSize(1400, 2500))
+        
+        # Main content layout
+        self.contentLayout = QtWidgets.QVBoxLayout(self.scrollAreaWidgetContents)
+        self.contentLayout.setContentsMargins(40, 25, 40, 60)
+        self.contentLayout.setSpacing(50)
+
+        # SECTION 1: Traffic Prediction
+        self.predictionGroupBox = QtWidgets.QGroupBox("Traffic Prediction")
+        predictionLayout = QtWidgets.QVBoxLayout(self.predictionGroupBox)
+        predictionLayout.setContentsMargins(30, 25, 30, 25)
+        predictionLayout.setSpacing(20)
+
+        # Prediction table and graph
+        self.predictionDisplayLayout = QtWidgets.QHBoxLayout()
+        
+        # Left side: Table with input controls underneath
+        self.leftPredictionLayout = QtWidgets.QVBoxLayout()
+        
+        # Time table with increased width
+        self.tableWidget_3 = QtWidgets.QTableWidget()
+        self.tableWidget_3.setMinimumWidth(450)  # Further increased width to avoid truncation
+        self.tableWidget_3.setColumnCount(2)
+        self.tableWidget_3.setRowCount(7)
+        self.tableWidget_3.setHorizontalHeaderLabels(["Time", "Packet Estimate"])
+        self.tableWidget_3.setVerticalHeaderLabels(["Current", "Desired Time", "+ 1 Hour", "+ 3 Hour", "+ 6 Hour", "+ 12 Hour", "+ 24 Hour"])
+        
+        # Add table to layout
+        self.leftPredictionLayout.addWidget(self.tableWidget_3)
+        self.leftPredictionLayout.addSpacing(15)
+        
+        # Add input controls under the table
+        self.inputControlsLayout = QtWidgets.QHBoxLayout()
+        self.label_5 = QtWidgets.QLabel("Enter Number of Hours:")
+        self.lineEdit = QtWidgets.QLineEdit()
+        self.lineEdit.setMaximumWidth(100)
+        self.pushButton = QtWidgets.QPushButton("Predict")
+        self.pushButton.setMinimumWidth(120)
+        
+        self.inputControlsLayout.addWidget(self.label_5)
+        self.inputControlsLayout.addWidget(self.lineEdit)
+        self.inputControlsLayout.addWidget(self.pushButton)
+        self.inputControlsLayout.addStretch()
+        
+        self.leftPredictionLayout.addLayout(self.inputControlsLayout)
+        
+        # Add left side layout to main prediction layout
+        self.predictionDisplayLayout.addLayout(self.leftPredictionLayout)
+        
+        # Right side: Graph
+        self.widget = QtWidgets.QWidget()
+        self.widget.setMinimumSize(QtCore.QSize(800, 450))
+        
+        # Add graph to layout with stretch priority
+        self.predictionDisplayLayout.addWidget(self.widget, 1)
+        
+        predictionLayout.addLayout(self.predictionDisplayLayout)
+        self.contentLayout.addWidget(self.predictionGroupBox)
+
+        # SECTION 2: Network Activity Monitoring
+        self.networkActivityGroupBox = QtWidgets.QGroupBox("Network Activity Monitoring")
+        networkActivityLayout = QtWidgets.QVBoxLayout(self.networkActivityGroupBox)
+        networkActivityLayout.setContentsMargins(30, 25, 30, 25)
+        networkActivityLayout.setSpacing(20)
+
+        # Network activity list
+        self.listView_2 = QtWidgets.QListView()
+        self.listView_2.setMinimumHeight(450)
+        networkActivityLayout.addWidget(self.listView_2)
+
+        # Network activity controls - moved to bottom and centered
+        self.networkControlsLayout = QtWidgets.QHBoxLayout()
+        self.pushButton_5 = QtWidgets.QPushButton("Save")
+        self.pushButton_5.setMinimumWidth(200)
+        self.pushButton_7 = QtWidgets.QPushButton("Refresh")
+        self.pushButton_7.setMinimumWidth(200)
+        self.networkControlsLayout.addStretch()
+        self.networkControlsLayout.addWidget(self.pushButton_5)
+        self.networkControlsLayout.addSpacing(30)
+        self.networkControlsLayout.addWidget(self.pushButton_7)
+        self.networkControlsLayout.addStretch()
+        networkActivityLayout.addLayout(self.networkControlsLayout)
+
+        self.contentLayout.addWidget(self.networkActivityGroupBox)
+
+        # SECTION 3: Corrupted Packets
+        self.corruptedPacketsGroupBox = QtWidgets.QGroupBox("Corrupted Packets")
+        corruptedPacketsLayout = QtWidgets.QVBoxLayout(self.corruptedPacketsGroupBox)
+        corruptedPacketsLayout.setContentsMargins(30, 25, 30, 25)
+        corruptedPacketsLayout.setSpacing(20)
+
+        # Corrupted packets table - moved to top
+        self.tableWidget_6 = QtWidgets.QTableWidget()
+        self.tableWidget_6.setMinimumHeight(350)
+        self.tableWidget_6.setColumnCount(11)
+        self.tableWidget_6.setHorizontalHeaderLabels(
+            ["Timestamp", "Source", "Destination", "Protocol", "Layer", "MAC Src", "MAC Dst", "Src Port", "Dst Port", "Length", "IP Version"]
+        )
+        corruptedPacketsLayout.addWidget(self.tableWidget_6)
+
+        # Filter controls - moved to bottom
+        self.filterControlsLayout = QtWidgets.QHBoxLayout()
+        self.pushButton_11 = QtWidgets.QPushButton("Apply Filter")
+        self.pushButton_11.setMinimumWidth(180)
+        self.pushButton_6 = QtWidgets.QPushButton("Reset Filter")
+        self.pushButton_6.setMinimumWidth(180)
+        self.filterControlsLayout.addStretch()
+        self.filterControlsLayout.addWidget(self.pushButton_11)
+        self.filterControlsLayout.addSpacing(30)
+        self.filterControlsLayout.addWidget(self.pushButton_6)
+        self.filterControlsLayout.addStretch()
+        corruptedPacketsLayout.addLayout(self.filterControlsLayout)
+
+        # Filter options - moved under the table
+        self.filterOptionsGroup = QtWidgets.QGroupBox("Filter Options")
+        self.filterOptionsGroup.setMaximumHeight(240)
+        self.filterOptionsLayout = QtWidgets.QHBoxLayout(self.filterOptionsGroup)
+        self.filterOptionsLayout.setContentsMargins(20, 20, 20, 20)
+        self.filterOptionsLayout.setSpacing(40)
+        
+        # Protocol filters - Updated to match UI_Main.py
+        self.protocolFiltersGroup = QtWidgets.QGroupBox("Protocol Filters")
+        protocolFiltersLayout = QtWidgets.QFormLayout(self.protocolFiltersGroup)
+        protocolFiltersLayout.setContentsMargins(15, 20, 15, 15)
+        protocolFiltersLayout.setVerticalSpacing(12)
+        protocolFiltersLayout.setHorizontalSpacing(20)
+        
+        # Create checkboxes in the same layout as UI_Main.py
+        self.checkBox_21 = QtWidgets.QCheckBox("UDP")
+        self.checkBox_22 = QtWidgets.QCheckBox("TCP")
+        self.checkBox_23 = QtWidgets.QCheckBox("ICMP")
+        self.checkBox_24 = QtWidgets.QCheckBox("DNS")
+        self.checkBox_25 = QtWidgets.QCheckBox("HTTP")
+        self.checkBox_26 = QtWidgets.QCheckBox("HTTPS")
+        self.checkBox_30 = QtWidgets.QCheckBox("TELNET")
+        self.checkBox_27 = QtWidgets.QCheckBox("FTP")
+        self.checkBox_28 = QtWidgets.QCheckBox("DHCP")
+        self.checkBox_29 = QtWidgets.QCheckBox("Other")
+
+        # Add to layout in matching pattern
+        protocolFiltersLayout.addRow(self.checkBox_21, self.checkBox_25)
+        protocolFiltersLayout.addRow(self.checkBox_22, self.checkBox_26)
+        protocolFiltersLayout.addRow(self.checkBox_23, self.checkBox_30)
+        protocolFiltersLayout.addRow(self.checkBox_24, self.checkBox_27)
+        protocolFiltersLayout.addRow(self.checkBox_28, self.checkBox_29)
+        
+        self.filterOptionsLayout.addWidget(self.protocolFiltersGroup)
+
+        # IP filters
+        self.ipFiltersGroup = QtWidgets.QGroupBox("IP Filters")
+        ipFiltersLayout = QtWidgets.QFormLayout(self.ipFiltersGroup)
+        ipFiltersLayout.setContentsMargins(20, 20, 20, 20)
+        ipFiltersLayout.setVerticalSpacing(15)
+        ipFiltersLayout.setHorizontalSpacing(20)
+        self.lineEdit_8 = QtWidgets.QLineEdit()
+        self.lineEdit_9 = QtWidgets.QLineEdit()
+        self.comboBox_3 = QtWidgets.QComboBox()
+        self.comboBox_3.addItems(["All", "Inside Traffic", "Outside Traffic"])
+        
+        ipFiltersLayout.addRow("Source IP:", self.lineEdit_8)
+        ipFiltersLayout.addRow("Destination IP:", self.lineEdit_9)
+        ipFiltersLayout.addRow("Traffic Type:", self.comboBox_3)
+        
+        self.filterOptionsLayout.addWidget(self.ipFiltersGroup)
+        
+        corruptedPacketsLayout.addWidget(self.filterOptionsGroup)
+
+        self.contentLayout.addWidget(self.corruptedPacketsGroupBox)
+
+        # Add some space at the bottom
+        self.contentLayout.addSpacing(40)
+
+        # Set the scroll area widget
         self.scrollArea.setWidget(self.scrollAreaWidgetContents)
 
         self.retranslateUi(Naswail_Tool)
-        self.tabWidget_3.setCurrentIndex(0)
-        self.tabWidget.setCurrentIndex(0)
         QtCore.QMetaObject.connectSlotsByName(Naswail_Tool)
 
     def retranslateUi(self, Naswail_Tool):
         _translate = QtCore.QCoreApplication.translate
-        Naswail_Tool.setWindowTitle(_translate("Naswail_Tool", "Form"))
+        Naswail_Tool.setWindowTitle(_translate("Naswail_Tool", "Naswail - Tools"))
+        self.label_4.setText(_translate("Naswail_Tool", "Naswail"))
         self.pushButton_4.setText(_translate("Naswail_Tool", "Home"))
         self.pushButton_8.setText(_translate("Naswail_Tool", "Incident Response"))
         self.pushButton_3.setText(_translate("Naswail_Tool", "Tools"))
         self.pushButton_2.setText(_translate("Naswail_Tool", "Analysis"))
-        self.label_4.setText(_translate("Naswail_Tool", "      Naswail"))
-        self.label_2.setText(_translate("Naswail_Tool", "                                                                                Suspicious Packets Analyzer"))
-        self.label_15.setText(_translate("Naswail_Tool", "                                                                             Predict Future Traffic"))
-        self.label_22.setText(_translate("Naswail_Tool", "Start Time"))
-        self.label_23.setText(_translate("Naswail_Tool", "End Time"))
-        self.checkBox_21.setText(_translate("Naswail_Tool", "UDP"))
-        self.checkBox_22.setText(_translate("Naswail_Tool", "TCP"))
-        self.checkBox_23.setText(_translate("Naswail_Tool", "ICMP"))
-        self.checkBox_24.setText(_translate("Naswail_Tool", "DNS"))
-        self.checkBox_25.setText(_translate("Naswail_Tool", "HTTP"))
-        self.checkBox_26.setText(_translate("Naswail_Tool", "HTTPS"))
-        self.checkBox_27.setText(_translate("Naswail_Tool", "FTP"))
-        self.checkBox_28.setText(_translate("Naswail_Tool", "DHCP"))
-        self.checkBox_29.setText(_translate("Naswail_Tool", "Other"))
-        self.checkBox_30.setText(_translate("Naswail_Tool", "TELNET"))
-        self.label_25.setText(_translate("Naswail_Tool", "  Filter by Protocol"))
-        self.label_26.setText(_translate("Naswail_Tool", "Filter by source IP"))
-        self.label_27.setText(_translate("Naswail_Tool", "Filter by Destination IP"))
-        self.comboBox_3.setItemText(0, _translate("Naswail_Tool", "All"))
-        self.comboBox_3.setItemText(1, _translate("Naswail_Tool", "Inside Traffic"))
-        self.comboBox_3.setItemText(2, _translate("Naswail_Tool", "Outside Traffic"))
-        self.label_28.setText(_translate("Naswail_Tool", "Type Of Traffic"))
-        self.pushButton_6.setText(_translate("Naswail_Tool", "Reset"))
-        self.pushButton_11.setText(_translate("Naswail_Tool", "Apply"))
-        self.tabWidget_3.setTabText(self.tabWidget_3.indexOf(self.tab_5), _translate("Naswail_Tool", "Packet Filter"))
-        self.tabWidget_3.setTabText(self.tabWidget_3.indexOf(self.tab_7), _translate("Naswail_Tool", "Decode"))
-        self.tabWidget_3.setTabText(self.tabWidget_3.indexOf(self.tab_6), _translate("Naswail_Tool", "Packet Details"))
         self.label_5.setText(_translate("Naswail_Tool", "Enter Number of Hours:"))
         self.pushButton.setText(_translate("Naswail_Tool", "Predict"))
-        self.label_19.setText(_translate("Naswail_Tool", "                                                                   Network Activity Monitoring"))
         self.pushButton_5.setText(_translate("Naswail_Tool", "Save"))
         self.pushButton_7.setText(_translate("Naswail_Tool", "Refresh"))
-        self.label_18.setText(_translate("Naswail_Tool", "                                                                             Corrupted Packets"))
-        self.label_7.setText(_translate("Naswail_Tool", "Start Time"))
-        self.label_8.setText(_translate("Naswail_Tool", "End Time"))
-        self.checkBox.setText(_translate("Naswail_Tool", "UDP"))
-        self.checkBox_2.setText(_translate("Naswail_Tool", "TCP"))
-        self.checkBox_3.setText(_translate("Naswail_Tool", "ICMP"))
-        self.checkBox_4.setText(_translate("Naswail_Tool", "DNS"))
-        self.checkBox_5.setText(_translate("Naswail_Tool", "HTTP"))
-        self.checkBox_6.setText(_translate("Naswail_Tool", "HTTPS"))
-        self.checkBox_8.setText(_translate("Naswail_Tool", "FTP"))
-        self.checkBox_9.setText(_translate("Naswail_Tool", "DHCP"))
-        self.checkBox_10.setText(_translate("Naswail_Tool", "Other"))
-        self.checkBox_7.setText(_translate("Naswail_Tool", "TELNET"))
-        self.label.setText(_translate("Naswail_Tool", "  Filter by Protocol"))
-        self.label_10.setText(_translate("Naswail_Tool", "Filter by source IP"))
-        self.label_16.setText(_translate("Naswail_Tool", "Filter by Destination IP"))
-        self.comboBox.setItemText(0, _translate("Naswail_Tool", "All"))
-        self.comboBox.setItemText(1, _translate("Naswail_Tool", "Inside Traffic"))
-        self.comboBox.setItemText(2, _translate("Naswail_Tool", "Outside Traffic"))
-        self.label_3.setText(_translate("Naswail_Tool", "Type Of Traffic"))
-        self.pushButton_9.setText(_translate("Naswail_Tool", "Apply"))
-        self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab), _translate("Naswail_Tool", "Packet Filter"))
-        self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_2), _translate("Naswail_Tool", "Packet Details"))
+        self.pushButton_6.setText(_translate("Naswail_Tool", "Reset Filter"))
+        self.pushButton_11.setText(_translate("Naswail_Tool", "Apply Filter"))
+        self.filterOptionsGroup.setTitle(_translate("Naswail_Tool", "Filter Options"))
+        self.protocolFiltersGroup.setTitle(_translate("Naswail_Tool", "Protocol Filters"))
+        self.ipFiltersGroup.setTitle(_translate("Naswail_Tool", "IP Filters"))
 
 
 if __name__ == "__main__":

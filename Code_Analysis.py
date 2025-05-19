@@ -1,25 +1,43 @@
 import sys
 import numpy as np
 import threading
+from PyQt6.QtCore import pyqtSignal, pyqtSlot, QObject
+
+# Set matplotlib backend before importing pyplot
+import matplotlib
+matplotlib.use('Agg')  # Use non-interactive backend
+
+import matplotlib.pyplot as plt
+from matplotlib.figure import Figure
+from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
+
 import plotly.graph_objects as go
 import geoip2.database
 import networkx as nx
-import matplotlib.pyplot as plt
 from datetime import datetime
 from PyQt6.QtWidgets import *
 from PyQt6.QtCore import *
-from PyQt6.QtGui import QPixmap
+from PyQt6.QtGui import QPixmap, QPainter, QColor, QPen, QBrush, QFont, QPainterPath, QImage
 from scapy.layers.inet import IP
 from scapy.all import *
-from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
-from matplotlib.figure import Figure
 from UI_Analysis import Ui_Naswail_Anlaysis
 from Code_Tools import Window_Tools
 from Code_IncidentResponse import IncidentResponse
+import math
 
-class GeoMap(threading.Thread):
+class GeoMap(threading.Thread, QObject):
+    # Define signal to send pixmap to the main thread
+    pixmapReady = pyqtSignal(QPixmap)
+    
+    # Class variables for real location
+    real_location_fetched = False
+    real_lat = 30.0444
+    real_lon = 31.2357
+    real_location_name = "Cairo (Default)"
+    
     def __init__(self, ui, packets, anomalies):
-        super().__init__()
+        threading.Thread.__init__(self)
+        QObject.__init__(self)
         self.ui = ui
         self.packets = packets
         self.anomalies = anomalies
@@ -28,7 +46,38 @@ class GeoMap(threading.Thread):
         self.src_lats, self.src_lons = [], []
         self.dst_lats, self.dst_lons = [], []
         self.lines = []
+        
+        # Connect signal to label update function
+        self.pixmapReady.connect(self.update_ui_label)
+        
+        # Fetch real location once if not already fetched
+        if not GeoMap.real_location_fetched:
+            self.fetch_real_location()
+        
+        # Move to daemon thread for automatic cleanup
+        self.daemon = True
         self.start()  
+
+    def fetch_real_location(self):
+        """Fetch real location once and store in class variables"""
+        try:
+            import requests
+            print("Detecting real location...")
+            # Using ip-api.com free service (no API key needed)
+            response = requests.get('http://ip-api.com/json/', timeout=3).json()
+            if response.get('status') == 'success':
+                GeoMap.real_lat = response.get('lat')
+                GeoMap.real_lon = response.get('lon')
+                city = response.get('city', 'Unknown')
+                country = response.get('country', 'Unknown')
+                GeoMap.real_location_name = f"{city}, {country}"
+                print(f"Detected real location: {GeoMap.real_location_name} ({GeoMap.real_lat}, {GeoMap.real_lon})")
+                GeoMap.real_location_fetched = True
+            else:
+                print(f"IP geolocation failed, using default coordinates")
+        except Exception as e:
+            print(f"Error getting real location: {e}")
+            print("Using default coordinates (Cairo)")
 
     def get_location(self, ip):
         try:
@@ -38,11 +87,30 @@ class GeoMap(threading.Thread):
                 lon = response.location.longitude
                 return lat, lon
         except geoip2.errors.AddressNotFoundError:
-            return 30.0444, 31.2357
+            # Use the pre-fetched real location
+            return GeoMap.real_lat, GeoMap.real_lon
+        except Exception as e:
+            print(f"Error getting location for IP {ip}: {e}")
+            return GeoMap.real_lat, GeoMap.real_lon  # Use real location as fallback
+    
+    @pyqtSlot(QPixmap)
+    def update_ui_label(self, pixmap):
+        """This method runs in the main thread to update the UI safely"""
+        try:
+            if not pixmap.isNull() and self.ui and hasattr(self.ui, 'label') and self.ui.label is not None:
+                print("Updating UI label with pixmap from main thread")
+                self.ui.label.setPixmap(pixmap)
+                self.ui.label.setScaledContents(True)
+            else:
+                print("Pixmap was null or UI label is not available")
+        except RuntimeError as e:
+            print(f"UI update error: {e}")  # This catches the C++ object deleted error
+        except Exception as e:
+            print(f"Unexpected error updating UI: {e}")
 
     def create_map(self):
         try:
-            
+            print("Starting create_map function...")
             for i in range(self.lastindex, len(self.packets)):
                 if IP in self.packets[i]:
                     
@@ -56,9 +124,6 @@ class GeoMap(threading.Thread):
                         self.dst_lats.append(dst_lat)
                         self.dst_lons.append(dst_lon)
 
-                        
-
-                        # add lines connecting the source to destination
                         if self.packets[i] in self.anomalies:
                             self.lines.append({
                                 "type": "scattergeo",
@@ -73,46 +138,321 @@ class GeoMap(threading.Thread):
                                 "lat": [src_lat, dst_lat],
                                 "lon": [src_lon, dst_lon],
                                 "mode": "lines",
-                                "line": {"width": 1, "color": "green"},
+                                "line": {"width": 1, "color": "blue"},
                             })
 
             self.lastindex = len(self.packets)
 
-            points = go.Scattergeo(
-                lon=self.src_lons + self.dst_lons,  # Combine source and destination lon values
-                lat=self.src_lats + self.dst_lats,  # Combine source and destination lat values
-                mode="markers",
-                marker=dict(size=6, color="blue"),
-                text=[f"Source: {p[IP].src}" for p in self.packets if IP in p] + [f"Destination: {p[IP].dst}" for p in self.packets if IP in p],
-            )
-
-            # Combine points and lines
-            fig = go.Figure(data=[points] + self.lines)
-
-            # Set map layout
-            fig.update_layout(
-                title="Packet Origins and Destinations",
-                geo=dict(
-                    scope="world",
-                    projection_type="equirectangular",
-                    showland=True,
-                    landcolor="rgb(243, 243, 243)",
-                    subunitcolor="rgb(217, 217, 217)",
-                ),
-            )
-
+            print(f"Processing {len(self.src_lats)} data points for the map...")
+            if len(self.src_lats) == 0:
+                print("No valid coordinates found for the map")
+                return
             
+            # Create a basic plot without a map
+            print("Creating map visualization with world map background...")
+            # Create a direct rendering using QPainter
+            from PyQt6.QtGui import QPainter, QColor, QPen, QBrush, QFont, QPainterPath, QImage
+            from PyQt6.QtCore import Qt, QPointF, QRect
+            import os
+            
+            # Create a new QPixmap with appropriate size
+            pixmap_width, pixmap_height = 700, 450
+            
+            # Load the world map background
+            world_map_path = "newworldmap.png"  # Try the equirectangular map first
+            if not os.path.exists(world_map_path):
+                world_map_path = "worldmap.png"  # Fall back to original map
+            
+            # Check if world map exists
+            if not os.path.exists(world_map_path):
+                print(f"World map file not found. Using plain background.")
+                pixmap = QPixmap(pixmap_width, pixmap_height)
+                pixmap.fill(QColor('#1a1a2e'))  # Dark blue background
+            else:
+                try:
+                    # Load the world map as background and convert to grayscale
+                    from PyQt6.QtGui import QImage
+                    print(f"Converting world map to grayscale...")
+                    
+                    # Load the image
+                    background_image = QImage(world_map_path)
+                    
+                    # Convert to grayscale
+                    for y in range(background_image.height()):
+                        for x in range(background_image.width()):
+                            pixel_color = background_image.pixelColor(x, y)
+                            # Calculate grayscale value but make it lighter
+                            gray_value = int(0.299 * pixel_color.red() + 0.587 * pixel_color.green() + 0.114 * pixel_color.blue())
+                            # Make it lighter by adding an offset (clamp to 255 max)
+                            gray_value = min(255, gray_value + 40)
+                            pixel_color.setRgb(gray_value, gray_value, gray_value)
+                            background_image.setPixelColor(x, y, pixel_color)
+                    
+                    background_map = QPixmap.fromImage(background_image)
+                    pixmap = QPixmap(pixmap_width, pixmap_height)
+                    
+                    # Scale the background map to fit our pixmap size
+                    scaled_map = background_map.scaled(pixmap_width, pixmap_height, 
+                                                    Qt.AspectRatioMode.IgnoreAspectRatio, 
+                                                    Qt.TransformationMode.SmoothTransformation)
+                    
+                    # Create a slightly transparent version of the map for better data visibility
+                    pixmap.fill(Qt.GlobalColor.transparent)
+                    painter = QPainter(pixmap)
+                    painter.setOpacity(0.8)  # Make the map slightly transparent
+                    painter.drawPixmap(0, 0, scaled_map)
+                    painter.setOpacity(1.0)  # Reset opacity for data points
+                except Exception as e:
+                    print(f"Error processing world map: {e}")
+                    pixmap = QPixmap(pixmap_width, pixmap_height)
+                    pixmap.fill(QColor('#1a1a2e'))  # Dark blue background if error occurs
+            
+            # Start painting
+            if not os.path.exists(world_map_path):
+                # If we didn't load a background, we need to initialize the painter
+                painter = QPainter(pixmap)
+                
+            painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
+            
+            # Convert lat/lon to x,y coordinates
+            def latlon_to_xy(lat, lon):
+                # Simple conversion from lat/lon to x,y in pixmap
+                # Make sure longitude is correctly handled for the map
+                # Most world maps have longitude ranging from -180 to +180
+                # with 0 at the center (Greenwich meridian)
+                
+                # X coordinate: Convert longitude from -180...+180 to 0...pixmap_width
+                x = ((lon + 180) / 360) * pixmap_width
+                
+                # Y coordinate: Convert latitude from +90 (North Pole) to -90 (South Pole)
+                # to 0...pixmap_height, leaving room for title and legend
+                y = ((90 - lat) / 180) * (pixmap_height - 60) + 30
+                
+                # Debug output for Cairo coordinates
+                if abs(lat - 30.0444) < 0.001 and abs(lon - 31.2357) < 0.001:
+                    print(f"Cairo coordinates: lat={lat}, lon={lon} -> x={x}, y={y}")
+                    # Cairo is at ~30° North, ~31° East
+                    # Should be slightly above the equator and slightly east of Greenwich
+                
+                return x, y
+            
+            # Draw connections as curved lines
+            for i in range(len(self.src_lats)):
+                x1, y1 = latlon_to_xy(self.src_lats[i], self.src_lons[i])
+                x2, y2 = latlon_to_xy(self.dst_lats[i], self.dst_lons[i])
+                
+                # Check if this packet is an anomaly and set the color accordingly
+                if i < len(self.packets) and self.packets[i] in self.anomalies:
+                    # Red color for anomalies
+                    painter.setPen(QPen(QColor(255, 0, 0, 255), 1.5))  # Pure red line for anomalies
+                    # Slightly increase curve height for anomalies
+                    anomaly_factor = 1.20  # Just 10% more curved
+                else:
+                    # Blue color for regular connections
+                    painter.setPen(QPen(QColor(0, 0, 255, 255), 1.5))  # Pure blue line for normal connections
+                    anomaly_factor = 1.0  # Normal curvature
+                
+                # Create curved path
+                path = QPainterPath()
+                path.moveTo(x1, y1)
+                
+                # Calculate control points for bezier curve
+                # The curve height is proportional to the distance between points
+                dx = x2 - x1
+                dy = y2 - y1
+                dist = (dx**2 + dy**2)**0.5  # Distance between points
+                
+                # Determine curve height (bulge)
+                curve_height = min(dist / 3, 150) * anomaly_factor  # Cap at 150px to avoid extreme curves, apply anomaly factor
+                
+                # Calculate control point - perpendicular to the line
+                # This creates a nice arc effect
+                mid_x = (x1 + x2) / 2
+                mid_y = (y1 + y2) / 2
+                
+                # For points on opposite sides of the map
+                if abs(dx) > pixmap_width / 2:
+                    # Skip drawing these lines that would wrap around the world
+                    continue
+                
+                # Calculate perpendicular vector to create curve
+                if dx == 0:  # Vertical line case
+                    ctrl_x = mid_x + curve_height
+                    ctrl_y = mid_y
+                else:
+                    # Perpendicular slope is negative reciprocal
+                    slope = -dx / dy if dy != 0 else 0
+                    angle = math.atan(slope)
+                    
+                    # Always make curves bend upward (negative y direction)
+                    # Flip the sign if needed based on the line direction
+                    side = -1  # Start with upward (-1 in screen coordinates)
+
+                    # If the line is mostly horizontal, we need to adjust the side
+                    # to make sure it points upward relative to the screen
+                    if abs(dx) > abs(dy):  # More horizontal than vertical
+                        if slope > 0:  # Line goes down-right or up-left
+                            side = -1  # Keep upward
+                        else:  # Line goes up-right or down-left
+                            side = 1   # Switch to make it visually upward
+                    
+                    ctrl_x = mid_x + side * curve_height * math.cos(angle)
+                    ctrl_y = mid_y + side * curve_height * math.sin(angle)
+                    
+                    # Force curves to always go upward in screen coordinates (smaller y)
+                    if ctrl_y > mid_y:  # If control point is below midpoint (larger y value)
+                        side *= -1  # Flip the side to make it go upward
+                        ctrl_x = mid_x + side * curve_height * math.cos(angle)
+                        ctrl_y = mid_y + side * curve_height * math.sin(angle)
+                
+                # Add the quadratic bezier curve
+                path.quadTo(ctrl_x, ctrl_y, x2, y2)
+                painter.drawPath(path)
+                
+                # Add arrow at destination for direction
+                arrow_size = 6  # Smaller arrow
+                # Calculate angle of arrival
+                angle = math.atan2(y2 - ctrl_y, x2 - ctrl_x)
+                # Draw arrow
+                arrow_p1 = QPointF(x2 - arrow_size * math.cos(angle - math.pi/6), 
+                                 y2 - arrow_size * math.sin(angle - math.pi/6))
+                arrow_p2 = QPointF(x2 - arrow_size * math.cos(angle + math.pi/6), 
+                                 y2 - arrow_size * math.sin(angle + math.pi/6))
+                painter.drawLine(QPointF(x2, y2), arrow_p1)
+                painter.drawLine(QPointF(x2, y2), arrow_p2)
+            
+            # Draw all network nodes as a single type (no distinction between source and destination)
+            painter.setPen(QPen(Qt.GlobalColor.white, 1))  # White outline
+            painter.setBrush(QBrush(QColor(0, 255, 0, 255)))  # Pure green with full opacity
+            
+            # Create a set of all unique node coordinates to avoid drawing duplicates
+            unique_nodes = set()
+            
+            # Process all source and destination nodes
+            for i in range(len(self.src_lats)):
+                # Add source coordinates
+                src_coords = (self.src_lats[i], self.src_lons[i])
+                if src_coords not in unique_nodes:
+                    unique_nodes.add(src_coords)
+                
+                # Add destination coordinates
+                dst_coords = (self.dst_lats[i], self.dst_lons[i])
+                if dst_coords not in unique_nodes:
+                    unique_nodes.add(dst_coords)
+            
+            # Draw all unique nodes
+            for lat, lon in unique_nodes:
+                x, y = latlon_to_xy(lat, lon)
+                painter.drawEllipse(QPointF(x, y), 4, 4)  # Draw nodes with consistent size
+            
+            # Create a semi-transparent background for legend
+            legend_rect = QRect(10, pixmap_height - 80, 300, 60)  # Wider and shorter legend
+            painter.setBrush(QBrush(QColor(30, 30, 30, 180)))  # Semi-transparent dark background
+            painter.setPen(QPen(QColor(200, 200, 200, 150), 1))
+            painter.drawRoundedRect(legend_rect, 10, 10)
+            
+            # Draw legend
+            legend_font = QFont()
+            legend_font.setPointSize(9)  # Slightly smaller font
+            painter.setFont(legend_font)
+            
+            # Network node legend
+            painter.setPen(QColor('#FFFFFF'))  # White color for text
+            painter.drawText(20, pixmap_height - 60, "Network Node")
+            painter.setPen(QPen(Qt.GlobalColor.white, 1))
+            painter.setBrush(QBrush(QColor(0, 255, 0, 255)))  # Pure green to match nodes
+            painter.drawEllipse(QPointF(105, pixmap_height - 60), 4, 4)
+            
+            # Normal connection legend
+            painter.setPen(QColor('#FFFFFF'))  # White color for text
+            painter.drawText(130, pixmap_height - 60, "Normal Traffic")
+            painter.setPen(QPen(QColor(0, 0, 255, 255), 1.5))  # Pure blue lines
+            
+            # Draw a small curved line for normal connections in the legend
+            legend_x1 = 210
+            legend_y1 = pixmap_height - 60
+            legend_x2 = 240
+            legend_y2 = pixmap_height - 60
+            
+            # Normal connection curved path
+            legend_path = QPainterPath()
+            legend_path.moveTo(legend_x1, legend_y1)
+            legend_path.quadTo(
+                (legend_x1 + legend_x2) / 2,  # control point x 
+                legend_y1 - 10,              # control point y (curved up)
+                legend_x2, 
+                legend_y2
+            )
+            painter.drawPath(legend_path)
+            
+            # Anomaly connection legend
+            painter.setPen(QColor('#FFFFFF'))  # White color for text
+            painter.drawText(20, pixmap_height - 35, "Anomaly")
+            painter.setPen(QPen(QColor(255, 0, 0, 255), 1.5))  # Pure red lines
+            
+            # Draw a small curved line for anomaly connections in the legend
+            legend_x1_anom = 80
+            legend_y1_anom = pixmap_height - 35
+            legend_x2_anom = 110
+            legend_y2_anom = pixmap_height - 35
+            
+            # Anomaly connection curved path
+            legend_path_anom = QPainterPath()
+            legend_path_anom.moveTo(legend_x1_anom, legend_y1_anom)
+            legend_path_anom.quadTo(
+                (legend_x1_anom + legend_x2_anom) / 2,  # control point x 
+                legend_y1_anom - 10,              # control point y (curved up)
+                legend_x2_anom, 
+                legend_y2_anom
+            )
+            painter.drawPath(legend_path_anom)
+            
+            # Add arrows to legend lines
+            arrow_size = 4
+            # Normal traffic arrow
+            painter.setPen(QPen(QColor(0, 0, 255, 255), 1.5))
+            painter.drawLine(
+                QPointF(legend_x2, legend_y2),
+                QPointF(legend_x2 - arrow_size, legend_y2 - arrow_size/2)
+            )
+            painter.drawLine(
+                QPointF(legend_x2, legend_y2),
+                QPointF(legend_x2 - arrow_size, legend_y2 + arrow_size/2)
+            )
+            
+            # Anomaly traffic arrow
+            painter.setPen(QPen(QColor(255, 0, 0, 255), 1.5))
+            painter.drawLine(
+                QPointF(legend_x2_anom, legend_y2_anom),
+                QPointF(legend_x2_anom - arrow_size, legend_y2_anom - arrow_size/2)
+            )
+            painter.drawLine(
+                QPointF(legend_x2_anom, legend_y2_anom),
+                QPointF(legend_x2_anom - arrow_size, legend_y2_anom + arrow_size/2)
+            )
+            
+            # End painting
+            painter.end()
+            
+            print(f"Created QPixmap with world map: {pixmap.width()}x{pixmap.height()}")
+            
+            # Save pixmap to file for debugging
             image_path = "packet_map.png"
-            fig.write_image(image_path)  
-            pixmap = QPixmap(image_path)
-            self.ui.label.setPixmap(pixmap)
+            pixmap.save(image_path)
+            print(f"Map saved to {image_path}")
+            
+            # Emit signal with pixmap to update UI from main thread
+            self.pixmapReady.emit(pixmap)
 
         except Exception as e:
+            import traceback
             print(f"Error in create_map function: {e}")
+            print(traceback.format_exc())
     
     def run(self):
         print("GeoMap Thread is running...")
         self.create_map()
+        print("GeoMap Thread finished")
 
 
 class Node:
@@ -122,23 +462,37 @@ class Node:
 
 
 class NetworkTopologyVisualizer(threading.Thread):
-    def __init__(self,packetobj, ui):
+    def __init__(self, packetobj, ui):
         super().__init__()
         self.ui = ui
         self.list_of_nodes = []
-        self.packetobj=packetobj
-        # Layout for self.ui.widget_6
-        self.layout = QVBoxLayout(self.ui.widget_6)
+        self.packetobj = packetobj
+        try:
+            # Layout for self.ui.widget_6
+            self.layout = QVBoxLayout(self.ui.widget_6)
+            
+            # Clear any existing widgets in the layout
+            if self.ui.widget_6.layout():
+                while self.ui.widget_6.layout().count():
+                    item = self.ui.widget_6.layout().takeAt(0)
+                    if item.widget():
+                        item.widget().deleteLater()
 
-        
-        self.figure = plt.figure()
-        self.canvas = FigureCanvas(self.figure)
-        self.layout.addWidget(self.canvas)
+            self.figure = plt.figure(figsize=(6, 5))  # Reduced figure size
+            self.canvas = FigureCanvas(self.figure)
+            self.layout.addWidget(self.canvas)
+            
+            print("NetworkTopologyVisualizer initialized successfully")
+        except Exception as e:
+            import traceback
+            print(f"Error initializing NetworkTopologyVisualizer: {e}")
+            print(traceback.format_exc())
 
         self.start()
 
     def find_unique_devices_and_edges(self):
         try:
+            print("Finding unique devices and edges...")
             unique_ips = set()
             pure_local=[]#local in both dst and src
             #  unique IP addresses
@@ -158,6 +512,7 @@ class NetworkTopologyVisualizer(threading.Thread):
                 if islocal2 and islocal:
                     pure_local.append(packet) 
            
+            print(f"Found {len(unique_ips)} unique IPs and {len(pure_local)} pure local packets")
             
             # Create nodes
             for ip in unique_ips:
@@ -177,9 +532,12 @@ class NetworkTopologyVisualizer(threading.Thread):
                     if src_ip == current_node.mac_address:
                         current_node.edges.add(dst_ip)
             
+            print(f"Successfully processed {len(self.list_of_nodes)} nodes with their connections")
             
         except Exception as e:
-            print(f"Error in unique IP function: {e}")
+            import traceback
+            print(f"Error in find_unique_devices_and_edges: {e}")
+            print(traceback.format_exc())
 
     
     def visualize_network(self):
@@ -228,10 +586,9 @@ class NetworkTopologyVisualizer(threading.Thread):
         # Display legend if nodes exist
         if self.list_of_nodes:
              ax.legend(
-        
-        bbox_to_anchor=(1.45, 1.05),  # Move the legend to the right and slightly higher
-        borderaxespad=0.0  # Padding between the legend and the axes
-    )
+                bbox_to_anchor=(1.45, 1.05),  # Move the legend to the right and slightly higher
+                borderaxespad=0.0  # Padding between the legend and the axes
+            )
 
         
         self.canvas.draw()
@@ -469,6 +826,7 @@ class visualization:#class for all the charts
                     child.deleteLater()
 
         layout.addWidget(canvas)
+        
     def display_time_series(self):
         try:
  
@@ -952,43 +1310,116 @@ class Window_Analysis(QWidget, Ui_Naswail_Anlaysis):
     def __init__(self, main_window):
         super().__init__()
         self.main_window = main_window  # Reference to the main window
-
         self.ui = Ui_Naswail_Anlaysis()  # Create an instance of the UI class
         self.ui.setupUi(self)  # Set up the UI for this widget
+        
+        # Initialize visualization object first
+        print("Initializing visualization objects...")
+        self.Visualizationobj = visualization(self.main_window, self.ui)
+        
+        # Create a refresh button for the geomap
+        self.refresh_button = QPushButton("Refresh Map")
+        self.refresh_button.setObjectName("refreshMapButton")
+        self.refresh_button.setMaximumWidth(120)
+        self.ui.geoGroupBox.layout().insertWidget(0, self.refresh_button)
+        self.refresh_button.clicked.connect(self.refresh_geomap)
+        
+        # Add a location label above the map
+        self.location_label = QLabel("Detecting location...")
+        self.location_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        font = QFont()
+        font.setPointSize(12)
+        font.setBold(True)
+        self.location_label.setFont(font)
+        self.location_label.setStyleSheet("color: #40E0D0;")  # Turquoise color to match theme
+        self.ui.geoGroupBox.layout().insertWidget(0, self.location_label)
+        
+        # Then set up UI connections
         self.init_ui()
-        self.Visualizationobj=visualization(self.main_window,self.ui)
-        self.ThreeDVisulizationobj=NetworkTopologyVisualizer(self.main_window.PacketSystemobj,self.ui)
-        self.GeoMapObj = GeoMap(self.ui, self.main_window.PacketSystemobj.packets, self.main_window.PacketSystemobj.anomalies)
-        #self.GeoMapObj.start()
+        
+        try:
+            print("Setting up 3D visualization...")
+            self.ThreeDVisulizationobj = NetworkTopologyVisualizer(self.main_window.PacketSystemobj, self.ui)
+        except Exception as e:
+            print(f"Error initializing 3D visualization: {e}")
+        
+        try:
+            print("Setting up GeoMap visualization...")
+            # Make sure packets and anomalies exist and are accessible
+            if hasattr(self.main_window.PacketSystemobj, 'packets') and self.main_window.PacketSystemobj.packets:
+                print(f"Found {len(self.main_window.PacketSystemobj.packets)} packets")
+                self.GeoMapObj = GeoMap(self.ui, self.main_window.PacketSystemobj.packets, 
+                                      self.main_window.PacketSystemobj.anomalies)
+                # Update location label after GeoMap is created
+                self.update_location_label()
+            else:
+                print("No packets available for the GeoMap")
+        except Exception as e:
+            import traceback
+            print(f"Error initializing GeoMap: {e}")
+            print(traceback.format_exc())
+
+    def update_location_label(self):
+        """Update the location label with the real location information"""
+        if hasattr(GeoMap, 'real_location_name') and GeoMap.real_location_name:
+            self.location_label.setText(f"Network Traffic Map (Real Location: {GeoMap.real_location_name})")
+        else:
+            self.location_label.setText("Network Traffic Map (Location: Unknown)")
+
+    def refresh_geomap(self):
+        """Refresh the geomap visualization"""
+        try:
+            print("Refreshing GeoMap...")
+            # Re-initialize the GeoMap object
+            if hasattr(self, 'GeoMapObj'):
+                # Delete old thread if it exists
+                self.GeoMapObj = None
+                
+            # Create new GeoMap
+            self.GeoMapObj = GeoMap(self.ui, self.main_window.PacketSystemobj.packets, 
+                                  self.main_window.PacketSystemobj.anomalies)
+            print("GeoMap refresh initiated")
+            
+            # Update the location label
+            self.update_location_label()
+            
+        except Exception as e:
+            import traceback
+            print(f"Error refreshing GeoMap: {e}")
+            print(traceback.format_exc())
+            
     def init_ui(self):
         self.setWindowTitle("Secondary Widget")
         self.showMaximized()
         self.setWindowTitle("Naswail - Visualization")
-        self.Visualizationobj=visualization(self.main_window,self.ui)
+        
         # Connect comboBox_2 selection change
         self.ui.comboBox_2.currentIndexChanged.connect(self.on_combobox_change)
         self.ui.comboBox_3.currentIndexChanged.connect(self.on_combobox_change)
         self.ui.comboBox_4.currentIndexChanged.connect(self.on_combobox_change)
         self.ui.comboBox_5.currentIndexChanged.connect(self.on_combobox_change)
         self.ui.comboBox_6.currentIndexChanged.connect(self.on_combobox_change)
-        # Connect PushButton_5 click to display pie chart
         
-        pixmap = QPixmap(r"logo.png")
+        # Set up logo
+        pixmap = QPixmap(r"logo.jpg")  # Fixed to use logo.jpg instead of logo.png
         self.pixmap_item = QGraphicsPixmapItem(pixmap)
         self.scene = QGraphicsScene(self)
         self.scene.addItem(self.pixmap_item)
         self.ui.graphicsView.setScene(self.scene)
         self.ui.graphicsView.setFixedSize(71, 61)
         self.ui.graphicsView.fitInView(self.scene.sceneRect(), Qt.AspectRatioMode.KeepAspectRatio)
+        
+        # Connect navigation buttons
         self.ui.pushButton_4.clicked.connect(self.show_main_window)
         self.ui.pushButton_3.clicked.connect(self.show_tools_window)
         self.ui.pushButton_5.clicked.connect(self.show_incidentresponse_window)
 
         self.ui.label.setText("")
-       
      
         # Initialize a placeholder for selected option
         self.selected_option = "Protocols"
+        
+        # Display all visualizations
         self.Visualizationobj.display_graph()
         self.Visualizationobj.display_heatmap()
         self.Visualizationobj.display_histogram()
