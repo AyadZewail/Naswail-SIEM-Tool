@@ -12,6 +12,8 @@ from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 from datetime import datetime, timedelta
 from UI_Tools import Ui_Naswail_Tool
+import time
+
 class NetworkActivity:
     def __init__(self,ui):
         self.packetsysobj=None
@@ -52,41 +54,57 @@ class RegressionPrediction(threading.Thread):
         self.packets = packets
         self.time_series = time_series
         self.model = LinearRegression()
-        #print(self.packets)
+        self.prediction_running = False  # Flag to prevent concurrent predictions
+        self.last_update_time = 0  # Track last update time
         self.start()  
         
     def pred_traffic(self):
         #Train Regression Model
         try:
+            # Prevent concurrent predictions
+            if self.prediction_running:
+                return
+                
+            self.prediction_running = True
+            
             if(len(self.packets) > 10):
-                #print(datetime.strptime(list(time_series.keys())[0], "%H:%M:%S"))
-                X = [timestamp - list(self.time_series.keys())[0] for timestamp in self.time_series.keys()]
-
-                X = np.array(list(map(int, X))).reshape(-1, 1)
-                y = list(self.time_series.values())
-                X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, train_size=0.8, random_state=42)
+                # Convert time series to numpy arrays directly
+                X = np.array([timestamp - list(self.time_series.keys())[0] for timestamp in self.time_series.keys()]).reshape(-1, 1)
+                y = np.array(list(self.time_series.values()))
+                
+                # Use smaller test size for better performance with small datasets
+                test_size = min(0.2, 10/len(self.packets))
+                X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size, random_state=42)
+                
                 self.model.fit(X_train, y_train)
 
                 currentTime = datetime.now()
-                TimeLater = []
+                # Pre-allocate arrays for better performance
                 Intervals = [0, 1, 3, 6, 12, 24]
-                for i in range(6):
-                    if(i != 0):
-                        TimeLater.append(currentTime.second + 3600 * Intervals[i])
-                    else:
-                        TimeLater.append((currentTime.second + 3600 * self.noHours) if self.noHours is not None else 0)
+                TimeLater = np.zeros(6)
                 
-                TimeLater = np.array(TimeLater).reshape(-1, 1)
-
+                for i in range(6):
+                    if i != 0:
+                        TimeLater[i] = currentTime.second + 3600 * Intervals[i]
+                    else:
+                        TimeLater[i] = (currentTime.second + 3600 * self.noHours) if self.noHours is not None else 0
+                
+                # Reshape once
+                TimeLater = TimeLater.reshape(-1, 1)
+                
+                # Make predictions
                 self.futureTraffic = self.model.predict(TimeLater)
-                for i in range(len(self.futureTraffic)):
-                    self.futureTraffic[i] -= len(self.packets)
-                y_pred = self.model.predict(X_test)
-                self.r2 = r2_score(y_test, y_pred)
-
-                print(self.r2)
+                self.futureTraffic = np.maximum(0, self.futureTraffic - len(self.packets))
+                
+                # Calculate R² score only if we have test data
+                if len(X_test) > 0:
+                    y_pred = self.model.predict(X_test)
+                    self.r2 = r2_score(y_test, y_pred)
+            
+            self.prediction_running = False
         except Exception as e:
-            print(e)
+            self.prediction_running = False
+            print(f"Error in prediction: {e}")
 
     def setHours(self):
         try:
@@ -131,38 +149,89 @@ class RegressionPrediction(threading.Thread):
         except Exception as e:
             print(e)
 
-    def display_graph(self):
+    def display_advanced_graph(self):
         try:
-            counts = []
-            labels = ["Current", "Desired Time", "+1 Hours", "+3 Hours", "+6 Hours", "+12 Hours" + "+24 Hours"]
-            counts.append(len(self.packets))
-            for i in range(0, len(self.futureTraffic) - 1):
-                counts.append(int(self.futureTraffic[i]))
-
-            # Create the graph
-            figure = Figure(figsize=(4, 4))
+            # Only redraw if it's been a while since the last update
+            current_time = time.time()
+            if current_time - self.last_update_time < 5:  # Don't update more than once every 5 seconds
+                return
+                
+            self.last_update_time = current_time
+                
+            # Create a figure with better proportions and smaller size for performance
+            figure = Figure(figsize=(8, 6))
             canvas = FigureCanvas(figure)
-            ax = figure.add_subplot(111)
-            ax.plot(labels, counts, marker='o', linestyle='-', color='b')
-            ax.set_title("Prediction Graph")
-            ax.set_xlabel("Time Intervals")
-            ax.set_ylabel("Estimated Packet Amount")
+            
+            # Main plot for predictions
+            ax1 = figure.add_subplot(211)  # 2 rows, 1 column, first plot
+            
+            # Prediction data
+            pred_labels = ["Now", "Desired", "+1h", "+3h", "+6h", "+12h", "+24h"]
+            pred_times = list(range(len(pred_labels)))
+            pred_values = [len(self.packets)] + [int(val) for val in self.futureTraffic]
+            
+            # Plot predictions as a line with points
+            ax1.plot(pred_times, pred_values, marker='o', color='#40E0D0', linewidth=2, label='Prediction')
+            
+            # Add confidence region (simplified for performance)
+            confidence = 0.1 * np.array(pred_values) * (1 + (1-max(0.1, self.r2))*2)
+            ax1.fill_between(pred_times, pred_values - confidence, pred_values + confidence, 
+                           color='#40E0D0', alpha=0.2)
+            
+            ax1.set_title(f"Network Traffic Prediction")
+            ax1.set_ylabel("Packet Count")
+            ax1.set_xticks(pred_times)
+            ax1.set_xticklabels(pred_labels, rotation=15)
+            ax1.grid(True, linestyle='--', alpha=0.5)
+            
+            # Percentage change plot
+            ax2 = figure.add_subplot(212)  # 2 rows, 1 column, second plot
+            
+            # Calculate percent change
+            base = pred_values[0] if pred_values[0] > 0 else 1
+            pct_change = [(val - base)/base * 100 for val in pred_values]
+            
+            # Create color map
+            colors = ['#40E0D0' if x >= 0 else '#FF6B6B' for x in pct_change]
+            
+            # Plot percentage changes
+            bars = ax2.bar(pred_times, pct_change, color=colors, alpha=0.7)
+            
+            # Add value labels on bars (only for significant changes)
+            for bar, pct in zip(bars, pct_change):
+                if abs(pct) > 1.0:  # Only label significant changes
+                    height = bar.get_height()
+                    y_pos = height + 1 if height >= 0 else height - 5
+                    ax2.text(bar.get_x() + bar.get_width()/2., y_pos,
+                           f'{pct:.1f}%', ha='center', va='bottom', color='white', fontsize=8)
+            
+            ax2.set_title("Percentage Change in Traffic")
+            ax2.set_ylabel("% Change")
+            ax2.set_xticks(pred_times)
+            ax2.set_xticklabels(pred_labels, rotation=15)
+            ax2.grid(True, linestyle='--', alpha=0.5)
+            ax2.axhline(y=0, color='white', linestyle='-', alpha=0.3)
+            
+            # Add R² score without using figure.text for better performance
+            ax2.annotate(f"R²: {self.r2:.2f}", xy=(0.02, 0.02), xycoords='axes fraction', fontsize=8)
+            
+            figure.tight_layout()
             canvas.draw()
-
+            
+            # Update layout
             if self.ui.widget.layout() is None:
                 layout = QVBoxLayout(self.ui.widget)
                 self.ui.widget.setLayout(layout)
             else:
                 layout = self.ui.widget.layout()
-                # Clear the previous widgets in the layout
                 for i in range(layout.count()):
                     child = layout.itemAt(i).widget()
                     if child is not None:
                         child.deleteLater()
-
+            
             layout.addWidget(canvas)
         except Exception as e:
-            print(e)
+            print(f"Error in advanced graph: {e}")
 
     def run(self):
         print("Thread is running...")
@@ -392,7 +461,7 @@ class ErrorPacketSystem:
             self.error_packets = []
             self.packetobj=None
             self.ui=ui
-            
+            self._last_packet_count = 0  # Track packet count for optimized updates
         
         def add_error_packet(self, packet):
                 self.packetobj=packet
@@ -400,39 +469,71 @@ class ErrorPacketSystem:
 
         def display(self):
                 try:
-                    self.ui.tableWidget_6.setRowCount(0)
-                    for packet in self.packetobj.corrupted_packet:
+                    # Only redraw if we have new packets
+                    if self.packetobj and hasattr(self.packetobj, 'corrupted_packet'):
+                        current_count = len(self.packetobj.corrupted_packet)
+                        if current_count == self._last_packet_count:
+                            return  # Skip redraw if no new packets
+                        
+                        # If table already has rows and we're just adding new ones
+                        if self._last_packet_count > 0 and current_count > self._last_packet_count:
+                            # Only process the new packets
+                            start_idx = self._last_packet_count
+                        else:
+                            # Full redraw
+                            self.ui.tableWidget_6.setRowCount(0)
+                            start_idx = 0
                             
-                            #print("in error packet")
-                            src_ip = packet["IP"].src if packet.haslayer("IP") else "N/A"
-                            dst_ip = packet["IP"].dst if packet.haslayer("IP") else "N/A"
+                        # Update our packet count tracker
+                        self._last_packet_count = current_count
+                        
+                        # Add only the new packets
+                        for idx in range(start_idx, current_count):
+                            packet = self.packetobj.corrupted_packet[idx]
+                            
+                            # Extract data once to avoid redundant calls
+                            has_ip = packet.haslayer("IP")
+                            src_ip = packet["IP"].src if has_ip else "N/A"
+                            dst_ip = packet["IP"].dst if has_ip else "N/A"
+                            
+                            has_eth = packet.haslayer("Ethernet")
+                            macsrc = packet["Ethernet"].src if has_eth else "N/A"
+                            macdst = packet["Ethernet"].dst if has_eth else "N/A"
+                            
+                            has_tcp = packet.haslayer("TCP")
+                            has_udp = packet.haslayer("UDP")
+                            
+                            # Determine layer and protocol
+                            if has_tcp:
+                                layer = "tcp"
+                                sport = packet["TCP"].sport
+                                dport = packet["TCP"].dport
+                            elif has_udp:
+                                layer = "udp"
+                                sport = packet["UDP"].sport
+                                dport = packet["UDP"].dport
+                            else:
+                                layer = "Other"
+                                sport = None
+                                dport = None
+                            
                             protocol = self.packetobj.get_protocol(packet)
-                            layer = "UDP" if packet.haslayer("UDP") else "TCP" if packet.haslayer("TCP") else "Other"
-                            packet_time = datetime.fromtimestamp(float(packet.time))
-                            macsrc = packet["Ethernet"].src if packet.haslayer("Ethernet") else "N/A"
-                            macdst = packet["Ethernet"].dst if packet.haslayer("Ethernet") else "N/A"
-                
-                            packet_length = int(len(packet))
-                
-                            ip_version = "IPv6" if packet.haslayer("IPv6") else "IPv4" if packet.haslayer("IP") else "N/A"
-                            layer = "udp" if packet.haslayer("UDP") else "tcp" if packet.haslayer("TCP") else "Other"
-                
-                            sport = None
-                            dport = None
-                            if packet.haslayer("TCP"):
-                                    sport = packet["TCP"].sport
-                                    dport = packet["TCP"].dport
-                            elif packet.haslayer("UDP"):
-                                    sport = packet["UDP"].sport
-                                    dport = packet["UDP"].dport
+                            packet_length = len(packet)
+                            ip_version = "IPv6" if packet.haslayer("IPv6") else "IPv4" if has_ip else "N/A"
+                            
+                            # Format timestamp once
+                            timestamp_str = datetime.fromtimestamp(float(packet.time)).strftime("%I:%M:%S %p")
+                            
+                            # Add row with optimized QTableWidgetItem creation
                             row_position = self.ui.tableWidget_6.rowCount()
                             self.ui.tableWidget_6.insertRow(row_position)
-                            self.ui.tableWidget_6.setItem(row_position, 0, QTableWidgetItem(datetime.fromtimestamp(float(packet.time)).strftime("%I:%M:%S %p")))
+                            
+                            # Populate row efficiently
+                            self.ui.tableWidget_6.setItem(row_position, 0, QTableWidgetItem(timestamp_str))
                             self.ui.tableWidget_6.setItem(row_position, 1, QTableWidgetItem(src_ip))
                             self.ui.tableWidget_6.setItem(row_position, 2, QTableWidgetItem(dst_ip))
                             self.ui.tableWidget_6.setItem(row_position, 3, QTableWidgetItem(protocol))
                             self.ui.tableWidget_6.setItem(row_position, 4, QTableWidgetItem(layer))
-                
                             self.ui.tableWidget_6.setItem(row_position, 5, QTableWidgetItem(macsrc))
                             self.ui.tableWidget_6.setItem(row_position, 6, QTableWidgetItem(macdst))
                             self.ui.tableWidget_6.setItem(row_position, 7, QTableWidgetItem(str(sport) if sport else "N/A"))
@@ -441,7 +542,7 @@ class ErrorPacketSystem:
                             self.ui.tableWidget_6.setItem(row_position, 10, QTableWidgetItem(ip_version))
                 except Exception as e:
                     print(f"Error in display function: {e}")
-           
+
 class Window_Tools(QWidget, Ui_Naswail_Tool):
     def __init__(self, main_window):
         super().__init__()
@@ -492,12 +593,19 @@ class Window_Tools(QWidget, Ui_Naswail_Tool):
         self.ui.pushButton_7.clicked.connect(self.networkactobj.display)
         self.ui.pushButton_5.clicked.connect(self.networkactobj.save_activity)
         
+        # Use a more efficient timer strategy with reduced frequency
         self.timer = QTimer(self)
         self.timer.timeout.connect(self.ttTime)
-        self.timer.start(1000)  # Call every 1000 milliseconds (1 second)
+        self.timer.start(3000)  # Update every 3 seconds instead of every 1 second
         self.sec = 0
         
+        # Set up a second, slower timer for heavy operations
+        self.heavy_timer = QTimer(self)
+        self.heavy_timer.timeout.connect(self.heavy_update)
+        self.heavy_timer.start(15000)  # Run heavy operations every 15 seconds
         
+        # Add cleanup when window is closed
+        self.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose, True)
         
     def init_ui(self):
         self.showMaximized()
@@ -507,16 +615,37 @@ class Window_Tools(QWidget, Ui_Naswail_Tool):
         
 
     def ttTime(self):
-        
+        # Only update the error packet display - light operation
         self.ErrorPacketSystemobj.display()
-        # self.SuAn.display()
-        if(self.sec % 15 == 0):
-            self.RegPred.pred_traffic()
-            if(self.RegPred.r2 > 0.50):
-                self.RegPred.display()
-                self.RegPred.display_graph()
-                pass
-        self.sec += 1
+        self.sec += 3  # Increment by 3 since we're running every 3 seconds
+    
+    def heavy_update(self):
+        # Handle heavy operations on a separate timer
+        try:
+            # Run prediction if not already running
+            if not self.RegPred.prediction_running:
+                self.RegPred.pred_traffic()
+                if self.RegPred.r2 > 0.50:
+                    self.RegPred.display()
+                    self.RegPred.display_advanced_graph()
+        except Exception as e:
+            print(f"Error in heavy update: {e}")
+            
+    def closeEvent(self, event):
+        # Cleanup resources when window is closed
+        self.timer.stop()
+        self.heavy_timer.stop()
+        
+        # Clean up matplotlib resources
+        if self.ui.widget.layout() is not None:
+            layout = self.ui.widget.layout()
+            for i in range(layout.count()):
+                child = layout.itemAt(i).widget()
+                if child is not None:
+                    child.deleteLater()
+        
+        # Accept the close event
+        event.accept()
 
     def resetfilter(self):
         try:
