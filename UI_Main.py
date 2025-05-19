@@ -139,48 +139,39 @@ class Ui_MainWindow(object):
         self.centralwidget = QtWidgets.QWidget(parent=MainWindow)
         self.centralwidget.setObjectName("centralwidget")
         self.tabWidget = QtWidgets.QTabWidget(parent=self.centralwidget)
-        self.tabWidget.setGeometry(QtCore.QRect(12, 437, 781, 311))
+        self.tabWidget.setGeometry(QtCore.QRect(12, 437, 781, 310))
         self.tabWidget.setObjectName("tabWidget")
         self.tab = QtWidgets.QWidget()
         self.tab.setObjectName("tab")
         self.label_7 = QtWidgets.QLabel(parent=self.tab)
-        self.label_7.setGeometry(QtCore.QRect(10, 0, 161, 21))
+        self.label_7.setGeometry(QtCore.QRect(20, 10, 161, 21))
         self.label_7.setStyleSheet("QLabel {\n"
 "    color: white;\n"
 "}\n"
 "")
         self.label_7.setObjectName("label_7")
-        self.dateTimeEdit_2 = QtWidgets.QDateTimeEdit(parent=self.tab)
-        self.dateTimeEdit_2.setGeometry(QtCore.QRect(0, 110, 194, 38))
-        self.dateTimeEdit_2.setObjectName("dateTimeEdit_2")
+        self.dateTimeEdit = QtWidgets.QDateTimeEdit(parent=self.tab)
+        self.dateTimeEdit.setGeometry(QtCore.QRect(20, 35, 200, 38))
+        self.dateTimeEdit.setObjectName("dateTimeEdit")
         self.label_8 = QtWidgets.QLabel(parent=self.tab)
-        self.label_8.setGeometry(QtCore.QRect(10, 80, 161, 21))
+        self.label_8.setGeometry(QtCore.QRect(20, 85, 161, 21))
         self.label_8.setStyleSheet("QLabel {\n"
 "    color: white;\n"
 "}\n"
 "")
         self.label_8.setObjectName("label_8")
-        self.dateTimeEdit = QtWidgets.QDateTimeEdit(parent=self.tab)
-        self.dateTimeEdit.setGeometry(QtCore.QRect(0, 30, 194, 38))
-        self.dateTimeEdit.setObjectName("dateTimeEdit")
-        self.lineEdit = QtWidgets.QLineEdit(parent=self.tab)
-        self.lineEdit.setGeometry(QtCore.QRect(630, 30, 142, 38))
-        self.lineEdit.setAutoFillBackground(False)
-        self.lineEdit.setStyleSheet("QLineEdit {\n"
-"\n"
-"\n"
-"        color: white;\n"
-"}")
-        self.lineEdit.setObjectName("lineEdit")
-        self.label_9 = QtWidgets.QLabel(parent=self.tab)
-        self.label_9.setGeometry(QtCore.QRect(650, 0, 55, 16))
-        self.label_9.setStyleSheet("QLabel {\n"
+        self.dateTimeEdit_2 = QtWidgets.QDateTimeEdit(parent=self.tab)
+        self.dateTimeEdit_2.setGeometry(QtCore.QRect(20, 110, 200, 38))
+        self.dateTimeEdit_2.setObjectName("dateTimeEdit_2")
+        self.label = QtWidgets.QLabel(parent=self.tab)
+        self.label.setGeometry(QtCore.QRect(240, 10, 190, 20))
+        self.label.setStyleSheet("QLabel {\n"
 "    color: white;\n"
 "}\n"
 "")
-        self.label_9.setObjectName("label_9")
+        self.label.setObjectName("label")
         self.formLayoutWidget = QtWidgets.QWidget(parent=self.tab)
-        self.formLayoutWidget.setGeometry(QtCore.QRect(240, 40, 187, 220))
+        self.formLayoutWidget.setGeometry(QtCore.QRect(240, 35, 210, 220))
         self.formLayoutWidget.setObjectName("formLayoutWidget")
         self.formLayout = QtWidgets.QFormLayout(self.formLayoutWidget)
         self.formLayout.setContentsMargins(0, 0, 0, 0)
@@ -216,141 +207,173 @@ class Ui_MainWindow(object):
         self.checkBox_7 = QtWidgets.QCheckBox(parent=self.formLayoutWidget)
         self.checkBox_7.setObjectName("checkBox_7")
         self.formLayout.setWidget(2, QtWidgets.QFormLayout.ItemRole.FieldRole, self.checkBox_7)
-        self.label = QtWidgets.QLabel(parent=self.tab)
-        self.label.setGeometry(QtCore.QRect(250, 10, 171, 20))
-        self.label.setStyleSheet("QLabel {\n"
-"    color: white;\n"
-"}\n"
-"")
-        self.label.setObjectName("label")
-        self.lineEdit_2 = QtWidgets.QLineEdit(parent=self.tab)
-        self.lineEdit_2.setGeometry(QtCore.QRect(460, 40, 142, 38))
-        self.lineEdit_2.setObjectName("lineEdit_2")
         self.label_10 = QtWidgets.QLabel(parent=self.tab)
-        self.label_10.setGeometry(QtCore.QRect(460, 20, 151, 20))
+        self.label_10.setGeometry(QtCore.QRect(470, 10, 160, 20))
         self.label_10.setStyleSheet("QLabel {\n"
 "    color: white;\n"
 "}\n"
 "")
         self.label_10.setObjectName("label_10")
+        self.lineEdit_2 = QtWidgets.QLineEdit(parent=self.tab)
+        self.lineEdit_2.setGeometry(QtCore.QRect(470, 35, 160, 38))
+        self.lineEdit_2.setObjectName("lineEdit_2")
         self.label_15 = QtWidgets.QLabel(parent=self.tab)
-        self.label_15.setGeometry(QtCore.QRect(460, 80, 151, 20))
+        self.label_15.setGeometry(QtCore.QRect(470, 85, 160, 20))
         self.label_15.setStyleSheet("QLabel {\n"
 "    color: white;\n"
 "}\n"
 "")
         self.label_15.setObjectName("label_15")
         self.lineEdit_5 = QtWidgets.QLineEdit(parent=self.tab)
-        self.lineEdit_5.setGeometry(QtCore.QRect(460, 100, 142, 38))
+        self.lineEdit_5.setGeometry(QtCore.QRect(470, 110, 160, 38))
         self.lineEdit_5.setObjectName("lineEdit_5")
-        self.comboBox = QtWidgets.QComboBox(parent=self.tab)
-        self.comboBox.setGeometry(QtCore.QRect(460, 150, 150, 38))
-        self.comboBox.setObjectName("comboBox")
-        self.comboBox.addItem("")
-        self.comboBox.addItem("")
-        self.comboBox.addItem("")
+        self.label_9 = QtWidgets.QLabel(parent=self.tab)
+        self.label_9.setGeometry(QtCore.QRect(650, 10, 100, 20))
+        self.label_9.setStyleSheet("QLabel {\n"
+"    color: white;\n"
+"}\n"
+"")
+        self.label_9.setObjectName("label_9")
+        self.lineEdit = QtWidgets.QLineEdit(parent=self.tab)
+        self.lineEdit.setGeometry(QtCore.QRect(650, 35, 100, 38))
+        self.lineEdit.setAutoFillBackground(False)
+        self.lineEdit.setStyleSheet("QLineEdit {\n"
+"        color: white;\n"
+"}")
+        self.lineEdit.setObjectName("lineEdit")
         self.label_3 = QtWidgets.QLabel(parent=self.tab)
-        self.label_3.setGeometry(QtCore.QRect(460, 130, 151, 20))
+        self.label_3.setGeometry(QtCore.QRect(470, 160, 160, 20))
         self.label_3.setStyleSheet("QLabel {\n"
 "    color: white;\n"
 "}\n"
 "")
         self.label_3.setObjectName("label_3")
+        self.comboBox = QtWidgets.QComboBox(parent=self.tab)
+        self.comboBox.setGeometry(QtCore.QRect(470, 185, 160, 38))
+        self.comboBox.setObjectName("comboBox")
+        self.comboBox.addItem("")
+        self.comboBox.addItem("")
+        self.comboBox.addItem("")
         self.pushButton = QtWidgets.QPushButton(parent=self.tab)
-        self.pushButton.setGeometry(QtCore.QRect(620, 140, 126, 41))
+        self.pushButton.setGeometry(QtCore.QRect(650, 110, 100, 41))
         self.pushButton.setObjectName("pushButton")
         self.pushButton_9 = QtWidgets.QPushButton(parent=self.tab)
-        self.pushButton_9.setGeometry(QtCore.QRect(470, 210, 126, 41))
+        self.pushButton_9.setGeometry(QtCore.QRect(650, 185, 100, 41))
         self.pushButton_9.setObjectName("pushButton_9")
         self.tabWidget.addTab(self.tab, "")
         self.tab_2 = QtWidgets.QWidget()
         self.tab_2.setObjectName("tab_2")
         self.listView = QtWidgets.QListView(parent=self.tab_2)
-        self.listView.setGeometry(QtCore.QRect(0, 0, 791, 231))
+        self.listView.setGeometry(QtCore.QRect(0, 0, 781, 260))
         self.listView.setObjectName("listView")
         self.tabWidget.addTab(self.tab_2, "")
        
         self.tab_3 = QtWidgets.QWidget()
         self.tab_3.setObjectName("tab_3")
-        self.lineEdit_3 = QtWidgets.QLineEdit(parent=self.tab_3)
-        self.lineEdit_3.setGeometry(QtCore.QRect(562, 70, 211, 38))
-        self.lineEdit_3.setObjectName("lineEdit_3")
-        self.lineEdit_4 = QtWidgets.QLineEdit(parent=self.tab_3)
-        self.lineEdit_4.setGeometry(QtCore.QRect(542, 170, 211, 38))
-        self.lineEdit_4.setObjectName("lineEdit_4")
-        self.label_11 = QtWidgets.QLabel(parent=self.tab_3)
-        self.label_11.setGeometry(QtCore.QRect(620, 40, 101, 20))
-        self.label_11.setStyleSheet("QLabel {\n"
-"    color: white;\n"
-"}\n"
-"")
-        self.label_11.setObjectName("label_11")
-        self.label_12 = QtWidgets.QLabel(parent=self.tab_3)
-        self.label_12.setGeometry(QtCore.QRect(620, 130, 101, 20))
-        self.label_12.setStyleSheet("QLabel {\n"
-"    color: white;\n"
-"}\n"
-"")
-        self.label_12.setObjectName("label_12")
-        self.buttonBox = QtWidgets.QDialogButtonBox(parent=self.tab_3)
-        self.buttonBox.setGeometry(QtCore.QRect(570, 170, 193, 28))
-        self.buttonBox.setObjectName("buttonBox")
-        self.buttonBox_2 = QtWidgets.QDialogButtonBox(parent=self.tab_3)
-        self.buttonBox_2.setGeometry(QtCore.QRect(560, 220, 193, 41))
-        self.buttonBox_2.setLayoutDirection(QtCore.Qt.LayoutDirection.RightToLeft)
-        self.buttonBox_2.setStandardButtons(QtWidgets.QDialogButtonBox.StandardButton.Apply|QtWidgets.QDialogButtonBox.StandardButton.Discard)
-        self.buttonBox_2.setObjectName("buttonBox_2")
-        self.label_13 = QtWidgets.QLabel(parent=self.tab_3)
-        self.label_13.setGeometry(QtCore.QRect(564, 0, 191, 20))
-        self.label_13.setStyleSheet("QLabel {\n"
-"    color: white;\n"
-"}\n"
-"")
-        self.label_13.setObjectName("label_13")
-        self.pushButton_7 = QtWidgets.QPushButton(parent=self.tab_3)
-        self.pushButton_7.setGeometry(QtCore.QRect(160, 230, 126, 38))
-        self.pushButton_7.setObjectName("pushButton_7")
+        
+        # Sensors Tab - Left side (All Devices section)
         self.label_14 = QtWidgets.QLabel(parent=self.tab_3)
-        self.label_14.setGeometry(QtCore.QRect(150, 1, 181, 20))
+        self.label_14.setGeometry(QtCore.QRect(20, 10, 400, 20))
         self.label_14.setStyleSheet("QLabel {\n"
 "    color: white;\n"
 "}\n"
 "")
         self.label_14.setObjectName("label_14")
+        
         self.tableWidget_2 = QtWidgets.QTableWidget(parent=self.tab_3)
-        self.tableWidget_2.setGeometry(QtCore.QRect(5, 30, 461, 191))
+        self.tableWidget_2.setGeometry(QtCore.QRect(20, 35, 420, 191))
         self.tableWidget_2.setObjectName("tableWidget_2")
         self.tableWidget_2.setColumnCount(0)
         self.tableWidget_2.setRowCount(0)
+        
+        self.pushButton_7 = QtWidgets.QPushButton(parent=self.tab_3)
+        self.pushButton_7.setGeometry(QtCore.QRect(20, 240, 126, 38))
+        self.pushButton_7.setObjectName("pushButton_7")
+        
+        # Sensors Tab - Right side (Add/Remove Sensor section)
+        self.label_13 = QtWidgets.QLabel(parent=self.tab_3)
+        self.label_13.setGeometry(QtCore.QRect(480, 10, 260, 20))
+        self.label_13.setStyleSheet("QLabel {\n"
+"    color: white;\n"
+"    text-align: center;\n"
+"}\n"
+"")
+        self.label_13.setObjectName("label_13")
+        
+        self.label_11 = QtWidgets.QLabel(parent=self.tab_3)
+        self.label_11.setGeometry(QtCore.QRect(480, 45, 260, 20))
+        self.label_11.setStyleSheet("QLabel {\n"
+"    color: white;\n"
+"}\n"
+"")
+        self.label_11.setObjectName("label_11")
+        
+        self.lineEdit_3 = QtWidgets.QLineEdit(parent=self.tab_3)
+        self.lineEdit_3.setGeometry(QtCore.QRect(480, 70, 260, 38))
+        self.lineEdit_3.setObjectName("lineEdit_3")
+        
+        self.label_12 = QtWidgets.QLabel(parent=self.tab_3)
+        self.label_12.setGeometry(QtCore.QRect(480, 120, 260, 20))
+        self.label_12.setStyleSheet("QLabel {\n"
+"    color: white;\n"
+"}\n"
+"")
+        self.label_12.setObjectName("label_12")
+        
+        self.lineEdit_4 = QtWidgets.QLineEdit(parent=self.tab_3)
+        self.lineEdit_4.setGeometry(QtCore.QRect(480, 145, 260, 38))
+        self.lineEdit_4.setObjectName("lineEdit_4")
+        
+        self.buttonBox = QtWidgets.QDialogButtonBox(parent=self.tab_3)
+        self.buttonBox.setGeometry(QtCore.QRect(480, 195, 260, 28))
+        self.buttonBox.setObjectName("buttonBox")
+        
+        self.buttonBox_2 = QtWidgets.QDialogButtonBox(parent=self.tab_3)
+        self.buttonBox_2.setGeometry(QtCore.QRect(480, 240, 260, 38))
+        self.buttonBox_2.setLayoutDirection(QtCore.Qt.LayoutDirection.RightToLeft)
+        self.buttonBox_2.setStandardButtons(QtWidgets.QDialogButtonBox.StandardButton.Apply|QtWidgets.QDialogButtonBox.StandardButton.Discard)
+        self.buttonBox_2.setObjectName("buttonBox_2")
+        
         self.tabWidget.addTab(self.tab_3, "")
         self.tab_5 = QtWidgets.QWidget()
         self.tab_5.setObjectName("tab_5")
-        self.pushButton_8 = QtWidgets.QPushButton(parent=self.tab_5)
-        self.pushButton_8.setGeometry(QtCore.QRect(600, 30, 126, 38))
-        self.pushButton_8.setObjectName("pushButton_8")
+        
+        # Application Filter Tab - Main table section
         self.label_16 = QtWidgets.QLabel(parent=self.tab_5)
-        self.label_16.setGeometry(QtCore.QRect(240, 0, 161, 20))
+        self.label_16.setGeometry(QtCore.QRect(20, 10, 561, 20))
+        self.label_16.setStyleSheet("QLabel {\n"
+"    color: white;\n"
+"    text-align: center;\n"
+"}\n"
+"")
         self.label_16.setObjectName("label_16")
+        
         self.tableWidget_3 = QtWidgets.QTableWidget(parent=self.tab_5)
-        self.tableWidget_3.setGeometry(QtCore.QRect(20, 0, 561, 341))
+        self.tableWidget_3.setGeometry(QtCore.QRect(20, 35, 730, 220))
         self.tableWidget_3.setObjectName("tableWidget_3")
         self.tableWidget_3.setColumnCount(0)
         self.tableWidget_3.setRowCount(0)
+        
+        # Application Filter Tab - Focus button
+        self.pushButton_8 = QtWidgets.QPushButton(parent=self.tab_5)
+        self.pushButton_8.setGeometry(QtCore.QRect(600, 30, 126, 38))
+        self.pushButton_8.setObjectName("pushButton_8")
+        
         self.tabWidget.addTab(self.tab_5, "")
         self.tab_6 = QtWidgets.QWidget()
         self.tab_6.setObjectName("tab_6")
         self.listView_2 = QtWidgets.QListView(parent=self.tab_6)
-        self.listView_2.setGeometry(QtCore.QRect(0, 0, 791, 231))
+        self.listView_2.setGeometry(QtCore.QRect(0, 0, 781, 260))
         self.tabWidget.addTab(self.tab_6, "Packet Decode")
         self.tab_7 = QtWidgets.QWidget()
         self.tab_7.setObjectName("tab_7")
         self.listView_3 = QtWidgets.QListView(parent=self.tab_7)
-        self.listView_3.setGeometry(QtCore.QRect(0, 0, 791, 231))
-        self.tabWidget.addTab(self.tab_7, "Packet statictics")
+        self.listView_3.setGeometry(QtCore.QRect(0, 0, 781, 260))
+        self.tabWidget.addTab(self.tab_7, "Packet Statistics")
         self.tab_8 = QtWidgets.QWidget()
         self.tab_8.setObjectName("tab_8")
         self.listView_4 = QtWidgets.QListView(parent=self.tab_8)
-        self.listView_4.setGeometry(QtCore.QRect(0, 0, 391, 231))
+        self.listView_4.setGeometry(QtCore.QRect(0, 0, 391, 260))
         self.listView_4.setObjectName("listView_4")
         self.label_17 = QtWidgets.QLabel(parent=self.tab_8)
         self.label_17.setGeometry(QtCore.QRect(500, 110, 161, 20))
@@ -368,7 +391,7 @@ class Ui_MainWindow(object):
         self.tab_9 = QtWidgets.QWidget()
         self.tab_9.setObjectName("tab_9")
         self.listView_5 = QtWidgets.QListView(parent=self.tab_9)
-        self.listView_5.setGeometry(QtCore.QRect(0, 0, 391, 231))
+        self.listView_5.setGeometry(QtCore.QRect(0, 0, 391, 260))
         self.listView_5.setObjectName("listView_5")
         self.label_18 = QtWidgets.QLabel(parent=self.tab_9)
         self.label_18.setGeometry(QtCore.QRect(500, 100, 261, 120))
@@ -466,49 +489,58 @@ class Ui_MainWindow(object):
         self.graphicsView.setGeometry(QtCore.QRect(10, 0, 71, 61))
         self.graphicsView.setObjectName("graphicsView")
         self.label_2 = QtWidgets.QLabel(parent=self.centralwidget)
-        self.label_2.setGeometry(QtCore.QRect(81, 3, 141, 41))
+        self.label_2.setGeometry(QtCore.QRect(81, 3, 220, 53))
         font = QtGui.QFont()
         font.setFamily("Segoe UI Variable Small Semibol")
-        font.setPointSize(18)
+        font.setPointSize(32)
         font.setBold(True)
-        font.setWeight(75)
+        font.setWeight(85)
         self.label_2.setFont(font)
         self.label_2.setObjectName("label_2")
         self.label_4 = QtWidgets.QLabel(parent=self.centralwidget)
-        self.label_4.setGeometry(QtCore.QRect(864, 433, 311, 20))
+        self.label_4.setGeometry(QtCore.QRect(805, 433, 400, 20))
         self.label_4.setStyleSheet("QLabel {\n"
 "    color: white;\n"
+"    text-align: center;\n"
 "}\n"
 "")
         self.label_4.setObjectName("label_4")
         self.label_5 = QtWidgets.QLabel(parent=self.centralwidget)
-        self.label_5.setGeometry(QtCore.QRect(1270, 70, 91, 20))
+        self.label_5.setGeometry(QtCore.QRect(1250, 60, 120, 20))
         self.label_5.setStyleSheet("QLabel {\n"
 "    color: white;\n"
+"    font-weight: bold;\n"
 "}\n"
 "")
         self.label_5.setObjectName("label_5")
+        
         self.label_6 = QtWidgets.QLabel(parent=self.centralwidget)
-        self.label_6.setGeometry(QtCore.QRect(1290, 110, 55, 16))
+        self.label_6.setGeometry(QtCore.QRect(1250, 85, 120, 20))
+        self.label_6.setStyleSheet("QLabel {\n"
+"    color: white;\n"
+"}\n"
+"")
         self.label_6.setObjectName("label_6")
+        
         self.pushButton_5 = QtWidgets.QPushButton(parent=self.centralwidget)
-        self.pushButton_5.setGeometry(QtCore.QRect(1270, 180, 126, 41))
+        self.pushButton_5.setGeometry(QtCore.QRect(1250, 115, 126, 41))
         self.pushButton_5.setObjectName("pushButton_5")
+        
         self.pushButton_6 = QtWidgets.QPushButton(parent=self.centralwidget)
-        self.pushButton_6.setGeometry(QtCore.QRect(1270, 250, 126, 41))
+        self.pushButton_6.setGeometry(QtCore.QRect(1250, 165, 126, 41))
         self.pushButton_6.setObjectName("pushButton_6")
         self.tableWidget = QtWidgets.QTableWidget(parent=self.centralwidget)
-        self.tableWidget.setGeometry(QtCore.QRect(20, 60, 1231, 361))
+        self.tableWidget.setGeometry(QtCore.QRect(20, 60, 1220, 361))
         self.tableWidget.setObjectName("tableWidget")
         self.tableWidget.setColumnCount(0)
         self.tableWidget.setRowCount(0)
         self.tableWidget_4 = QtWidgets.QTableWidget(parent=self.centralwidget)
-        self.tableWidget_4.setGeometry(QtCore.QRect(805, 460, 381, 271))
+        self.tableWidget_4.setGeometry(QtCore.QRect(805, 460, 400, 271))
         self.tableWidget_4.setObjectName("tableWidget_4")
         self.tableWidget_4.setColumnCount(0)
         self.tableWidget_4.setRowCount(0)
         self.graphicsView_2 = QtWidgets.QGraphicsView(parent=self.centralwidget)
-        self.graphicsView_2.setGeometry(QtCore.QRect(1210, 400, 300, 401))
+        self.graphicsView_2.setGeometry(QtCore.QRect(1220, 430, 300, 401))
         self.graphicsView_2.setObjectName("graphicsView_2")
         MainWindow.setCentralWidget(self.centralwidget)
         self.statusbar = QtWidgets.QStatusBar(parent=MainWindow)
@@ -631,9 +663,9 @@ class Ui_MainWindow(object):
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_2), _translate("MainWindow", "Packet Details"))
         self.label_11.setText(_translate("MainWindow", "Device name"))
         self.label_12.setText(_translate("MainWindow", "MAC Address"))
-        self.label_13.setText(_translate("MainWindow", "              Add/Remove Sensor"))
+        self.label_13.setText(_translate("MainWindow", "Add/Remove Sensor"))
         self.pushButton_7.setText(_translate("MainWindow", "Focus on"))
-        self.label_14.setText(_translate("MainWindow", "                All Devices"))
+        self.label_14.setText(_translate("MainWindow", "All Devices"))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_3), _translate("MainWindow", " Sensors "))
         self.pushButton_8.setText(_translate("MainWindow", "Focus on"))
         self.pushButton_10.setText(_translate("MainWindow", "Add"))
@@ -652,7 +684,7 @@ class Ui_MainWindow(object):
         self.pushButton_3.setText(_translate("MainWindow", "Tools"))
         self.pushButton_2.setText(_translate("MainWindow", "Analysis"))
         self.label_2.setText(_translate("MainWindow", "Naswail"))
-        self.label_4.setText(_translate("MainWindow", "                      Suspicious Packets"))
+        self.label_4.setText(_translate("MainWindow", "Suspicious Packets"))
         self.label_5.setText(_translate("MainWindow", "Time Elapsed:"))
         self.label_6.setText(_translate("MainWindow", "TextLabel"))
         self.label_ip_dst.setText(_translate("MainWindow", "Enter destination IP"))

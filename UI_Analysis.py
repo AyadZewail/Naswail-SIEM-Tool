@@ -12,8 +12,8 @@ from PyQt6 import QtCore, QtGui, QtWidgets
 class Ui_Naswail_Anlaysis(object):
     def setupUi(self, Ui_Naswail_Anlaysis):
         Ui_Naswail_Anlaysis.setObjectName("Ui_Naswail_Anlaysis")
-        Ui_Naswail_Anlaysis.resize(1575, 3555)
-        Ui_Naswail_Anlaysis.setMinimumSize(QtCore.QSize(1000, 1000))
+        Ui_Naswail_Anlaysis.resize(1600, 900)
+        Ui_Naswail_Anlaysis.setMinimumSize(QtCore.QSize(1200, 800))
         Ui_Naswail_Anlaysis.setStyleSheet("/* Main Application Background */\n"
 "QWidget {\n"
 "    background-color: #2D2A2E;\n"
@@ -133,233 +133,334 @@ class Ui_Naswail_Anlaysis(object):
 "/* Group Boxes */\n"
 "QGroupBox {\n"
 "    color: #40E0D0;\n"
+"    border: 1px solid #40E0D0;\n"
+"    border-radius: 4px;\n"
+"    margin-top: 10px;\n"
+"    padding-top: 15px;\n"
+"}\n"
+"\n"
+"QGroupBox::title {\n"
+"    subcontrol-origin: margin;\n"
+"    subcontrol-position: top center;\n"
+"    padding: 0 5px;\n"
+"}\n"
+"\n"
+"/* ComboBox */\n"
+"QComboBox {\n"
+"    background-color: #3E3D40;\n"
+"    color: #40E0D0;\n"
+"    border: 1px solid #5A595C;\n"
+"    border-radius: 4px;\n"
+"    padding: 5px;\n"
+"}\n"
+"\n"
+"QComboBox::drop-down {\n"
+"    border: none;\n"
+"}\n"
+"\n"
+"QComboBox::down-arrow {\n"
+"    image: url(:/icons/down_arrow.png);\n"
+"    width: 10px;\n"
+"    height: 10px;\n"
+"}\n"
+"\n"
+"QComboBox QAbstractItemView {\n"
+"    background-color: #3E3D40;\n"
+"    color: #40E0D0;\n"
+"    selection-background-color: #5A595C;\n"
 "}\n"
 "")
+
+        # Main layout for the whole window
+        self.mainLayout = QtWidgets.QVBoxLayout(Ui_Naswail_Anlaysis)
+        self.mainLayout.setContentsMargins(10, 10, 10, 10)
+        self.mainLayout.setSpacing(10)
+        self.mainLayout.setObjectName("mainLayout")
+        
+        # EXACT MATCH TO UI_Main.py Navigation
+        # Create graphicsView for logo
+        self.graphicsView = QtWidgets.QGraphicsView(parent=Ui_Naswail_Anlaysis)
+        self.graphicsView.setGeometry(QtCore.QRect(10, 0, 71, 61))
+        self.graphicsView.setObjectName("graphicsView")
+        
+        # App name label
+        self.label_2 = QtWidgets.QLabel(parent=Ui_Naswail_Anlaysis)
+        self.label_2.setGeometry(QtCore.QRect(81, 3, 220, 53))
+        font = QtGui.QFont()
+        font.setFamily("Segoe UI Variable Small Semibol")
+        font.setPointSize(32)
+        font.setBold(True)
+        font.setWeight(85)
+        self.label_2.setFont(font)
+        self.label_2.setObjectName("label_2")
+        
+        # Navigation buttons - EXACTLY as in UI_Main.py
         self.horizontalLayoutWidget = QtWidgets.QWidget(parent=Ui_Naswail_Anlaysis)
-        self.horizontalLayoutWidget.setGeometry(QtCore.QRect(240, 20, 1031, 41))
+        self.horizontalLayoutWidget.setGeometry(QtCore.QRect(266, 10, 1031, 41))
         self.horizontalLayoutWidget.setObjectName("horizontalLayoutWidget")
+        
         self.horizontalLayout = QtWidgets.QHBoxLayout(self.horizontalLayoutWidget)
         self.horizontalLayout.setContentsMargins(0, 0, 0, 0)
         self.horizontalLayout.setObjectName("horizontalLayout")
+        
         self.pushButton_4 = QtWidgets.QPushButton(parent=self.horizontalLayoutWidget)
         self.pushButton_4.setObjectName("pushButton_4")
         self.horizontalLayout.addWidget(self.pushButton_4)
+        
         self.pushButton_5 = QtWidgets.QPushButton(parent=self.horizontalLayoutWidget)
         self.pushButton_5.setObjectName("pushButton_5")
         self.horizontalLayout.addWidget(self.pushButton_5)
+        
         self.pushButton_3 = QtWidgets.QPushButton(parent=self.horizontalLayoutWidget)
         self.pushButton_3.setObjectName("pushButton_3")
         self.horizontalLayout.addWidget(self.pushButton_3)
+        
         self.pushButton_2 = QtWidgets.QPushButton(parent=self.horizontalLayoutWidget)
         self.pushButton_2.setObjectName("pushButton_2")
         self.horizontalLayout.addWidget(self.pushButton_2)
-        self.label_4 = QtWidgets.QLabel(parent=Ui_Naswail_Anlaysis)
-        self.label_4.setGeometry(QtCore.QRect(90, 20, 141, 41))
-        font = QtGui.QFont()
-        font.setFamily("Segoe UI Variable Small Semibol")
-        font.setPointSize(18)
-        font.setBold(True)
-        font.setWeight(75)
-        self.label_4.setFont(font)
-        self.label_4.setObjectName("label_4")
-        self.graphicsView = QtWidgets.QGraphicsView(parent=Ui_Naswail_Anlaysis)
-        self.graphicsView.setGeometry(QtCore.QRect(10, 20, 71, 61))
-        self.graphicsView.setObjectName("graphicsView")
-        self.graphicsView_2 = QtWidgets.QGraphicsView(parent=Ui_Naswail_Anlaysis)
-        self.graphicsView_2.setGeometry(QtCore.QRect(10, 10, 81, 51))
-        self.graphicsView_2.setObjectName("graphicsView_2")
+        
+        # Add notification bell button
+        self.horizontalLayout.addSpacing(10)
+        self.notificationButton = QtWidgets.QPushButton(parent=self.horizontalLayoutWidget)
+        self.notificationButton.setText("🔔")
+        self.notificationButton.setFixedSize(40, 30)
+        self.notificationButton.setObjectName("notificationButton")
+        self.notificationButton.setStyleSheet("""
+                QPushButton {
+                background-color: #40E0D0;
+                color: #2D2A2E;
+                border: 1px solid #40E0D0;
+                border-radius: 15px;
+                font-size: 16px;
+                }
+                QPushButton:hover {
+                background-color: #36C9B0;
+                border: 1px solid #36C9B0;
+                }
+                QPushButton:pressed {
+                background-color: #2DB39E;
+                border: 1px solid #2DB39E;
+                }
+        """)
+        self.horizontalLayout.addWidget(self.notificationButton)
+        
+        # Scroll area for visualizations - increased height to avoid truncation
         self.scrollArea = QtWidgets.QScrollArea(parent=Ui_Naswail_Anlaysis)
-        self.scrollArea.setGeometry(QtCore.QRect(20, 84, 1511, 3381))
-        self.scrollArea.setMinimumSize(QtCore.QSize(1000, 0))
-        self.scrollArea.setLineWidth(1)
+        self.scrollArea.setGeometry(QtCore.QRect(20, 75, 1500, 800))
+        self.scrollArea.setWidgetResizable(True)
         self.scrollArea.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarPolicy.ScrollBarAlwaysOn)
         self.scrollArea.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarPolicy.ScrollBarAsNeeded)
-        self.scrollArea.setSizeAdjustPolicy(QtWidgets.QAbstractScrollArea.SizeAdjustPolicy.AdjustToContents)
-        self.scrollArea.setWidgetResizable(True)
         self.scrollArea.setAlignment(QtCore.Qt.AlignmentFlag.AlignLeading|QtCore.Qt.AlignmentFlag.AlignLeft|QtCore.Qt.AlignmentFlag.AlignTop)
         self.scrollArea.setObjectName("scrollArea")
+        
         self.scrollAreaWidgetContents = QtWidgets.QWidget()
-        self.scrollAreaWidgetContents.setGeometry(QtCore.QRect(0, 0, 1501, 13291))
-        self.scrollAreaWidgetContents.setMinimumSize(QtCore.QSize(1291, 13291))
+        self.scrollAreaWidgetContents.setMinimumSize(QtCore.QSize(1400, 2500))  # Increased height significantly to allow more scrolling
         self.scrollAreaWidgetContents.setObjectName("scrollAreaWidgetContents")
-        self.label_9 = QtWidgets.QLabel(parent=self.scrollAreaWidgetContents)
-        self.label_9.setGeometry(QtCore.QRect(800, 679, 521, 31))
-        font = QtGui.QFont()
-        font.setFamily("Yu Gothic UI Semibold")
-        font.setPointSize(18)
-        font.setBold(True)
-        font.setWeight(75)
-        self.label_9.setFont(font)
-        self.label_9.setStyleSheet("QLabel {\n"
-"    color: white;\n"
-"}\n"
-"")
-        self.label_9.setObjectName("label_9")
-        self.widget_5 = QtWidgets.QWidget(parent=self.scrollAreaWidgetContents)
-        self.widget_5.setGeometry(QtCore.QRect(720, 729, 741, 481))
-        self.widget_5.setObjectName("widget_5")
-        self.widget_3 = QtWidgets.QWidget(parent=self.scrollAreaWidgetContents)
-        self.widget_3.setGeometry(QtCore.QRect(30, 2030, 781, 491))
-        self.widget_3.setObjectName("widget_3")
-        self.label_13 = QtWidgets.QLabel(parent=self.scrollAreaWidgetContents)
-        self.label_13.setGeometry(QtCore.QRect(910, 1859, 141, 20))
-        self.label_13.setStyleSheet("QLabel {\n"
-"    color: white;\n"
-"}\n"
-"")
-        self.label_13.setObjectName("label_13")
-        self.widget = QtWidgets.QWidget(parent=self.scrollAreaWidgetContents)
-        self.widget.setGeometry(QtCore.QRect(20, 737, 581, 471))
-        self.widget.setObjectName("widget")
-        self.label_8 = QtWidgets.QLabel(parent=self.scrollAreaWidgetContents)
-        self.label_8.setGeometry(QtCore.QRect(310, 2550, 141, 20))
-        self.label_8.setStyleSheet("QLabel {\n"
-"    color: white;\n"
-"}\n"
-"")
-        self.label_8.setObjectName("label_8")
-        self.comboBox_6 = QtWidgets.QComboBox(parent=self.scrollAreaWidgetContents)
-        self.comboBox_6.setGeometry(QtCore.QRect(940, 1262, 161, 22))
-        self.comboBox_6.setObjectName("comboBox_6")
-        self.comboBox_6.addItem("")
-        self.comboBox_6.addItem("")
-        self.comboBox_6.addItem("")
-        self.comboBox_2 = QtWidgets.QComboBox(parent=self.scrollAreaWidgetContents)
-        self.comboBox_2.setGeometry(QtCore.QRect(210, 1247, 161, 22))
+        
+        # Layout for scroll area contents
+        self.scrollLayout = QtWidgets.QVBoxLayout(self.scrollAreaWidgetContents)
+        self.scrollLayout.setContentsMargins(10, 10, 10, 50)  # Added more bottom padding
+        self.scrollLayout.setSpacing(30)  # Increased spacing between sections
+        
+        # SECTION 1: 3D Network Topology Visualization
+        self.topologyGroupBox = QtWidgets.QGroupBox("3D Network Topology Visualization")
+        self.topologyGroupBox.setObjectName("topologyGroupBox")
+        topologyLayout = QtWidgets.QVBoxLayout(self.topologyGroupBox)
+        
+        self.widget_6 = QtWidgets.QWidget()
+        self.widget_6.setMinimumHeight(550)  # Increased height significantly
+        self.widget_6.setObjectName("widget_6")
+        topologyLayout.addWidget(self.widget_6)
+        
+        self.scrollLayout.addWidget(self.topologyGroupBox)
+        
+        # SECTION 2: First row of visualizations (Pie Chart and Time Series)
+        self.firstRowLayout = QtWidgets.QHBoxLayout()
+        self.firstRowLayout.setSpacing(20)
+        
+        # Pie Chart
+        self.pieChartGroupBox = QtWidgets.QGroupBox("Pie Chart")
+        self.pieChartGroupBox.setObjectName("pieChartGroupBox")
+        pieChartLayout = QtWidgets.QVBoxLayout(self.pieChartGroupBox)
+        
+        # Filter label and combobox for pie chart
+        self.pieFilterLayout = QtWidgets.QHBoxLayout()
+        self.label_5 = QtWidgets.QLabel()
+        self.label_5.setObjectName("label_5")
+        self.pieFilterLayout.addWidget(self.label_5)
+        
+        self.comboBox_2 = QtWidgets.QComboBox()
         self.comboBox_2.setObjectName("comboBox_2")
         self.comboBox_2.addItem("")
         self.comboBox_2.addItem("")
         self.comboBox_2.addItem("")
-        self.comboBox_4 = QtWidgets.QComboBox(parent=self.scrollAreaWidgetContents)
-        self.comboBox_4.setGeometry(QtCore.QRect(300, 2590, 161, 22))
+        self.pieFilterLayout.addWidget(self.comboBox_2)
+        self.pieFilterLayout.addStretch(1)
+        
+        pieChartLayout.addLayout(self.pieFilterLayout)
+        
+        # Widget for pie chart
+        self.widget = QtWidgets.QWidget()
+        self.widget.setMinimumSize(QtCore.QSize(400, 400))  # Increased height
+        self.widget.setObjectName("widget")
+        pieChartLayout.addWidget(self.widget)
+        
+        self.firstRowLayout.addWidget(self.pieChartGroupBox)
+        
+        # Time Series
+        self.timeSeriesGroupBox = QtWidgets.QGroupBox("Time Series")
+        self.timeSeriesGroupBox.setObjectName("timeSeriesGroupBox")
+        timeSeriesLayout = QtWidgets.QVBoxLayout(self.timeSeriesGroupBox)
+        
+        # Filter label and combobox for time series
+        self.tsFilterLayout = QtWidgets.QHBoxLayout()
+        self.label_14 = QtWidgets.QLabel()
+        self.label_14.setObjectName("label_14")
+        self.tsFilterLayout.addWidget(self.label_14)
+        
+        self.comboBox_6 = QtWidgets.QComboBox()
+        self.comboBox_6.setObjectName("comboBox_6")
+        self.comboBox_6.addItem("")
+        self.comboBox_6.addItem("")
+        self.comboBox_6.addItem("")
+        self.tsFilterLayout.addWidget(self.comboBox_6)
+        self.tsFilterLayout.addStretch(1)
+        
+        timeSeriesLayout.addLayout(self.tsFilterLayout)
+        
+        # Widget for time series
+        self.widget_5 = QtWidgets.QWidget()
+        self.widget_5.setMinimumSize(QtCore.QSize(400, 400))  # Increased height
+        self.widget_5.setObjectName("widget_5")
+        timeSeriesLayout.addWidget(self.widget_5)
+        
+        self.firstRowLayout.addWidget(self.timeSeriesGroupBox)
+        
+        self.scrollLayout.addLayout(self.firstRowLayout)
+        
+        # SECTION 3: Second row of visualizations (Histogram and Heatmap)
+        self.secondRowLayout = QtWidgets.QHBoxLayout()
+        self.secondRowLayout.setSpacing(20)
+        
+        # Histogram
+        self.histogramGroupBox = QtWidgets.QGroupBox("Histogram")
+        self.histogramGroupBox.setObjectName("histogramGroupBox")
+        histogramLayout = QtWidgets.QVBoxLayout(self.histogramGroupBox)
+        
+        # Filter label and combobox for histogram
+        self.histFilterLayout = QtWidgets.QHBoxLayout()
+        self.label_6 = QtWidgets.QLabel()
+        self.label_6.setObjectName("label_6")
+        self.histFilterLayout.addWidget(self.label_6)
+        
+        self.comboBox_3 = QtWidgets.QComboBox()
+        self.comboBox_3.setObjectName("comboBox_3")
+        self.comboBox_3.addItem("")
+        self.comboBox_3.addItem("")
+        self.comboBox_3.addItem("")
+        self.histFilterLayout.addWidget(self.comboBox_3)
+        self.histFilterLayout.addStretch(1)
+        
+        histogramLayout.addLayout(self.histFilterLayout)
+        
+        # Widget for histogram
+        self.widget_2 = QtWidgets.QWidget()
+        self.widget_2.setMinimumSize(QtCore.QSize(400, 400))  # Increased height
+        self.widget_2.setObjectName("widget_2")
+        histogramLayout.addWidget(self.widget_2)
+        
+        self.secondRowLayout.addWidget(self.histogramGroupBox)
+        
+        # Heatmap
+        self.heatmapGroupBox = QtWidgets.QGroupBox("Heatmap")
+        self.heatmapGroupBox.setObjectName("heatmapGroupBox")
+        heatmapLayout = QtWidgets.QVBoxLayout(self.heatmapGroupBox)
+        
+        # Filter label and combobox for heatmap
+        self.heatFilterLayout = QtWidgets.QHBoxLayout()
+        self.label_13 = QtWidgets.QLabel()
+        self.label_13.setObjectName("label_13")
+        self.heatFilterLayout.addWidget(self.label_13)
+        
+        self.comboBox_5 = QtWidgets.QComboBox()
+        self.comboBox_5.setObjectName("comboBox_5")
+        self.comboBox_5.addItem("")
+        self.comboBox_5.addItem("")
+        self.comboBox_5.addItem("")
+        self.heatFilterLayout.addWidget(self.comboBox_5)
+        self.heatFilterLayout.addStretch(1)
+        
+        heatmapLayout.addLayout(self.heatFilterLayout)
+        
+        # Widget for heatmap
+        self.widget_4 = QtWidgets.QWidget()
+        self.widget_4.setMinimumSize(QtCore.QSize(400, 400))  # Increased height
+        self.widget_4.setObjectName("widget_4")
+        heatmapLayout.addWidget(self.widget_4)
+        
+        self.secondRowLayout.addWidget(self.heatmapGroupBox)
+        
+        self.scrollLayout.addLayout(self.secondRowLayout)
+        
+        # SECTION 4: Third row (Graph and Geo-Location Map side by side)
+        self.thirdRowLayout = QtWidgets.QHBoxLayout()
+        self.thirdRowLayout.setSpacing(20)
+        
+        # Graph - set to 50% of the row
+        self.graphGroupBox = QtWidgets.QGroupBox("Graph")
+        self.graphGroupBox.setObjectName("graphGroupBox")
+        self.graphGroupBox.setMinimumSize(QtCore.QSize(700, 450))  # Make equal width to geoGroupBox
+        graphLayout = QtWidgets.QVBoxLayout(self.graphGroupBox)
+        
+        # Filter label and combobox for graph
+        self.graphFilterLayout = QtWidgets.QHBoxLayout()
+        self.label_8 = QtWidgets.QLabel()
+        self.label_8.setObjectName("label_8")
+        self.graphFilterLayout.addWidget(self.label_8)
+        
+        self.comboBox_4 = QtWidgets.QComboBox()
         self.comboBox_4.setObjectName("comboBox_4")
         self.comboBox_4.addItem("")
         self.comboBox_4.addItem("")
         self.comboBox_4.addItem("")
         self.comboBox_4.addItem("")
-        self.widget_4 = QtWidgets.QWidget(parent=self.scrollAreaWidgetContents)
-        self.widget_4.setGeometry(QtCore.QRect(720, 1399, 651, 421))
-        self.widget_4.setObjectName("widget_4")
-        self.comboBox_5 = QtWidgets.QComboBox(parent=self.scrollAreaWidgetContents)
-        self.comboBox_5.setGeometry(QtCore.QRect(900, 1899, 161, 22))
-        self.comboBox_5.setObjectName("comboBox_5")
-        self.comboBox_5.addItem("")
-        self.comboBox_5.addItem("")
-        self.comboBox_5.addItem("")
-        self.label_2 = QtWidgets.QLabel(parent=self.scrollAreaWidgetContents)
-        self.label_2.setGeometry(QtCore.QRect(40, 689, 451, 20))
-        font = QtGui.QFont()
-        font.setFamily("Yu Gothic UI Semibold")
-        font.setPointSize(14)
-        font.setBold(True)
-        font.setWeight(75)
-        self.label_2.setFont(font)
-        self.label_2.setStyleSheet("QLabel {\n"
-"    color: white;\n"
-"}\n"
-"")
-        self.label_2.setObjectName("label_2")
-        self.label_5 = QtWidgets.QLabel(parent=self.scrollAreaWidgetContents)
-        self.label_5.setGeometry(QtCore.QRect(220, 1219, 141, 20))
-        self.label_5.setStyleSheet("QLabel {\n"
-"    color: white;\n"
-"}\n"
-"")
-        self.label_5.setObjectName("label_5")
-        self.label_14 = QtWidgets.QLabel(parent=self.scrollAreaWidgetContents)
-        self.label_14.setGeometry(QtCore.QRect(950, 1222, 141, 20))
-        self.label_14.setStyleSheet("QLabel {\n"
-"    color: white;\n"
-"}\n"
-"")
-        self.label_14.setObjectName("label_14")
-        self.label_10 = QtWidgets.QLabel(parent=self.scrollAreaWidgetContents)
-        self.label_10.setGeometry(QtCore.QRect(810, 1339, 421, 31))
-        font = QtGui.QFont()
-        font.setFamily("Yu Gothic UI Semibold")
-        font.setPointSize(18)
-        font.setBold(True)
-        font.setWeight(75)
-        self.label_10.setFont(font)
-        self.label_10.setStyleSheet("QLabel {\n"
-"    color: white;\n"
-"}\n"
-"")
-        self.label_10.setObjectName("label_10")
-        self.label_7 = QtWidgets.QLabel(parent=self.scrollAreaWidgetContents)
-        self.label_7.setGeometry(QtCore.QRect(160, 1969, 311, 41))
-        font = QtGui.QFont()
-        font.setFamily("Yu Gothic UI Semibold")
-        font.setPointSize(16)
-        font.setBold(True)
-        font.setWeight(75)
-        self.label_7.setFont(font)
-        self.label_7.setStyleSheet("QLabel {\n"
-"    color: white;\n"
-"}\n"
-"")
-        self.label_7.setObjectName("label_7")
-        self.label_3 = QtWidgets.QLabel(parent=self.scrollAreaWidgetContents)
-        self.label_3.setGeometry(QtCore.QRect(60, 1329, 511, 41))
-        font = QtGui.QFont()
-        font.setFamily("Yu Gothic UI Semibold")
-        font.setPointSize(18)
-        font.setBold(True)
-        font.setWeight(75)
-        self.label_3.setFont(font)
-        self.label_3.setStyleSheet("QLabel {\n"
-"    color: white;\n"
-"}\n"
-"")
-        self.label_3.setObjectName("label_3")
-        self.widget_2 = QtWidgets.QWidget(parent=self.scrollAreaWidgetContents)
-        self.widget_2.setGeometry(QtCore.QRect(30, 1399, 591, 431))
-        self.widget_2.setObjectName("widget_2")
-        self.comboBox_3 = QtWidgets.QComboBox(parent=self.scrollAreaWidgetContents)
-        self.comboBox_3.setGeometry(QtCore.QRect(220, 1909, 161, 22))
-        self.comboBox_3.setObjectName("comboBox_3")
-        self.comboBox_3.addItem("")
-        self.comboBox_3.addItem("")
-        self.comboBox_3.addItem("")
-        self.label_6 = QtWidgets.QLabel(parent=self.scrollAreaWidgetContents)
-        self.label_6.setGeometry(QtCore.QRect(230, 1869, 141, 20))
-        self.label_6.setStyleSheet("QLabel {\n"
-"    color: white;\n"
-"}\n"
-"")
-        self.label_6.setObjectName("label_6")
-        self.widget_6 = QtWidgets.QWidget(parent=self.scrollAreaWidgetContents)
-        self.widget_6.setGeometry(QtCore.QRect(40, 60, 1261, 551))
-        self.widget_6.setObjectName("widget_6")
-        self.label_11 = QtWidgets.QLabel(parent=self.scrollAreaWidgetContents)
-        self.label_11.setGeometry(QtCore.QRect(60, 9, 1201, 31))
-        font = QtGui.QFont()
-        font.setFamily("Yu Gothic UI Semibold")
-        font.setPointSize(14)
-        font.setBold(True)
-        font.setWeight(75)
-        self.label_11.setFont(font)
-        self.label_11.setStyleSheet("QLabel {\n"
-"    color: white;\n"
-"}\n"
-"")
-        self.label_11.setObjectName("label_11")
-        self.label_12 = QtWidgets.QLabel(parent=self.scrollAreaWidgetContents)
-        self.label_12.setGeometry(QtCore.QRect(640, 2640, 251, 31))
-        font = QtGui.QFont()
-        font.setFamily("Yu Gothic UI Semibold")
-        font.setPointSize(14)
-        font.setBold(True)
-        font.setWeight(75)
-        self.label_12.setFont(font)
-        self.label_12.setStyleSheet("QLabel {\n"
-"    color: white;\n"
-"}\n"
-"")
-        self.label_12.setObjectName("label_12")
-        self.label = QtWidgets.QLabel(parent=self.scrollAreaWidgetContents)
-        self.label.setGeometry(QtCore.QRect(60, 2710, 1371, 611))
+        self.graphFilterLayout.addWidget(self.comboBox_4)
+        self.graphFilterLayout.addStretch(1)
+        
+        graphLayout.addLayout(self.graphFilterLayout)
+        
+        # Widget for graph
+        self.widget_3 = QtWidgets.QWidget()
+        self.widget_3.setMinimumSize(QtCore.QSize(400, 400))  # Increased height
+        self.widget_3.setObjectName("widget_3")
+        graphLayout.addWidget(self.widget_3)
+        
+        self.thirdRowLayout.addWidget(self.graphGroupBox)
+        
+        # Geo-Location Mapping (set to 50% of the row)
+        self.geoGroupBox = QtWidgets.QGroupBox("Geo-Location Mapping")
+        self.geoGroupBox.setObjectName("geoGroupBox")
+        self.geoGroupBox.setMinimumSize(QtCore.QSize(700, 450))  # Make equal to graphGroupBox
+        geoLayout = QtWidgets.QVBoxLayout(self.geoGroupBox)
+        
+        # Label for geolocation map
+        self.label = QtWidgets.QLabel()
+        self.label.setMinimumSize(QtCore.QSize(600, 400))  # Increased size for better map visibility
+        self.label.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
         self.label.setObjectName("label")
+        self.label.setScaledContents(True)  # Important: Scale the pixmap to fit the label
+        geoLayout.addWidget(self.label)
+        
+        self.thirdRowLayout.addWidget(self.geoGroupBox)
+        
+        self.scrollLayout.addLayout(self.thirdRowLayout)
+        
+        # Extra padding at the bottom to ensure everything is visible
+        self.bottomSpacerWidget = QtWidgets.QWidget()
+        self.bottomSpacerWidget.setMinimumHeight(100)  # Add extra space at bottom
+        self.scrollLayout.addWidget(self.bottomSpacerWidget)
+        
+        # Set the scroll area widget
         self.scrollArea.setWidget(self.scrollAreaWidgetContents)
 
         self.retranslateUi(Ui_Naswail_Anlaysis)
@@ -367,15 +468,18 @@ class Ui_Naswail_Anlaysis(object):
 
     def retranslateUi(self, Ui_Naswail_Anlaysis):
         _translate = QtCore.QCoreApplication.translate
-        Ui_Naswail_Anlaysis.setWindowTitle(_translate("Ui_Naswail_Anlaysis", "Form"))
+        Ui_Naswail_Anlaysis.setWindowTitle(_translate("Ui_Naswail_Anlaysis", "Naswail - Analysis"))
         self.pushButton_4.setText(_translate("Ui_Naswail_Anlaysis", "Home"))
         self.pushButton_5.setText(_translate("Ui_Naswail_Anlaysis", "Incident Response"))
         self.pushButton_3.setText(_translate("Ui_Naswail_Anlaysis", "Tools"))
         self.pushButton_2.setText(_translate("Ui_Naswail_Anlaysis", "Analysis"))
-        self.label_4.setText(_translate("Ui_Naswail_Anlaysis", "Naswail"))
-        self.label_9.setText(_translate("Ui_Naswail_Anlaysis", "                        time series"))
-        self.label_13.setText(_translate("Ui_Naswail_Anlaysis", "filter on:"))
-        self.label_8.setText(_translate("Ui_Naswail_Anlaysis", "filter on:"))
+        self.notificationButton.setText(_translate("Ui_Naswail_Anlaysis", "🔔"))
+        self.label_2.setText(_translate("Ui_Naswail_Anlaysis", "Naswail"))
+        self.label_5.setText(_translate("Ui_Naswail_Anlaysis", "Filter on:"))
+        self.label_14.setText(_translate("Ui_Naswail_Anlaysis", "Filter on:"))
+        self.label_13.setText(_translate("Ui_Naswail_Anlaysis", "Filter on:"))
+        self.label_6.setText(_translate("Ui_Naswail_Anlaysis", "Filter on:"))
+        self.label_8.setText(_translate("Ui_Naswail_Anlaysis", "Filter on:"))
         self.comboBox_6.setItemText(0, _translate("Ui_Naswail_Anlaysis", "Protocols"))
         self.comboBox_6.setItemText(1, _translate("Ui_Naswail_Anlaysis", "Sensors"))
         self.comboBox_6.setItemText(2, _translate("Ui_Naswail_Anlaysis", "Bandwidth"))
@@ -389,19 +493,17 @@ class Ui_Naswail_Anlaysis(object):
         self.comboBox_5.setItemText(0, _translate("Ui_Naswail_Anlaysis", "Protocols"))
         self.comboBox_5.setItemText(1, _translate("Ui_Naswail_Anlaysis", "Sensors"))
         self.comboBox_5.setItemText(2, _translate("Ui_Naswail_Anlaysis", "Bandwidth"))
-        self.label_2.setText(_translate("Ui_Naswail_Anlaysis", "                                 Pie Chart"))
-        self.label_5.setText(_translate("Ui_Naswail_Anlaysis", "filter on:"))
-        self.label_14.setText(_translate("Ui_Naswail_Anlaysis", "filter on:"))
-        self.label_10.setText(_translate("Ui_Naswail_Anlaysis", "                 Heatmap"))
-        self.label_7.setText(_translate("Ui_Naswail_Anlaysis", "                       Graph"))
-        self.label_3.setText(_translate("Ui_Naswail_Anlaysis", "                        Hstogram"))
         self.comboBox_3.setItemText(0, _translate("Ui_Naswail_Anlaysis", "Protocols"))
         self.comboBox_3.setItemText(1, _translate("Ui_Naswail_Anlaysis", "inside/outside"))
         self.comboBox_3.setItemText(2, _translate("Ui_Naswail_Anlaysis", "Sensors"))
-        self.label_6.setText(_translate("Ui_Naswail_Anlaysis", "filter on:"))
-        self.label_11.setText(_translate("Ui_Naswail_Anlaysis", "                                                                            3D Network Topology Visulization"))
-        self.label_12.setText(_translate("Ui_Naswail_Anlaysis", "Geo-Location Mapping"))
-        self.label.setText(_translate("Ui_Naswail_Anlaysis", "TextLabel"))
+        self.label.setText(_translate("Ui_Naswail_Anlaysis", ""))
+        self.topologyGroupBox.setTitle(_translate("Ui_Naswail_Anlaysis", "3D Network Topology Visualization"))
+        self.pieChartGroupBox.setTitle(_translate("Ui_Naswail_Anlaysis", "Pie Chart"))
+        self.timeSeriesGroupBox.setTitle(_translate("Ui_Naswail_Anlaysis", "Time Series"))
+        self.histogramGroupBox.setTitle(_translate("Ui_Naswail_Anlaysis", "Histogram"))
+        self.heatmapGroupBox.setTitle(_translate("Ui_Naswail_Anlaysis", "Heatmap"))
+        self.graphGroupBox.setTitle(_translate("Ui_Naswail_Anlaysis", "Graph"))
+        self.geoGroupBox.setTitle(_translate("Ui_Naswail_Anlaysis", "Geo-Location Mapping"))
 
 
 if __name__ == "__main__":

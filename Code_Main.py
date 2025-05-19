@@ -455,7 +455,7 @@ class PacketSystem:
             while True:
                 line = f.readline()
                 if not line:
-                    time.sleep(0.1)  # Avoid CPU overuse
+                    time.sleep(10)  # Avoid CPU overuse
                     continue
 
                 try:
@@ -491,8 +491,8 @@ class PacketSystem:
                                 end_dport = line[sdst:].find('\n')
                                 dport = line[sdst + end_pos + 1 : sdst + end_dport]
 
-                            if (src_ip, sport, dst_ip, dport) not in self.snort_alerts:
-                                self.snort_alerts[(src_ip, sport, dst_ip, dport)].append(attack_label)
+                            if (src_ip, dst_ip) not in self.snort_alerts:
+                                self.snort_alerts[(src_ip, dst_ip)].append(attack_label)
                                 print(f"Detected: {attack_label} from {src_ip}, {sport} to {dst_ip}, {dport}")
                                 for packet in self.qued_packets:
                                     msrc_ip = packet["IP"].src if packet.haslayer("IP") else "N/A"
@@ -506,7 +506,7 @@ class PacketSystem:
                                             self.ui.tableWidget_4.setItem(row_position, 0, QTableWidgetItem(current_time))
                                             self.ui.tableWidget_4.setItem(row_position, 1, QTableWidgetItem(src_ip))
                                             self.ui.tableWidget_4.setItem(row_position, 2, QTableWidgetItem(dst_ip))
-                                            self.ui.tableWidget_4.setItem(row_position, 3, QTableWidgetItem(str(self.snort_alerts[(src_ip, sport, dst_ip, dport)][0])))
+                                            self.ui.tableWidget_4.setItem(row_position, 3, QTableWidgetItem(str(self.snort_alerts[(src_ip, dst_ip)][0])))
                                                     
 
                 except Exception as e:
@@ -905,7 +905,7 @@ class PacketSystem:
                             "}\n"
                             "")
                     self.new_packet_features.append([packet_length, timestamp, protocol])
-                    if (src_ip, sport, dst_ip, dport) in self.snort_alerts or 1 == 1:
+                    if (src_ip, dst_ip) in self.snort_alerts:
                         self.anomalies.append(packet)
                         current_time = datetime.now().strftime("%H:%M:%S")
                         self.networkLog+=current_time+"/  "+"An anomaly occured"+"\n"
@@ -914,7 +914,7 @@ class PacketSystem:
                         self.ui.tableWidget_4.setItem(row_position, 0, QTableWidgetItem(readable_time))
                         self.ui.tableWidget_4.setItem(row_position, 1, QTableWidgetItem(src_ip))
                         self.ui.tableWidget_4.setItem(row_position, 2, QTableWidgetItem(dst_ip))
-                        self.ui.tableWidget_4.setItem(row_position, 3, QTableWidgetItem("Distributed Denial of Service"))#str(self.snort_alerts[(src_ip, sport, dst_ip, dport)][0])))
+                        self.ui.tableWidget_4.setItem(row_position, 3, QTableWidgetItem(str(self.snort_alerts[(src_ip, dst_ip)][0])))
                     row_position = self.ui.tableWidget.rowCount()
                     self.ui.tableWidget.insertRow(row_position)
                     self.ui.tableWidget.setItem(row_position, 0, QTableWidgetItem(readable_time))
@@ -1759,7 +1759,7 @@ def is_admin():
 
 def run_command_as_admin():
     # Command to execute
-    cmd_command = 'snort -i 4 -c C:\\Snort\\etc\\snort.conf -l C:\\Snort\\log -A fast'
+    cmd_command = 'snort -i 5 -c C:\\Snort\\etc\\snort.conf -l C:\\Snort\\log -A fast'
     
     # Run in a new persistent command prompt window
     subprocess.Popen(

@@ -452,7 +452,7 @@ class Window_Tools(QWidget, Ui_Naswail_Tool):
         self.init_ui()
         self.ErrorPacketSystemobj = ErrorPacketSystem(self.ui)
         self.RegPred = RegressionPrediction(self.ui, self.main_window.PacketSystemobj.packets, self.main_window.time_series)
-        self.SuAn = SuspiciousAnalysis(self.ui, self.main_window.PacketSystemobj.anomalies, self.main_window.PacketSystemobj)
+        # self.SuAn = SuspiciousAnalysis(self.ui, self.main_window.PacketSystemobj.anomalies, self.main_window.PacketSystemobj)
         self.networkactobj=NetworkActivity(self.ui)
         self.networkactobj.set_packetobj(self.main_window.PacketSystemobj)
         self.networkactobj.display()
@@ -472,23 +472,23 @@ class Window_Tools(QWidget, Ui_Naswail_Tool):
         self.ui.pushButton.clicked.connect(self.RegPred.setHours)
         self.ui.pushButton_6.clicked.connect(self.resetfilter)
 
-        self.ui.tableWidget.setColumnCount(10)
-        self.ui.tableWidget.setHorizontalHeaderLabels(
-            ["Timestamp", "Source IP", "Destination IP", "MAC Src", "MAC Dst", "Src Port", "Dst Port", "Protocol", "Length", "Payload"]
-        )
-        self.ui.tableWidget.cellClicked.connect(self.SuAn.display_packet_details)
-        self.ui.tableWidget.cellClicked.connect(self.SuAn.decode_packet)   # UDP
-        self.ui.checkBox_21.stateChanged.connect(self.SuAn.apply_filter)    # TCP
-        self.ui.checkBox_22.stateChanged.connect(self.SuAn.apply_filter)    # ICMP
-        self.ui.checkBox_23.stateChanged.connect(self.SuAn.apply_filter)    # DNS
-        self.ui.checkBox_24.stateChanged.connect(self.SuAn.apply_filter)    # DHCP
-        self.ui.checkBox_28.stateChanged.connect(self.SuAn.apply_filter)    # HTTP
-        self.ui.checkBox_25.stateChanged.connect(self.SuAn.apply_filter)    # HTTPS
-        self.ui.checkBox_26.stateChanged.connect(self.SuAn.apply_filter)    # TELNET
-        self.ui.checkBox_30.stateChanged.connect(self.SuAn.apply_filter)    # FTP
-        self.ui.checkBox_27.stateChanged.connect(self.SuAn.apply_filter)
-        self.ui.checkBox_29.stateChanged.connect(self.SuAn.apply_filter)      # Other
-        self.ui.pushButton_11.clicked.connect(self.SuAn.apply_filter)
+        # self.ui.tableWidget.setColumnCount(10)
+        # self.ui.tableWidget.setHorizontalHeaderLabels(
+        #     ["Timestamp", "Source IP", "Destination IP", "MAC Src", "MAC Dst", "Src Port", "Dst Port", "Protocol", "Length", "Payload"]
+        # )
+        # self.ui.tableWidget.cellClicked.connect(self.SuAn.display_packet_details)
+        # self.ui.tableWidget.cellClicked.connect(self.SuAn.decode_packet)   # UDP
+        # self.ui.checkBox_21.stateChanged.connect(self.SuAn.apply_filter)    # TCP
+        # self.ui.checkBox_22.stateChanged.connect(self.SuAn.apply_filter)    # ICMP
+        # self.ui.checkBox_23.stateChanged.connect(self.SuAn.apply_filter)    # DNS
+        # self.ui.checkBox_24.stateChanged.connect(self.SuAn.apply_filter)    # DHCP
+        # self.ui.checkBox_28.stateChanged.connect(self.SuAn.apply_filter)    # HTTP
+        # self.ui.checkBox_25.stateChanged.connect(self.SuAn.apply_filter)    # HTTPS
+        # self.ui.checkBox_26.stateChanged.connect(self.SuAn.apply_filter)    # TELNET
+        # self.ui.checkBox_30.stateChanged.connect(self.SuAn.apply_filter)    # FTP
+        # self.ui.checkBox_27.stateChanged.connect(self.SuAn.apply_filter)
+        # self.ui.checkBox_29.stateChanged.connect(self.SuAn.apply_filter)      # Other
+        # self.ui.pushButton_11.clicked.connect(self.SuAn.apply_filter)
         self.ui.pushButton_7.clicked.connect(self.networkactobj.display)
         self.ui.pushButton_5.clicked.connect(self.networkactobj.save_activity)
         
@@ -509,7 +509,7 @@ class Window_Tools(QWidget, Ui_Naswail_Tool):
     def ttTime(self):
         
         self.ErrorPacketSystemobj.display()
-        self.SuAn.display()
+        # self.SuAn.display()
         if(self.sec % 15 == 0):
             self.RegPred.pred_traffic()
             if(self.RegPred.r2 > 0.50):
@@ -520,10 +520,10 @@ class Window_Tools(QWidget, Ui_Naswail_Tool):
 
     def resetfilter(self):
         try:
-            self.SuAn.process_packet_index=0
-            self.SuAn.pcap_process_packet_index=0
-            self.ui.tableWidget.setRowCount(0)
-            self.SuAn.filterapplied=False
+            # self.SuAn.process_packet_index=0
+            # self.SuAn.pcap_process_packet_index=0
+            # self.ui.tableWidget.setRowCount(0)
+            # self.SuAn.filterapplied=False
             self.ui.lineEdit_8.setText("")
             self.ui.lineEdit_9.setText("")
             checkboxes = [
@@ -540,7 +540,7 @@ class Window_Tools(QWidget, Ui_Naswail_Tool):
             ]
             for checkbox in checkboxes:
                 checkbox.setCheckState(Qt.CheckState.Unchecked)
-            self.SuAn.filterapplied = False
+            # self.SuAn.filterapplied = False
         except Exception as e:
             print(f"Error in resetfilter function: {e}")
 

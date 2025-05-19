@@ -7,6 +7,7 @@
 
 
 from PyQt6 import QtCore, QtGui, QtWidgets
+from PyQt6.QtCore import Qt
 
 
 class Ui_IncidentResponse(object):
@@ -161,130 +162,24 @@ class Ui_IncidentResponse(object):
         font.setWeight(75)
         self.label_2.setFont(font)
         self.label_2.setObjectName("label_2")
+        
+        # Main suspicious packets table (left side, top) - wider and taller
         self.tableWidget = QtWidgets.QTableWidget(parent=Form)
-        self.tableWidget.setGeometry(QtCore.QRect(50, 100, 731, 381))
+        self.tableWidget.setGeometry(QtCore.QRect(20, 100, 800, 420))
         self.tableWidget.setObjectName("tableWidget")
         self.tableWidget.setColumnCount(0)
         self.tableWidget.setRowCount(0)
-        self.tabWidget = QtWidgets.QTabWidget(parent=Form)
-        self.tabWidget.setGeometry(QtCore.QRect(774, 500, 581, 291))
-        self.tabWidget.setObjectName("tabWidget")
-        self.tab = QtWidgets.QWidget()
-        # Create the new tab
-        self.terminateTab = QtWidgets.QWidget()
-        self.terminateTab.setObjectName("terminateTab")
-
-        # Create the layout
-        self.terminateLayout = QtWidgets.QHBoxLayout(self.terminateTab)
-
-        # Left side: Label and ListView
-        self.leftLayout = QtWidgets.QVBoxLayout()
-        self.terminatedLabel = QtWidgets.QLabel("Terminated Process")
-        self.terminatedList = QtWidgets.QListView()
-        self.leftLayout.addWidget(self.terminatedLabel)
-        self.leftLayout.addWidget(self.terminatedList)
-
-        # Right side: Label, LineEdit, and Button
-        self.rightLayout = QtWidgets.QVBoxLayout()
-        self.processLabel = QtWidgets.QLabel("Name of Process to Terminate")
-        self.processLineEdit = QtWidgets.QLineEdit()
-        self.terminateButton = QtWidgets.QPushButton("Terminate")
-        self.rightLayout.addWidget(self.processLabel)
-        self.rightLayout.addWidget(self.processLineEdit)
-        self.rightLayout.addWidget(self.terminateButton)
-                # Create the new tab
-        self.rateLimitTab = QtWidgets.QWidget()
-        self.rateLimitTab.setObjectName("rateLimitTab")
-
-        # Create the layout
-        self.rateLimitLayout = QtWidgets.QHBoxLayout(self.rateLimitTab)
-
-        # Left side: Label and ListView
-        self.leftRateLayout = QtWidgets.QVBoxLayout()
-        self.limitedIPsLabel = QtWidgets.QLabel("Limited IPs")
-        self.limitedIPsList = QtWidgets.QListView()
-        self.leftRateLayout.addWidget(self.limitedIPsLabel)
-        self.leftRateLayout.addWidget(self.limitedIPsList)
-
-        # Right side: Labels, LineEdits, and Button
-        self.rightRateLayout = QtWidgets.QVBoxLayout()
-        self.ipLabel = QtWidgets.QLabel("IP Address to Limit")
-        self.ipLineEdit = QtWidgets.QLineEdit()
-        self.rateLabel = QtWidgets.QLabel("Rate Limit (Kbits per Second no less than 8 is allowed)")
-        self.rateLineEdit = QtWidgets.QLineEdit()
-        self.applyLimitButton = QtWidgets.QPushButton("Apply Limit")
-        self.resetbutton=QtWidgets.QPushButton("Reset Limits")
-
-        # Add widgets to right layout
-        self.rightRateLayout.addWidget(self.ipLabel)
-        self.rightRateLayout.addWidget(self.ipLineEdit)
-        self.rightRateLayout.addWidget(self.rateLabel)
-        self.rightRateLayout.addWidget(self.rateLineEdit)
-        self.rightRateLayout.addWidget(self.applyLimitButton)
-        self.rightRateLayout.addWidget(self.resetbutton)
-
-        # Add left and right layouts to the main layout
-        self.rateLimitLayout.addLayout(self.leftRateLayout)
-        self.rateLimitLayout.addLayout(self.rightRateLayout)
-
-        # Add the tab to the QTabWidget
         
-        # Add left and right layouts to the main layout
-        self.terminateLayout.addLayout(self.leftLayout)
-        self.terminateLayout.addLayout(self.rightLayout)
-
-        # Add the tab to the QTabWidget
+        # Attack intelligence table (right side, top) - shifted further right
+        self.tableWidget_3 = QtWidgets.QTableWidget(parent=Form)
+        self.tableWidget_3.setGeometry(QtCore.QRect(850, 100, 510, 420))
+        self.tableWidget_3.setObjectName("tableWidget_3")
+        self.tableWidget_3.setColumnCount(0)
+        self.tableWidget_3.setRowCount(0)
         
-        
-        self.tab.setObjectName("tab")
-        self.listView = QtWidgets.QListView(parent=self.tab)
-        self.listView.setGeometry(QtCore.QRect(5, 0, 331, 261))
-        self.listView.setObjectName("listView")
-        self.pushButton = QtWidgets.QPushButton(parent=self.tab)
-        self.pushButton.setGeometry(QtCore.QRect(360, 180, 93, 28))
-        self.pushButton.setObjectName("pushButton")
-        self.pushButton_9 = QtWidgets.QPushButton(parent=self.tab)
-        self.pushButton_9.setGeometry(QtCore.QRect(460, 180, 93, 28))
-        self.pushButton_9.setObjectName("pushButton_9")
-        self.lineEdit = QtWidgets.QLineEdit(parent=self.tab)
-        self.lineEdit.setGeometry(QtCore.QRect(360, 140, 191, 31))
-        self.lineEdit.setStyleSheet("QLineEdit{\n"
-"border: 1px solid #76797C;\n"
-"    gridline-color: #31363b;\n"
-"    background-color: #232629;\n"
-"}")
-        self.lineEdit.setObjectName("lineEdit")
-        self.label = QtWidgets.QLabel(parent=self.tab)
-        self.label.setGeometry(QtCore.QRect(360, 100, 161, 31))
-        self.label.setObjectName("label")
-        self.tabWidget.addTab(self.tab, "")
-        self.tab_2 = QtWidgets.QWidget()
-        self.tab_2.setObjectName("tab_2")
-        self.tableWidget_2 = QtWidgets.QTableWidget(parent=self.tab_2)
-        self.tableWidget_2.setGeometry(QtCore.QRect(40, 40, 251, 211))
-        self.tableWidget_2.setObjectName("tableWidget_2")
-        self.tableWidget_2.setColumnCount(0)
-        self.tableWidget_2.setRowCount(0)
-        self.lineEdit_2 = QtWidgets.QLineEdit(parent=self.tab_2)
-        self.lineEdit_2.setGeometry(QtCore.QRect(330, 140, 191, 31))
-        self.lineEdit_2.setStyleSheet("QLineEdit{\n"
-"border: 1px solid #76797C;\n"
-"    gridline-color: #31363b;\n"
-"    background-color: #232629;\n"
-"}")
-        self.lineEdit_2.setObjectName("lineEdit_2")
-        self.label_3 = QtWidgets.QLabel(parent=self.tab_2)
-        self.label_3.setGeometry(QtCore.QRect(330, 100, 161, 31))
-        self.label_3.setObjectName("label_3")
-        self.pushButton_10 = QtWidgets.QPushButton(parent=self.tab_2)
-        self.pushButton_10.setGeometry(QtCore.QRect(330, 180, 93, 28))
-        self.pushButton_10.setObjectName("pushButton_10")
-        self.pushButton_11 = QtWidgets.QPushButton(parent=self.tab_2)
-        self.pushButton_11.setGeometry(QtCore.QRect(430, 180, 93, 28))
-        self.pushButton_11.setObjectName("pushButton_11")
-        self.tabWidget.addTab(self.tab_2, "")
+        # Auto-Pilot Activity Log (left side, bottom) - wider but shorter
         self.treeView = QtWidgets.QTreeView(parent=Form)
-        self.treeView.setGeometry(QtCore.QRect(30, 530, 641, 271))
+        self.treeView.setGeometry(QtCore.QRect(20, 570, 800, 260))
         self.treeView.setStyleSheet("QTreeView {\n"
 "   border: 1px solid #76797C;\n"
 "    gridline-color: #31363b;\n"
@@ -292,13 +187,64 @@ class Ui_IncidentResponse(object):
 "}\n"
 "")
         self.treeView.setObjectName("treeView")
-        self.tableWidget_3 = QtWidgets.QTableWidget(parent=Form)
-        self.tableWidget_3.setGeometry(QtCore.QRect(850, 100, 501, 381))
-        self.tableWidget_3.setObjectName("tableWidget_3")
-        self.tableWidget_3.setColumnCount(0)
-        self.tableWidget_3.setRowCount(0)
+        
+        # Tab widget (right side, bottom) - shifted further right
+        self.tabWidget = QtWidgets.QTabWidget(parent=Form)
+        self.tabWidget.setGeometry(QtCore.QRect(850, 570, 510, 260))
+        self.tabWidget.setObjectName("tabWidget")
+        
+        self.tab = QtWidgets.QWidget()
+        self.tab.setObjectName("tab")
+        self.listView = QtWidgets.QListView(parent=self.tab)
+        self.listView.setGeometry(QtCore.QRect(10, 10, 230, 200))
+        self.listView.setObjectName("listView")
+        self.label = QtWidgets.QLabel(parent=self.tab)
+        self.label.setGeometry(QtCore.QRect(260, 10, 220, 30))
+        self.label.setObjectName("label")
+        self.lineEdit = QtWidgets.QLineEdit(parent=self.tab)
+        self.lineEdit.setGeometry(QtCore.QRect(260, 50, 220, 35))
+        self.lineEdit.setStyleSheet("QLineEdit{\n"
+"border: 1px solid #76797C;\n"
+"    gridline-color: #31363b;\n"
+"    background-color: #232629;\n"
+"}")
+        self.lineEdit.setObjectName("lineEdit")
+        self.pushButton = QtWidgets.QPushButton(parent=self.tab)
+        self.pushButton.setGeometry(QtCore.QRect(260, 100, 105, 35))
+        self.pushButton.setObjectName("pushButton")
+        self.pushButton_9 = QtWidgets.QPushButton(parent=self.tab)
+        self.pushButton_9.setGeometry(QtCore.QRect(375, 100, 105, 35))
+        self.pushButton_9.setObjectName("pushButton_9")
+        self.tabWidget.addTab(self.tab, "")
+        self.tab_2 = QtWidgets.QWidget()
+        self.tab_2.setObjectName("tab_2")
+        self.tableWidget_2 = QtWidgets.QTableWidget(parent=self.tab_2)
+        self.tableWidget_2.setGeometry(QtCore.QRect(10, 10, 230, 200))
+        self.tableWidget_2.setObjectName("tableWidget_2")
+        self.tableWidget_2.setColumnCount(0)
+        self.tableWidget_2.setRowCount(0)
+        self.label_3 = QtWidgets.QLabel(parent=self.tab_2)
+        self.label_3.setGeometry(QtCore.QRect(260, 10, 220, 30))
+        self.label_3.setObjectName("label_3")
+        self.lineEdit_2 = QtWidgets.QLineEdit(parent=self.tab_2)
+        self.lineEdit_2.setGeometry(QtCore.QRect(260, 50, 220, 35))
+        self.lineEdit_2.setStyleSheet("QLineEdit{\n"
+"border: 1px solid #76797C;\n"
+"    gridline-color: #31363b;\n"
+"    background-color: #232629;\n"
+"}")
+        self.lineEdit_2.setObjectName("lineEdit_2")
+        self.pushButton_10 = QtWidgets.QPushButton(parent=self.tab_2)
+        self.pushButton_10.setGeometry(QtCore.QRect(260, 100, 105, 35))
+        self.pushButton_10.setObjectName("pushButton_10")
+        self.pushButton_11 = QtWidgets.QPushButton(parent=self.tab_2)
+        self.pushButton_11.setGeometry(QtCore.QRect(375, 100, 105, 35))
+        self.pushButton_11.setObjectName("pushButton_11")
+        self.tabWidget.addTab(self.tab_2, "")
+        
+        # Updated label positions
         self.label_4 = QtWidgets.QLabel(parent=Form)
-        self.label_4.setGeometry(QtCore.QRect(230, 490, 241, 31))
+        self.label_4.setGeometry(QtCore.QRect(20, 535, 241, 31))
         font = QtGui.QFont()
         font.setFamily("Yu Gothic UI")
         font.setPointSize(11)
@@ -306,8 +252,9 @@ class Ui_IncidentResponse(object):
         font.setWeight(75)
         self.label_4.setFont(font)
         self.label_4.setObjectName("label_4")
+        
         self.label_5 = QtWidgets.QLabel(parent=Form)
-        self.label_5.setGeometry(QtCore.QRect(1020, 60, 161, 31))
+        self.label_5.setGeometry(QtCore.QRect(1050, 60, 161, 31))
         font = QtGui.QFont()
         font.setFamily("Yu Gothic UI")
         font.setPointSize(11)
@@ -315,8 +262,9 @@ class Ui_IncidentResponse(object):
         font.setWeight(75)
         self.label_5.setFont(font)
         self.label_5.setObjectName("label_5")
+        
         self.label_6 = QtWidgets.QLabel(parent=Form)
-        self.label_6.setGeometry(QtCore.QRect(300, 60, 161, 31))
+        self.label_6.setGeometry(QtCore.QRect(20, 60, 161, 31))
         font = QtGui.QFont()
         font.setFamily("Yu Gothic UI")
         font.setPointSize(11)
@@ -324,6 +272,84 @@ class Ui_IncidentResponse(object):
         font.setWeight(75)
         self.label_6.setFont(font)
         self.label_6.setObjectName("label_6")
+
+        # Terminate Process tab
+        self.terminateTab = QtWidgets.QWidget()
+        self.terminateTab.setObjectName("terminateTab")
+
+        # Create layout for terminate tab
+        self.terminateLayout = QtWidgets.QGridLayout(self.terminateTab)
+        self.terminateLayout.setContentsMargins(10, 10, 10, 10)
+        self.terminateLayout.setSpacing(10)
+
+        # Terminated processes list
+        self.terminatedLabel = QtWidgets.QLabel("Terminated Processes")
+        self.terminatedLabel.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.terminatedList = QtWidgets.QListView()
+
+        # Process termination controls
+        self.processLabel = QtWidgets.QLabel("Name of Process to Terminate")
+        self.processLabel.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.processLineEdit = QtWidgets.QLineEdit()
+        self.processLineEdit.setStyleSheet("QLineEdit{\n"
+"border: 1px solid #76797C;\n"
+"    gridline-color: #31363b;\n"
+"    background-color: #232629;\n"
+"}")
+        self.terminateButton = QtWidgets.QPushButton("Terminate")
+
+        # Add widgets to grid layout
+        self.terminateLayout.addWidget(self.terminatedLabel, 0, 0)
+        self.terminateLayout.addWidget(self.terminatedList, 1, 0)
+        self.terminateLayout.addWidget(self.processLabel, 0, 1)
+        self.terminateLayout.addWidget(self.processLineEdit, 1, 1)
+        self.terminateLayout.addWidget(self.terminateButton, 2, 1)
+
+        # Packet Rate Limiting tab
+        self.rateLimitTab = QtWidgets.QWidget()
+        self.rateLimitTab.setObjectName("rateLimitTab")
+
+        # Create layout for rate limit tab
+        self.rateLimitLayout = QtWidgets.QGridLayout(self.rateLimitTab)
+        self.rateLimitLayout.setContentsMargins(10, 10, 10, 10)
+        self.rateLimitLayout.setSpacing(10)
+
+        # Limited IPs list
+        self.limitedIPsLabel = QtWidgets.QLabel("Limited IPs")
+        self.limitedIPsLabel.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.limitedIPsList = QtWidgets.QListView()
+
+        # Rate limiting controls
+        self.ipLabel = QtWidgets.QLabel("IP Address to Limit")
+        self.ipLabel.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.ipLineEdit = QtWidgets.QLineEdit()
+        self.ipLineEdit.setStyleSheet("QLineEdit{\n"
+"border: 1px solid #76797C;\n"
+"    gridline-color: #31363b;\n"
+"    background-color: #232629;\n"
+"}")
+
+        self.rateLabel = QtWidgets.QLabel("Rate Limit (Kbits/sec, min 8)")
+        self.rateLabel.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.rateLineEdit = QtWidgets.QLineEdit()
+        self.rateLineEdit.setStyleSheet("QLineEdit{\n"
+"border: 1px solid #76797C;\n"
+"    gridline-color: #31363b;\n"
+"    background-color: #232629;\n"
+"}")
+
+        self.applyLimitButton = QtWidgets.QPushButton("Apply Limit")
+        self.resetbutton = QtWidgets.QPushButton("Reset Limits")
+
+        # Add widgets to grid layout
+        self.rateLimitLayout.addWidget(self.limitedIPsLabel, 0, 0)
+        self.rateLimitLayout.addWidget(self.limitedIPsList, 1, 0, 4, 1)  # span 4 rows
+        self.rateLimitLayout.addWidget(self.ipLabel, 0, 1)
+        self.rateLimitLayout.addWidget(self.ipLineEdit, 1, 1)
+        self.rateLimitLayout.addWidget(self.rateLabel, 2, 1)
+        self.rateLimitLayout.addWidget(self.rateLineEdit, 3, 1)
+        self.rateLimitLayout.addWidget(self.applyLimitButton, 4, 1)
+        self.rateLimitLayout.addWidget(self.resetbutton, 5, 1)
 
         self.retranslateUi(Form)
         self.tabWidget.setCurrentIndex(0)
@@ -345,9 +371,9 @@ class Ui_IncidentResponse(object):
         self.pushButton_10.setText(_translate("Form", "Add"))
         self.pushButton_11.setText(_translate("Form", "Remove"))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_2), _translate("Form", "Port Blocking"))
-        self.label_4.setText(_translate("Form", " Auto-Pilot Acitvity Log"))
+        self.label_4.setText(_translate("Form", " Auto-Pilot Activity Log"))
         self.label_5.setText(_translate("Form", "Attack Intelligence"))
-        self.label_6.setText(_translate("Form", "Suspecious Packets"))
+        self.label_6.setText(_translate("Form", "Suspicious Packets"))
         self.tabWidget.addTab(self.terminateTab, "Terminate Process")
         self.tabWidget.addTab(self.rateLimitTab, "Packet Rate Limiting")
 

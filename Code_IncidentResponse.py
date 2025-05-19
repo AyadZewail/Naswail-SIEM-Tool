@@ -24,7 +24,7 @@ from scapy.layers.l2 import Ether
 from UI_IncidentResponse import Ui_IncidentResponse
 from keybert import KeyBERT
 #!/usr/bin/env python
-# snort -i 4 -c C:\Snort\etc\snort.conf -l C:\Snort\log -A fast
+# snort -i 5 -c C:\Snort\etc\snort.conf -l C:\Snort\log -A fast
 # type C:\Snort\log\alert.ids
 # echo. > C:\Snort\log\alert.ids
 # ping -n 4 8.8.8.8
@@ -55,7 +55,7 @@ class Autopilot:
         
     def setup(self, prompt, ip, port):
         start_time = time.time()
-        NGROK_URL = "https://991f-34-135-175-210.ngrok-free.app"
+        NGROK_URL = "https://d215-34-66-185-255.ngrok-free.app"
         client = KaggleLLMClient(NGROK_URL, self.logModel)
         
         prompt_text = prompt
