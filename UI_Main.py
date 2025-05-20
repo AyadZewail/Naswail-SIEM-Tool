@@ -163,6 +163,31 @@ class Ui_MainWindow(object):
         self.dateTimeEdit_2 = QtWidgets.QDateTimeEdit(parent=self.tab)
         self.dateTimeEdit_2.setGeometry(QtCore.QRect(20, 110, 200, 38))
         self.dateTimeEdit_2.setObjectName("dateTimeEdit_2")
+
+        # Add info panel to fill the gap under the end time date picker
+        self.filterInfoFrame = QtWidgets.QFrame(parent=self.tab)
+        self.filterInfoFrame.setGeometry(QtCore.QRect(20, 160, 200, 190))
+        self.filterInfoFrame.setFrameShape(QtWidgets.QFrame.Shape.StyledPanel)
+        self.filterInfoFrame.setFrameShadow(QtWidgets.QFrame.Shadow.Raised)
+        self.filterInfoFrame.setStyleSheet("QFrame { background-color: rgba(64, 224, 208, 0.1); border: 1px solid rgba(64, 224, 208, 0.5); border-radius: 5px; }")
+        self.filterInfoFrame.setObjectName("filterInfoFrame")
+
+        self.filterInfoLayout = QtWidgets.QVBoxLayout(self.filterInfoFrame)
+        self.filterInfoLayout.setContentsMargins(10, 10, 10, 10)
+        self.filterInfoLayout.setSpacing(8)
+
+        self.filterInfoTitle = QtWidgets.QLabel(parent=self.filterInfoFrame)
+        self.filterInfoTitle.setStyleSheet("color: #40E0D0; border: none; font-weight: bold;")
+        self.filterInfoTitle.setText("Filter Tips")
+        self.filterInfoTitle.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
+        self.filterInfoLayout.addWidget(self.filterInfoTitle)
+
+        self.filterInfoText = QtWidgets.QLabel(parent=self.filterInfoFrame)
+        self.filterInfoText.setStyleSheet("color: white; border: none;")
+        self.filterInfoText.setText("• Set both times for time range\n• Leave blank for all times\n• Use protocols with IP filters\n• Filter by port number\n• Select traffic type")
+        self.filterInfoText.setWordWrap(True)
+        self.filterInfoLayout.addWidget(self.filterInfoText)
+
         self.label = QtWidgets.QLabel(parent=self.tab)
         self.label.setGeometry(QtCore.QRect(240, 10, 190, 20))
         self.label.setStyleSheet("QLabel {\n"
@@ -687,6 +712,20 @@ class Ui_MainWindow(object):
         self.label_4.setText(_translate("MainWindow", "Suspicious Packets"))
         self.label_5.setText(_translate("MainWindow", "Time Elapsed:"))
         self.label_6.setText(_translate("MainWindow", "TextLabel"))
+        
+        # Add recording indicator label with fixed position
+        self.recordingIndicator = QtWidgets.QLabel(parent=self.centralwidget)
+        self.recordingIndicator.setGeometry(QtCore.QRect(180, 20, 10, 10))  # Fixed position next to time elapsed
+        self.recordingIndicator.setStyleSheet("""
+            QLabel {
+                background-color: transparent;
+                border: none;
+                border-radius: 5px;
+            }
+        """)
+        self.recordingIndicator.setText("")
+        self.recordingIndicator.setObjectName("recordingIndicator")
+        
         self.label_ip_dst.setText(_translate("MainWindow", "Enter destination IP"))
         self.label_ip_source.setText(_translate("MainWindow", "Enter source IP"))
         self.label_protocol.setText(_translate("MainWindow", "Enter protocol"))

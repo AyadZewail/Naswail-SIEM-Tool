@@ -22,7 +22,7 @@ from scapy.all import *
 from scapy.layers.inet import IP
 from scapy.layers.l2 import Ether
 from UI_IncidentResponse import Ui_IncidentResponse
-from keybert import KeyBERT
+
 import multiprocessing
 #!/usr/bin/env python
 # snort -i 5 -c C:\Snort\etc\snort.conf -l C:\Snort\log -A fast
@@ -50,10 +50,11 @@ def run_scrap_instructions(attack_name, system):
             ]
         elif system == "Windows":
             cmd = [
-                r"venv-python12\Scripts\python",
+                r"python",
                 "scrapInstructions.py",
                 f"{attack_name} mitigation and response"
             ]
+            
         
         # Set high priority
         if system == "Windows":
@@ -115,7 +116,7 @@ class Autopilot:
         
     def setup(self, prompt, ip, port, scrapetime):
         start_time = time.time()
-        NGROK_URL = "https://4c07-35-201-207-70.ngrok-free.app"
+        NGROK_URL = "https://3c3b-35-234-63-106.ngrok-free.app"
         client = KaggleLLMClient(NGROK_URL, self.logModel)
         
         prompt_text = prompt
@@ -439,27 +440,7 @@ class AnomalousPackets():
         self.logModel.log_step(f"Failed to Procure Intelligence; Analyst Intervention Required")
         self.ui.tableWidget_3.setItem(5, 1, QTableWidgetItem(error_msg))
 
-    def preprocess_threat_for_AI(self,threat_text):
-        kw_model = KeyBERT("all-MiniLM-L6-v2")
-        
-        # Extract key phrases from the threat text.
-        # - keyphrase_ngram_range=(1, 2) tells the model to consider single words and two-word phrases.
-        # - stop_words='english' removes common words that don't add much meaning.
-        # - top_n=3 extracts the top three keywords/phrases.
-        keywords = kw_model.extract_keywords(threat_text, keyphrase_ngram_range=(1, 20), stop_words='english', top_n=20)
-        
-        # 'keywords' is a list of tuples where each tuple contains a keyphrase and its relevance score.
-        # For example, it might return: [('block port', 0.80), ('source port', 0.65), ...]
-        # We select the top-scoring keyphrase as the command.
-        command = keywords[0][0] if keywords else threat_text
-        
-        # Optionally, you can add post-processing to ensure the command is in a desired format.
-        # For example, lowercasing or removing extraneous words.
-        command = command.lower().strip()
-        
-        # Print the extracted command.
-        print("Command:", command)
-        return command
+
 
 
 class LogWindow(QMainWindow):

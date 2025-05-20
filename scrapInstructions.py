@@ -28,7 +28,7 @@ search_query = args.query  # Store query
 model = SentenceTransformer('all-MiniLM-L6-v2')
 nlp = spacy.load("en_core_web_sm", disable=["parser", "ner"])
 nlp.add_pipe("sentencizer")
-mit_emb_file = "D:\\Work\\University\\GradProject\\Naswail-SIEM-Tool\\mitigation_embeddings.pt"
+mit_emb_file = "mitigation_embeddings.pt"
 
 # Constants
 BING_SEARCH_URL = "https://www.bing.com/search"
