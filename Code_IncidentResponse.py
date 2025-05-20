@@ -23,12 +23,70 @@ from scapy.layers.inet import IP
 from scapy.layers.l2 import Ether
 from UI_IncidentResponse import Ui_IncidentResponse
 from keybert import KeyBERT
+import multiprocessing
 #!/usr/bin/env python
 # snort -i 5 -c C:\Snort\etc\snort.conf -l C:\Snort\log -A fast
 # type C:\Snort\log\alert.ids
 # echo. > C:\Snort\log\alert.ids
 # ping -n 4 8.8.8.8
 
+# Initialize process pool at module level for reuse
+process_pool = None
+
+def initialize_process_pool(processes=2):
+    global process_pool
+    if process_pool is None:
+        process_pool = multiprocessing.Pool(processes=processes)
+    return process_pool
+
+# Function to be executed by the process pool
+def run_scrap_instructions(attack_name, system):
+    try:
+        if system == "Linux":
+            cmd = [
+                r"/home/hamada/Downloads/Naswail-SIEM-Tool-main/.venv/bin/python",
+                "/home/hamada/Downloads/Naswail-SIEM-Tool-main/scrapInstructions.py",
+                f"{attack_name} mitigation and response"
+            ]
+        elif system == "Windows":
+            cmd = [
+                r"venv-python12\Scripts\python",
+                "scrapInstructions.py",
+                f"{attack_name} mitigation and response"
+            ]
+        
+        # Set high priority
+        if system == "Windows":
+            # Windows-specific high priority execution
+            startupinfo = subprocess.STARTUPINFO()
+            startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+            startupinfo.wShowWindow = subprocess.SW_HIDE
+            
+            # HIGH_PRIORITY_CLASS = 0x00000080
+            result = subprocess.run(
+                cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+                startupinfo=startupinfo,
+                creationflags=0x00000080,  # HIGH_PRIORITY_CLASS
+                shell=False
+            )
+        else:
+            # Linux execution with nice -n -20 (highest priority)
+            nice_cmd = ["nice", "-n", "-20"] + cmd
+            result = subprocess.run(
+                nice_cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+                shell=False,
+                preexec_fn=os.setpgrp  # Run in separate process group
+            )
+        
+        return result.stdout, result.stderr
+    except Exception as e:
+        return "", str(e)
 
 # ======= Modified Stop Criteria =======
 
@@ -52,10 +110,12 @@ class Autopilot:
     def __init__(self, MitEng, LogAP):
         self.MitEng = MitEng
         self.logModel = LogAP
+        self.TTR = 0
+        self.mitigation_success = False
         
-    def setup(self, prompt, ip, port):
+    def setup(self, prompt, ip, port, scrapetime):
         start_time = time.time()
-        NGROK_URL = "https://d215-34-66-185-255.ngrok-free.app"
+        NGROK_URL = "https://4c07-35-201-207-70.ngrok-free.app"
         client = KaggleLLMClient(NGROK_URL, self.logModel)
         
         prompt_text = prompt
@@ -63,44 +123,77 @@ class Autopilot:
         self.logModel.log_step("Prompting LLM...")
         response = client.send_prompt(prompt_text)
         print("Model Response:", response)
-        self.extract_function_and_params(response, ip, port)
+        
+        # Check for valid response
+        if not response or "Error:" in response:
+            self.logModel.log_step("Failed to get valid response from LLM")
+            end_time = time.time()
+            self.TTR = scrapetime + end_time - start_time
+            print(f"\nTotal execution time: {self.TTR:.2f} seconds")
+            self.logModel.log_step(f"Mitigation failed. Execution in {self.TTR:.2f} seconds")
+            return
+            
+        # Try to extract and execute the function
+        success = self.extract_function_and_params(response, ip, port)
         
         # Calculate and display total time
         end_time = time.time()
-        print(f"\nTotal execution time: {end_time - start_time:.2f} seconds")
+        self.TTR = scrapetime + end_time - start_time
+        print(f"\nTotal execution time: {self.TTR:.2f} seconds")
+        
+        # Only log success if both prompt and execution succeeded
+        if success:
+            self.logModel.log_step(f"Threat mitigated successfully in {self.TTR:.2f} seconds")
+        else:
+            self.logModel.log_step(f"Execution completed in {self.TTR:.2f} seconds, but mitigation failed")
 
     def extract_function_and_params(self, model_output, ip, port):
         try:
             match = re.search(r'\{.*\}', model_output, re.DOTALL)
             if not match:
-                return None
+                self.logModel.log_step("Failed to extract function from LLM response")
+                return False
             
             json_text = match.group(0)
             data = json.loads(json_text)
 
             values = list(data.values()) if isinstance(data, dict) else None
-            if values:
-                if values[0] == "block_ip":
-                    values.append(ip)
-                elif values[0] == "limit_rate":
-                    values.append(ip)
-                    values.append("5")
-                elif values[0] == "block_port":
-                    values.append(port)
-                self.logModel.log_step(f"Executing {values[0]} for {values[1:]}")
-                self.execute_function(self.MitEng, values[0], *values[1:])
+            if not values:
+                self.logModel.log_step("Invalid function format in LLM response")
+                return False
+                
+            if values[0] == "block_ip":
+                values.append(ip)
+            elif values[0] == "limit_rate":
+                values.append(ip)
+                values.append("8")
+            elif values[0] == "block_port":
+                values.append(port)
+            self.logModel.log_step(f"Executing {values[0]} for {values[1:]}")
+            
+            # Execute the function and capture its result
+            result = self.execute_function(self.MitEng, values[0], *values[1:])
+            return result
         except json.JSONDecodeError:
             self.logModel.log_step(f"Failed to Read LLM Instruction; Analyst Intervention Required")
-            return None
+            return False
+        except Exception as e:
+            self.logModel.log_step(f"Error during function extraction: {str(e)}")
+            return False
 
     def execute_function(self, obj, function_name, *args, **kwargs):
         func = getattr(obj, function_name, None)
         if callable(func):
-            self.logModel.log_step(f"Threat Mitigated Successfully")
-            return func(*args, **kwargs)
+            try:
+                func(*args, **kwargs)
+                return True
+            except Exception as e:
+                self.logModel.log_step(f"Function execution failed: {str(e)}")
+                return False
         else:
             self.logModel.log_step(f"Failed to Mitigate Threat; Analyst Intervention Required")
             print(f"Function '{function_name}' not found.")
+            return False
 
 class WorkerSignals(QObject):
     finished = pyqtSignal(str)  # Emits final result
@@ -112,39 +205,24 @@ class SubprocessWorker(QRunnable):
         super().__init__()
         self.attack_name = attack_name
         self.signals = WorkerSignals()
+        # Initialize process pool if not already initialized
+        initialize_process_pool()
 
     @pyqtSlot()
     def run(self):
         try:
             system = platform.system()
-            print(system)
-            if system == "Linux":
-                result = subprocess.run(
-                    [
-                        r"/home/hamada/Downloads/Naswail-SIEM-Tool-main/.venv/bin/python",
-                        "/home/hamada/Downloads/Naswail-SIEM-Tool-main/scrapInstructions.py",
-                        f"{self.attack_name} mitigation and response"
-                    ],
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE,
-                    text=True,
-                    shell=False
-                )
-            elif system == "Windows":
-                result = subprocess.run(
-                    [
-                        r"venv-python12\Scripts\python",
-                        "scrapInstructions.py",
-                        f"{self.attack_name} mitigation and response"
-                    ],
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE,
-                    text=True,
-                    shell=False
-                )
+            print(f"Starting subprocess with high priority on {system}")
+            
+            # Use the process pool for execution
+            stdout, stderr = process_pool.apply(
+                run_scrap_instructions, 
+                args=(self.attack_name, system)
+            )
+            
             output = ""
-            if result.stdout:
-                stdout_lines = result.stdout.strip().split("\n")
+            if stdout:
+                stdout_lines = stdout.strip().split("\n")
                 # Find the line containing the header
                 header_index = next(
                     (i for i, line in enumerate(stdout_lines) 
@@ -156,6 +234,10 @@ class SubprocessWorker(QRunnable):
                     # Get all lines AFTER the header (including potential multi-line content)
                     mitigation_lines = stdout_lines[header_index+1:]
                     output = " ".join(line.strip() for line in mitigation_lines if line.strip())
+            
+            if not output and stderr:
+                raise Exception(f"Error in script execution: {stderr}")
+                
             self.signals.finished.emit(output)
         except Exception as e:
             self.signals.error.emit(str(e))
@@ -171,6 +253,7 @@ class AnomalousPackets():
         self.threadpool = QThreadPool()
         self.geoip_db_path = "GeoLite2-City.mmdb"
         self.logModel = log
+        self.unique_anomalies = set()  # Track unique (src_ip, dst_ip, attack_name) tuples
         #self.preprocess_threat_for_AI("A Distributed Denial-of-Service (DDoS) attack overwhelms a network, service, or server with excessive traffic, disrupting legitimate user access. To effectively mitigate such attacks, consider the following strategies:Develop a DDoS Response Plan:Establish a comprehensive incident response plan that outlines roles, responsibilities, and procedures to follow during a DDoS attack. This proactive preparation ensures swift and coordinated action.esecurityplanet.comImplement Network Redundancies:Distribute resources across multiple data centers and networks to prevent single points of failure. This approach enhances resilience against DDoS attacks by ensuring that if one location is targeted, others can maintain operations. ")
     
 # Example usage
@@ -179,9 +262,35 @@ class AnomalousPackets():
         try:
             if self.filterapplied == False:
                 self.ui.tableWidget.setRowCount(0)
+                displayed_anomalies = set()  # Track already displayed anomalies
+                
                 for packet in self.anomalies:
                     src_ip = packet["IP"].src if packet.haslayer(IP) else "N/A"
                     dst_ip = packet["IP"].dst if packet.haslayer(IP) else "N/A"
+                    
+                    # Get attack family from the main window's table
+                    attack_family = None
+                    for row in range(main_window.tableWidget_4.rowCount()):
+                        if (main_window.tableWidget_4.item(row, 1) and 
+                            main_window.tableWidget_4.item(row, 2) and
+                            main_window.tableWidget_4.item(row, 1).text() == src_ip and
+                            main_window.tableWidget_4.item(row, 2).text() == dst_ip):
+                            attack_family = main_window.tableWidget_4.item(row, 3).text()
+                            break
+                    
+                    if not attack_family:
+                        continue  # Skip if we can't determine the attack family
+                        
+                    # Create a unique signature for this attack
+                    anomaly_signature = (src_ip, dst_ip, attack_family)
+                    
+                    # Skip if we've already displayed this signature
+                    if anomaly_signature in displayed_anomalies:
+                        continue
+                        
+                    displayed_anomalies.add(anomaly_signature)
+                    self.attack_family = attack_family
+                    
                     sport = None
                     dport = None
                     if packet.haslayer("TCP"):
@@ -194,14 +303,13 @@ class AnomalousPackets():
 
                     row_position = self.ui.tableWidget.rowCount()
                     self.ui.tableWidget.insertRow(row_position)
-                    self.attack_family = main_window.tableWidget_4.item(row_position, 3).text()
                     self.ui.tableWidget.setItem(row_position, 0, QTableWidgetItem(datetime.fromtimestamp(float(packet.time)).strftime("%I:%M:%S %p")))
                     self.ui.tableWidget.setItem(row_position, 1, QTableWidgetItem(src_ip))
                     self.ui.tableWidget.setItem(row_position, 2, QTableWidgetItem(dst_ip))
                     self.ui.tableWidget.setItem(row_position, 3, QTableWidgetItem(str(sport)))
                     self.ui.tableWidget.setItem(row_position, 4, QTableWidgetItem(str(dport)))
                     self.ui.tableWidget.setItem(row_position, 5, QTableWidgetItem(protocol))
-                    self.ui.tableWidget.setItem(row_position, 6, QTableWidgetItem(self.attack_family))
+                    self.ui.tableWidget.setItem(row_position, 6, QTableWidgetItem(attack_family))
         except Exception as e:
             print(e)
 
@@ -318,11 +426,12 @@ class AnomalousPackets():
     def on_result(self, output):
         print("✅ Result:", output)
         self.etime = time.time()
+        tTime = self.etime - self.stime
         print(f"##########################\nTotal Runtime for Scraping: {self.etime - self.stime:.2f} seconds\n")
         self.logModel.log_step("Recieved instructions (expand to see)")
         self.logModel.log_details(output)
         self.ui.tableWidget_3.setItem(5, 1, QTableWidgetItem(output))
-        self.AIobj.setup(output, self.src_ip, self.dport)
+        self.AIobj.setup(output, self.src_ip, self.dport, tTime)
 
         
     def on_error(self, error_msg):
@@ -399,11 +508,12 @@ class ThreatMitigationEngine():
                 ], check=True)
                 print(f"Rate limit set for {ip} on FORWARD chain.")   
             elif system == "Windows":
-                print("Router mode is only supported on Linux.")
+                print("Setting rate limit for Windows...")
                 rate = int(rate)
                 rate=rate*1000
                 if rate < 8000:
-                    raise ValueError("ThrottleRate must be ≥ 8000 bits/sec (8Kbps)")
+                    # Minimum rate must be 8Kbps
+                    rate = 8000
 
                 ps_script = f'''
     $ErrorActionPreference = "Stop"
@@ -412,8 +522,7 @@ class ThreatMitigationEngine():
         New-NetQosPolicy -Name "Throttle_{ip}" `
             -IPSrcPrefixMatchCondition "{ip}/32" `
             -ThrottleRateActionBitsPerSecond {rate} `
-            -NetworkProfile All `
-            
+            -NetworkProfile All
             
         Get-NetQosPolicy -Name "Throttle_{ip}"
     }} Catch {{
@@ -715,6 +824,10 @@ class IncidentResponse(QWidget, Ui_IncidentResponse):
         self.main_window = main_window
         self.ui = Ui_IncidentResponse()
         self.ui.setupUi(self)
+        
+        # Initialize process pool early during startup
+        initialize_process_pool(processes=2)
+        
         self.showMaximized()
         self.ui.pushButton_8.clicked.connect(self.show_main_window)
         self.ui.pushButton_7.clicked.connect(self.show_analysis_window)
