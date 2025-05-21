@@ -15,6 +15,9 @@ import base64
 import urllib.parse
 import binascii
 import codecs
+import threading
+import concurrent.futures
+import functools
 from PyQt6.QtWidgets import *
 from PyQt6.QtCore import *
 from PyQt6.QtGui import *
@@ -30,62 +33,76 @@ import multiprocessing
 # echo. > C:\Snort\log\alert.ids
 # ping -n 4 8.8.8.8
 
-# Initialize process pool at module level for reuse
-process_pool = None
+# Initialize thread pool at module level for immediate availability
+# Using ThreadPoolExecutor instead of ProcessPool for faster I/O bound operations
+thread_pool = concurrent.futures.ThreadPoolExecutor(max_workers=4)
 
-def initialize_process_pool(processes=2):
-    global process_pool
-    if process_pool is None:
-        process_pool = multiprocessing.Pool(processes=processes)
-    return process_pool
+# Cache for expensive function calls
+function_cache = {}
 
-# Function to be executed by the process pool
+# Function decorator for caching results
+def cache_result(func):
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        key = str(args) + str(kwargs)
+        if key not in function_cache:
+            function_cache[key] = func(*args, **kwargs)
+        return function_cache[key]
+    return wrapper
+
+# Optimized function for scraping instructions
+@cache_result
 def run_scrap_instructions(attack_name, system):
     try:
         if system == "Linux":
             cmd = [
-                r"/home/hamada/Downloads/Naswail-SIEM-Tool-main/.venv/bin/python",
-                "/home/hamada/Downloads/Naswail-SIEM-Tool-main/scrapInstructions.py",
+                "python",  # Use system python or adjust path if needed
+                "scrapInstructions.py",
                 f"{attack_name} mitigation and response"
             ]
         elif system == "Windows":
             cmd = [
-                r"python",
+                "python",
                 "scrapInstructions.py",
                 f"{attack_name} mitigation and response"
             ]
-            
         
-        # Set high priority
+        # Use Popen for non-blocking execution
         if system == "Windows":
-            # Windows-specific high priority execution
             startupinfo = subprocess.STARTUPINFO()
             startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
             startupinfo.wShowWindow = subprocess.SW_HIDE
             
-            # HIGH_PRIORITY_CLASS = 0x00000080
-            result = subprocess.run(
+            # ABOVE_NORMAL_PRIORITY_CLASS = 0x00008000
+            process = subprocess.Popen(
                 cmd,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
-                text=True,
                 startupinfo=startupinfo,
-                creationflags=0x00000080,  # HIGH_PRIORITY_CLASS
+                creationflags=0x00008000,
                 shell=False
             )
         else:
-            # Linux execution with nice -n -20 (highest priority)
-            nice_cmd = ["nice", "-n", "-20"] + cmd
-            result = subprocess.run(
-                nice_cmd,
+            # Linux execution
+            process = subprocess.Popen(
+                cmd,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
-                text=True,
                 shell=False,
-                preexec_fn=os.setpgrp  # Run in separate process group
+                preexec_fn=lambda: os.nice(-10) if system == "Linux" else None
             )
         
-        return result.stdout, result.stderr
+        # Get binary output and decode it safely
+        stdout_data, stderr_data = process.communicate()
+        stdout = stdout_data.decode('utf-8', errors='replace')
+        stderr = stderr_data.decode('utf-8', errors='replace')
+        
+        return stdout, stderr
+    except subprocess.TimeoutExpired:
+        # Kill the process if it times out
+        process.kill()
+        stdout, stderr = process.communicate()
+        return stdout, f"Process timed out after 30 seconds. {stderr}"
     except Exception as e:
         return "", str(e)
 
@@ -200,26 +217,21 @@ class WorkerSignals(QObject):
     finished = pyqtSignal(str)  # Emits final result
     error = pyqtSignal(str)     # Emits error messages
 
-# Async task runner
+# Async task runner - optimized for faster execution
 class SubprocessWorker(QRunnable):
     def __init__(self, attack_name):
         super().__init__()
         self.attack_name = attack_name
         self.signals = WorkerSignals()
-        # Initialize process pool if not already initialized
-        initialize_process_pool()
 
     @pyqtSlot()
     def run(self):
         try:
             system = platform.system()
-            print(f"Starting subprocess with high priority on {system}")
+            print(f"Starting subprocess for {self.attack_name}")
             
-            # Use the process pool for execution
-            stdout, stderr = process_pool.apply(
-                run_scrap_instructions, 
-                args=(self.attack_name, system)
-            )
+            # Direct function call instead of thread pool submission for faster execution
+            stdout, stderr = run_scrap_instructions(self.attack_name, system)
             
             output = ""
             if stdout:
@@ -421,6 +433,9 @@ class AnomalousPackets():
             self.ui.tableWidget_3.insertRow(row_position)
             self.ui.tableWidget_3.setItem(row_position, 0, QTableWidgetItem("Instruction"))
             self.ui.tableWidget_3.setItem(row_position, 1, QTableWidgetItem("Searching"))
+            
+            # Refresh the table to apply word wrap and resize properties
+            self.ui.tableWidget_3.resizeRowsToContents()
         except Exception as e:
             print(e)
     
@@ -431,7 +446,10 @@ class AnomalousPackets():
         print(f"##########################\nTotal Runtime for Scraping: {self.etime - self.stime:.2f} seconds\n")
         self.logModel.log_step("Recieved instructions (expand to see)")
         self.logModel.log_details(output)
-        self.ui.tableWidget_3.setItem(5, 1, QTableWidgetItem(output))
+        item = QTableWidgetItem(output)
+        item.setTextAlignment(Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignLeft)
+        self.ui.tableWidget_3.setItem(5, 1, item)
+        self.ui.tableWidget_3.resizeRowsToContents()
         self.AIobj.setup(output, self.src_ip, self.dport, tTime)
 
         
@@ -803,9 +821,6 @@ class IncidentResponse(QWidget, Ui_IncidentResponse):
         self.ui = Ui_IncidentResponse()
         self.ui.setupUi(self)
         
-        # Initialize process pool early during startup
-        initialize_process_pool(processes=2)
-        
         self.showMaximized()
         self.ui.pushButton_8.clicked.connect(self.show_main_window)
         self.ui.pushButton_7.clicked.connect(self.show_analysis_window)
@@ -836,6 +851,7 @@ class IncidentResponse(QWidget, Ui_IncidentResponse):
         self.ui.tableWidget_2.setColumnCount(2)
         self.ui.tableWidget_2.setHorizontalHeaderLabels(["Port Number", "Status"])
         
+        # Set up Attack Intelligence table with improved word wrap and text display
         self.ui.tableWidget_3.setWordWrap(True)
         self.ui.tableWidget_3.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
         self.ui.tableWidget_3.verticalHeader().setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
@@ -845,6 +861,24 @@ class IncidentResponse(QWidget, Ui_IncidentResponse):
         self.ui.tableWidget_3.setColumnCount(2)
         self.ui.tableWidget_3.setColumnWidth(0, 120)
         self.ui.tableWidget_3.setColumnWidth(1, 351)
+        
+        # Apply text elide mode to ensure wrapping
+        for i in range(10):
+            for j in range(2):
+                item = QTableWidgetItem()
+                item.setTextAlignment(Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignLeft)
+                self.ui.tableWidget_3.setItem(i, j, item)
+        
+        self.ui.tableWidget_3.setStyleSheet("""
+            QTableWidget {
+                gridline-color: #31363b;
+                background-color: #232629;
+            }
+            QTableWidget::item {
+                padding: 4px;
+                border: none;
+            }
+        """)
 
         self.ui.pushButton.clicked.connect(lambda: self.threatMitEngine.updateBlacklist(1))
         self.ui.pushButton_9.clicked.connect(lambda: self.threatMitEngine.updateBlacklist(0))
