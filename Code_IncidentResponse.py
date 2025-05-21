@@ -676,83 +676,80 @@ class ThreatMitigationEngine():
                 print(f"Broadcasted: {message}")
         except Exception as e:
             print(f"Error: {e}")
-    def get_gateway(self):
-        """Retrieve the current default gateway dynamically."""
-        system = platform.system()
-        
-        if system == "Linux":
-            try:
-                result = subprocess.check_output("ip route | grep default", shell=True).decode()
-                gateway = result.split()[2]
-                return gateway
-            except Exception as e:
-                print(f"Error retrieving Linux gateway: {e}")
-                return None
-
-        elif system == "Windows":
-            try:
-                result = subprocess.check_output("powershell -Command \"(Get-NetRoute -DestinationPrefix 0.0.0.0/0).NextHop\"", shell=True).decode().strip()
-                return result
-            except Exception as e:
-                print(f"Error retrieving Windows gateway: {e}")
-                return None
-        else:
-            print("Unsupported OS")
-            return None
 
     def block_ip(self, ip):
-        firewall_command = f"iptables -A INPUT -s {ip} -j DROP; iptables -A FORWARD -s {ip} -j DROP"
-        self.firewallConfiguration(ip, firewall_command)
+        system = platform.system()
+        if system == "Linux":
+            firewall_command = f"iptables -A INPUT -s {ip} -j DROP"
+            self.firewallConfiguration(ip, firewall_command)
+        elif system == "Windows":
+            firewall_command = f"New-NetFirewallRule -DisplayName 'Block-IP-{ip}' -Direction Inbound -Action Block -RemoteAddress {ip}"
+            self.firewallConfiguration(ip, firewall_command)
+        else:
+            print("Unsupported OS")
 
     def unblock_ip(self, ip):
-        firewall_command = f"iptables -D INPUT -s {ip} -j DROP; iptables -D FORWARD -s {ip} -j DROP"
-        self.firewallConfiguration(ip, firewall_command)
+        system = platform.system()
+        if system == "Linux":
+            firewall_command = f"iptables -D INPUT -s {ip} -j DROP"
+            self.firewallConfiguration(ip, firewall_command)
+        elif system == "Windows":
+            firewall_command = f"Remove-NetFirewallRule -DisplayName 'Block-IP-{ip}' -ErrorAction SilentlyContinue"
+            self.firewallConfiguration(ip, firewall_command)
+        else:
+            print("Unsupported OS")
 
     def block_port(self, port):
-        firewall_command = f"iptables -A INPUT -p tcp --dport {port} -j DROP"
-        self.firewallConfiguration(port, firewall_command)
-    
-    def unblock_port(self, port):
-        firewall_command = f"iptables -D INPUT -p tcp --dport {port} -j DROP"
-        self.firewallConfiguration(port, firewall_command)
-    
-    def firewallConfiguration(self, entity, firewall_command, username="admin", password=None):
-        """SSH into the router and block a malicious IP."""
-        gateway = self.get_gateway()
-        if not gateway:
-            print("Failed to find the gateway.")
-            return
         system = platform.system()
-        
         if system == "Linux":
-            try:
-                ssh_command = f"sshpass -p {password} ssh {username}@{gateway} '{firewall_command}'"
-                subprocess.run(ssh_command, shell=True, check=True)
-                print(f"Blocked {entity} on router firewall (Linux).")
-            except Exception as e:
-                print(f"Error blocking IP on Linux router: {e}")
-
+            firewall_command = f"iptables -A INPUT -p tcp --dport {port} -j DROP"
+            self.firewallConfiguration(port, firewall_command)
         elif system == "Windows":
-            try:
-                client = paramiko.SSHClient()
-                client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-                client.connect(gateway, username = username, password = password)
-
-                stdin, stdout, stderr = client.exec_command(firewall_command)
-                output = stdout.read().decode()
-                error = stderr.read().decode()
-
-                if error:
-                    print(f"Error blocking IP on Windows router: {error}")
-                else:
-                    print(f"Blocked {entity} on router firewall (Windows).")
-
-                client.close()
-            except Exception as e:
-                print(f"Error connecting via SSH on Windows: {e}")
+            firewall_command = f"New-NetFirewallRule -DisplayName 'Block-Port-{port}' -Direction Inbound -Action Block -Protocol TCP -LocalPort {port}"
+            self.firewallConfiguration(port, firewall_command)
         else:
             print("Unsupported OS")
     
+    def unblock_port(self, port):
+        system = platform.system()
+        if system == "Linux":
+            firewall_command = f"iptables -D INPUT -p tcp --dport {port} -j DROP"
+            self.firewallConfiguration(port, firewall_command)
+        elif system == "Windows":
+            firewall_command = f"Remove-NetFirewallRule -DisplayName 'Block-Port-{port}' -ErrorAction SilentlyContinue"
+            self.firewallConfiguration(port, firewall_command)
+        else:
+            print("Unsupported OS")
+    
+    def firewallConfiguration(self, entity, firewall_command):
+        """Execute firewall commands directly on the host system."""
+        system = platform.system()
+        
+        try:
+            if system == "Linux":
+                # For Linux, use sudo to execute iptables command
+                cmd = ["sudo", "sh", "-c", firewall_command]
+                result = subprocess.run(cmd, check=True, capture_output=True, text=True)
+                print(f"Firewall rule applied for {entity} on host (Linux)")
+            elif system == "Windows":
+                # For Windows, use PowerShell to execute firewall commands
+                ps_cmd = f"powershell -Command \"{firewall_command}\""
+                result = subprocess.run(ps_cmd, check=True, capture_output=True, text=True, shell=True)
+                print(f"Firewall rule applied for {entity} on host (Windows)")
+            else:
+                print("Unsupported OS")
+                return
+                
+            if result.stderr:
+                print(f"Warning: {result.stderr}")
+                
+        except subprocess.CalledProcessError as e:
+            print(f"Error applying firewall rule: {e}")
+            if e.stderr:
+                print(f"Error details: {e.stderr}")
+        except Exception as e:
+            print(f"Unexpected error: {e}")
+            
     def updateBlacklist(self, f):
         try:
             ip = self.ui.lineEdit.text().strip()
