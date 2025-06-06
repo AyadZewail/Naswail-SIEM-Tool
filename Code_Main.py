@@ -533,8 +533,10 @@ class PacketSystem:
         self.process_packet_index=0
         self.bandwidth_data = []
         self.captured_packets = []
+        self.putpacketinqueue()
         self.qued_packets = []
         self.pcap_packets = []
+        self.que_flag=False
         self.pcap_process_packet_index = 0
         self.corrupted_packet = []
         self.filtered_packets = []
@@ -561,11 +563,15 @@ class PacketSystem:
         self.rate_of_packets=0
         self.recently_qued_packets=0
         self.typeOFchartToPlot=0
+        self.flag_process_packet=False
         self.packetfile = 1
         self.local_packets = []
+        self.processpacket()
+        
         self.snort_alerts = defaultdict(list)
         system = platform.system()
         system = platform.system().lower()
+
         if system == "windows":
             self.snort_rules = self.load_snort_rule_names("C:\\Snort\\rules\\custom.rules")
             self.log_thread = threading.Thread(target=self.monitor_snort_logs, args=("C:\\Snort\\log\\alert.ids",), daemon=True)
@@ -679,6 +685,7 @@ class PacketSystem:
             while True:
                 line = f.readline()
                 if not line:
+                    print("el goofy")
                     time.sleep(10)  # Avoid CPU overuse
                     continue
 
@@ -723,40 +730,7 @@ class PacketSystem:
                             anomaly_signature = (src_ip, dst_ip, attack_label)
                             
                             # Find all packets matching this signature and add to anomalies
-                            for packet in self.qued_packets:
-                                msrc_ip = packet["IP"].src if packet.haslayer("IP") else "N/A"
-                                mdst_ip = packet["IP"].dst if packet.haslayer("IP") else "N/A"
-                                if msrc_ip == src_ip and mdst_ip == dst_ip:
-                                    # Always add to anomalies list
-                                    self.anomalies.append(packet)
-                                    
-                                    # Only add to tableWidget_4 if it's a new unique signature
-                                    if not added_to_table and anomaly_signature not in self.unique_anomalies:
-                                        self.unique_anomalies.add(anomaly_signature)
-                                        added_to_table = True
-                                        current_time = datetime.now().strftime("%H:%M:%S")
-                                        self.networkLog+=current_time+"/  "+"An anomaly occured"+"\n"
-                                        
-                                        # Add a single representative packet to tableWidget_4
-                                        row_position = self.ui.tableWidget_4.rowCount()
-                                        self.ui.tableWidget_4.insertRow(row_position)
-                                        
-                                        # Create items with background color
-                                        time_item = QTableWidgetItem(datetime.fromtimestamp(packet.time).strftime("%I:%M:%S %p"))
-                                        src_item = QTableWidgetItem(src_ip)
-                                        dst_item = QTableWidgetItem(dst_ip)
-                                        alert_item = QTableWidgetItem(str(attack_label))
-                                        
-                                        for item in [time_item, src_item, dst_item, alert_item]:
-                                            item.setBackground(QColor(255, 120, 120))
-                                        
-                                        print(f"Detected: {attack_label} from {src_ip}, {sport} to {dst_ip}, {dport}")
-                                        
-                                        self.ui.tableWidget_4.setItem(row_position, 0, time_item)
-                                        self.ui.tableWidget_4.setItem(row_position, 1, src_item)
-                                        self.ui.tableWidget_4.setItem(row_position, 2, dst_item)
-                                        self.ui.tableWidget_4.setItem(row_position, 3, alert_item)
-
+                            
                 except Exception as e:
                     print(f"Error processing log line: {e}")
                     tb = traceback.format_exc()
@@ -895,16 +869,25 @@ class PacketSystem:
             tb=traceback.format_exc()
             print(tb)
             print(f"Error drawing gauge: {e}")
-
+    def putpacketinqueue(self):
+        try:
+            fake_packet=Packet()
+            thread = threading.Thread(target=self.put_packet_in_queue,args=(fake_packet,))
+            thread.start()
+        except Exception as e:
+            print(f"Error in put_packet_in_queue_thread function: {e}")
     def put_packet_in_queue(self, packet):
         try:
+           
             global packetInput
             if packetInput == 0:
                 self.qued_packets.append(packet)
                 self.recently_qued_packets+=1
+                
             if packetInput == 1:
                 self.recently_qued_packets+=1
-                self.qued_packets.append(packet)            
+                self.qued_packets.append(packet)   
+                self.que_flag=False         
         except Exception as e:
             print(f"Error putting packet in queue: {e}")
     def updateBlacklist(self, f):
@@ -1048,195 +1031,203 @@ class PacketSystem:
             self.sensor_obj.show_donut_chart()
         else:
             self.typeOFchartToPlot=0
-
+    def processpacket(self):
+        try:
+            thread = threading.Thread(target=self.process_packet)
+            thread.start()
+        except Exception as e:
+            print(f"Error in process_packet function: {e}")
     def process_packet(self):
         try:
-            global packetInput
-            if packetInput == 0:
-                packet = self.qued_packets[self.process_packet_index] 
-            if packetInput == 1:
-                packet = self.qued_packets[self.pcap_process_packet_index]
-                
-            # Extract packet information once
-            packet_info = {
-                'timestamp': float(packet.time),
-                'src_ip': packet["IP"].src if packet.haslayer("IP") else "N/A",
-                'dst_ip': packet["IP"].dst if packet.haslayer("IP") else "N/A",
-                'has_tcp': packet.haslayer("TCP"),
-                'has_udp': packet.haslayer("UDP"),
-                'has_icmp': packet.haslayer("ICMP"),
-                'macsrc': packet["Ethernet"].src if packet.haslayer("Ethernet") else "N/A",
-                'macdst': packet["Ethernet"].dst if packet.haslayer("Ethernet") else "N/A",
-                'length': int(len(packet)),
-                'ip_version': "IPv6" if packet.haslayer("IPv6") else "IPv4" if packet.haslayer("IP") else "N/A"
-            }
             
-            # Extract ports if available
-            if packet_info['has_tcp']:
-                packet_info['sport'] = packet["TCP"].sport
-                packet_info['dport'] = packet["TCP"].dport
-                self.packet_stats["tcp"] += 1
-                self.tot_tcp_packets += 1
-            elif packet_info['has_udp']:
-                packet_info['sport'] = packet["UDP"].sport
-                packet_info['dport'] = packet["UDP"].dport
-                self.packet_stats["udp"] += 1
-                self.tot_udp_packets += 1
-            elif packet_info['has_icmp']:
-                self.packet_stats["icmp"] += 1
-                packet_info['sport'] = None
-                packet_info['dport'] = None
-            else:
-                packet_info['sport'] = None
-                packet_info['dport'] = None
-
-            # Check for blacklisted IPs
-            if (packet_info['src_ip'] in self.blacklist or 
-                packet_info['dst_ip'] in self.blacklist or 
-                packet_info['dport'] in self.blocked_ports):
-                row_position = self.ui.tableWidget.rowCount()
-                self.ui.tableWidget.insertRow(row_position)
-                for col in range(11):
-                    item = QTableWidgetItem("Blocked")
-                    item.setBackground(QColor(180, 0, 0, 100))
-                    item.setForeground(QColor(255, 255, 255))
-                    self.ui.tableWidget.setItem(row_position, col, item)
-            else:
-                self.packets.append(packet)
+            if self.flag_process_packet==False:
+                self.flag_process_packet=True
+                global packetInput
+                if packetInput == 0:
+                    packet = self.qued_packets[self.process_packet_index] 
+                if packetInput == 1:
+                    packet = self.qued_packets[self.pcap_process_packet_index]
+                    
+                # Extract packet information once
+                packet_info = {
+                    'timestamp': float(packet.time),
+                    'src_ip': packet["IP"].src if packet.haslayer("IP") else "N/A",
+                    'dst_ip': packet["IP"].dst if packet.haslayer("IP") else "N/A",
+                    'has_tcp': packet.haslayer("TCP"),
+                    'has_udp': packet.haslayer("UDP"),
+                    'has_icmp': packet.haslayer("ICMP"),
+                    'macsrc': packet["Ethernet"].src if packet.haslayer("Ethernet") else "N/A",
+                    'macdst': packet["Ethernet"].dst if packet.haslayer("Ethernet") else "N/A",
+                    'length': int(len(packet)),
+                    'ip_version': "IPv6" if packet.haslayer("IPv6") else "IPv4" if packet.haslayer("IP") else "N/A"
+                }
                 
-                # Handle packet storage limits
-                if len(self.packets) >= 15000:
-                    removed_elements = self.packets[0:5000]
-                    del self.qued_packets[0:5000]
-                    del self.packets[0:5000]
-                    self.process_packet_index -= 5000
-                    for key in list(window.time_series.keys())[:2000]:
-                        del window.time_series[key]
-                    wrpcap("packet_file" + str(self.packetfile) + ".pcap", removed_elements)
-                    removed_elements.clear()
-                    self.packetfile += 1
-
-                # Verify checksum and update stats
-                self.verify_packet_checksum(packet)
-                protocol = self.get_protocol(packet)
-                packet_info['protocol'] = protocol
-                packet_info['layer'] = (
-                    "udp" if packet_info['has_udp']
-                    else "tcp" if packet_info['has_tcp']
-                    else "icmp" if packet_info['has_icmp']
-                    else "N/A"
-                )
-
-                # Update packet stats
-                self.packet_stats["total"] += 1
-                if protocol in self.packet_stats:
-                    self.packet_stats[protocol] += 1
+                # Extract ports if available
+                if packet_info['has_tcp']:
+                    packet_info['sport'] = packet["TCP"].sport
+                    packet_info['dport'] = packet["TCP"].dport
+                    self.packet_stats["tcp"] += 1
+                    self.tot_tcp_packets += 1
+                elif packet_info['has_udp']:
+                    packet_info['sport'] = packet["UDP"].sport
+                    packet_info['dport'] = packet["UDP"].dport
+                    self.packet_stats["udp"] += 1
+                    self.tot_udp_packets += 1
+                elif packet_info['has_icmp']:
+                    self.packet_stats["icmp"] += 1
+                    packet_info['sport'] = None
+                    packet_info['dport'] = None
                 else:
-                    self.packet_stats["other"] += 1
+                    packet_info['sport'] = None
+                    packet_info['dport'] = None
 
-                # Check for local traffic
-                if self.is_local_ip(packet_info['src_ip']):
-                    self.total_inside_packets += 1
-                    self.local_packets.append(packet)
-                else:
-                    self.total_outside_packets += 1
-
-                # Only update UI if not filtering
-                if not (self.filterapplied or 
-                       self.sensor_obj.senFlag == 1 or 
-                       self.sensor_obj.singleSenFlag == 1 or 
-                       self.application_filter_flag):
-                    
-                    if self.capture == 1:
-                        self.ui.label_6.setStyleSheet("background-color: Red;")
-                        self.captured_packets.append(packet)
-                    else:
-                        self.ui.label_6.setStyleSheet("QLabel { color: white; }")
-                    
-                    self.new_packet_features.append([packet_info['length'], packet_info['timestamp'], protocol])
-                    
-                    # Check for anomalies
-                    if (packet_info['src_ip'], packet_info['dst_ip']) in self.snort_alerts:
-                        self.anomalies.append(packet)
-                        attack_label = self.snort_alerts[(packet_info['src_ip'], packet_info['dst_ip'])][0]
-                        anomaly_signature = (packet_info['src_ip'], packet_info['dst_ip'], attack_label)
-                        
-                        if anomaly_signature not in self.unique_anomalies:
-                            self.unique_anomalies.add(anomaly_signature)
-                            current_time = datetime.now().strftime("%H:%M:%S")
-                            self.networkLog += f"{current_time}/  An anomaly occurred\n"
-                            
-                            # Add to anomaly table
-                            row_position = self.ui.tableWidget_4.rowCount()
-                            self.ui.tableWidget_4.insertRow(row_position)
-                            
-                            # Create items with background color
-                            row_color = self.get_row_color(packet)
-                            qcolor = self.get_qcolor(row_color)
-                            
-                            items = [
-                                QTableWidgetItem(datetime.fromtimestamp(packet_info['timestamp']).strftime("%I:%M:%S %p")),
-                                QTableWidgetItem(packet_info['src_ip']),
-                                QTableWidgetItem(packet_info['dst_ip']),
-                                QTableWidgetItem(str(attack_label))
-                            ]
-                            
-                            for item in items:
-                                item.setBackground(qcolor)
-                            
-                            for col, item in enumerate(items):
-                                self.ui.tableWidget_4.setItem(row_position, col, item)
-                    
-                    # Add to main table
+                # Check for blacklisted IPs
+                if (packet_info['src_ip'] in self.blacklist or 
+                    packet_info['dst_ip'] in self.blacklist or 
+                    packet_info['dport'] in self.blocked_ports):
                     row_position = self.ui.tableWidget.rowCount()
                     self.ui.tableWidget.insertRow(row_position)
-                    
-                    # Get row color
-                    row_color = self.get_row_color(packet)
-                    qcolor = self.get_qcolor(row_color)
-                    
-                    # Create items with background color
-                    items = [
-                        QTableWidgetItem(datetime.fromtimestamp(packet_info['timestamp']).strftime("%I:%M:%S %p")),
-                        QTableWidgetItem(packet_info['src_ip']),
-                        QTableWidgetItem(packet_info['dst_ip']),
-                        QTableWidgetItem(protocol),
-                        QTableWidgetItem(packet_info['layer']),
-                        QTableWidgetItem(packet_info['macsrc']),
-                        QTableWidgetItem(packet_info['macdst']),
-                        QTableWidgetItem(str(packet_info['sport']) if packet_info['sport'] else "N/A"),
-                        QTableWidgetItem(str(packet_info['dport']) if packet_info['dport'] else "N/A"),
-                        QTableWidgetItem(str(packet_info['length'])),
-                        QTableWidgetItem(packet_info['ip_version'])
-                    ]
-                    
-                    # Apply background color to each item
-                    if row_color != "transparent":
-                        for item in items:
-                            item.setBackground(qcolor)
-                            if "100, 100" in row_color or "100, 170" in row_color:
-                                item.setForeground(QColor(255, 255, 255))
-                    
-                    # Set items in the table
-                    for col, item in enumerate(items):
+                    for col in range(11):
+                        item = QTableWidgetItem("Blocked")
+                        item.setBackground(QColor(180, 0, 0, 100))
+                        item.setForeground(QColor(255, 255, 255))
                         self.ui.tableWidget.setItem(row_position, col, item)
+                else:
+                    self.packets.append(packet)
+                    
+                    # Handle packet storage limits
+                    if len(self.packets) >= 15000:
+                        removed_elements = self.packets[0:5000]
+                        del self.qued_packets[0:5000]
+                        del self.packets[0:5000]
+                        self.process_packet_index -= 5000
+                        for key in list(window.time_series.keys())[:2000]:
+                            del window.time_series[key]
+                        wrpcap("packet_file" + str(self.packetfile) + ".pcap", removed_elements)
+                        removed_elements.clear()
+                        self.packetfile += 1
 
-            # Update indices
-            if packetInput == 0 and self.process_packet_index < len(self.qued_packets):
-                self.process_packet_index += 1
-            elif packetInput == 1 and self.pcap_process_packet_index < len(self.qued_packets):
-                self.pcap_process_packet_index += 1
+                    # Verify checksum and update stats
+                    self.verify_packet_checksum(packet)
+                    protocol = self.get_protocol(packet)
+                    packet_info['protocol'] = protocol
+                    packet_info['layer'] = (
+                        "udp" if packet_info['has_udp']
+                        else "tcp" if packet_info['has_tcp']
+                        else "icmp" if packet_info['has_icmp']
+                        else "N/A"
+                    )
 
-            # Update time series
-            window.time_series[packet_info['timestamp']] = len(self.packets)
+                    # Update packet stats
+                    self.packet_stats["total"] += 1
+                    if protocol in self.packet_stats:
+                        self.packet_stats[protocol] += 1
+                    else:
+                        self.packet_stats["other"] += 1
 
-            # Update bandwidth data
-            readable_time = datetime.fromtimestamp(packet_info['timestamp']).strftime("%I:%M:%S %p")
-            if len(self.bandwidth_data) == 0 or self.bandwidth_data[-1][0] != readable_time:
-                self.bandwidth_data.append((readable_time, packet_info['length']))
-            else:
-                self.bandwidth_data[-1] = (readable_time, self.bandwidth_data[-1][1] + packet_info['length'])
+                    # Check for local traffic
+                    if self.is_local_ip(packet_info['src_ip']):
+                        self.total_inside_packets += 1
+                        self.local_packets.append(packet)
+                    else:
+                        self.total_outside_packets += 1
 
+                    # Only update UI if not filtering
+                    if not (self.filterapplied or 
+                        self.sensor_obj.senFlag == 1 or 
+                        self.sensor_obj.singleSenFlag == 1 or 
+                        self.application_filter_flag):
+                        
+                        if self.capture == 1:
+                            self.ui.label_6.setStyleSheet("background-color: Red;")
+                            self.captured_packets.append(packet)
+                        else:
+                            self.ui.label_6.setStyleSheet("QLabel { color: white; }")
+                        
+                        self.new_packet_features.append([packet_info['length'], packet_info['timestamp'], protocol])
+                        
+                        # Check for anomalies
+                        if (packet_info['src_ip'], packet_info['dst_ip']) in self.snort_alerts:
+                            self.anomalies.append(packet)
+                            attack_label = self.snort_alerts[(packet_info['src_ip'], packet_info['dst_ip'])][0]
+                            anomaly_signature = (packet_info['src_ip'], packet_info['dst_ip'], attack_label)
+                            
+                            if anomaly_signature not in self.unique_anomalies:
+                                self.unique_anomalies.add(anomaly_signature)
+                                current_time = datetime.now().strftime("%H:%M:%S")
+                                self.networkLog += f"{current_time}/  An anomaly occurred\n"
+                                
+                                # Add to anomaly table
+                                row_position = self.ui.tableWidget_4.rowCount()
+                                self.ui.tableWidget_4.insertRow(row_position)
+                                
+                                # Create items with background color
+                                row_color = self.get_row_color(packet)
+                                qcolor = self.get_qcolor(row_color)
+                                
+                                items = [
+                                    QTableWidgetItem(datetime.fromtimestamp(packet_info['timestamp']).strftime("%I:%M:%S %p")),
+                                    QTableWidgetItem(packet_info['src_ip']),
+                                    QTableWidgetItem(packet_info['dst_ip']),
+                                    QTableWidgetItem(str(attack_label))
+                                ]
+                                
+                                for item in items:
+                                    item.setBackground(qcolor)
+                                
+                                for col, item in enumerate(items):
+                                    self.ui.tableWidget_4.setItem(row_position, col, item)
+                        
+                        # Add to main table
+                        row_position = self.ui.tableWidget.rowCount()
+                        self.ui.tableWidget.insertRow(row_position)
+                        
+                        # Get row color
+                        row_color = self.get_row_color(packet)
+                        qcolor = self.get_qcolor(row_color)
+                        
+                        # Create items with background color
+                        items = [
+                            QTableWidgetItem(datetime.fromtimestamp(packet_info['timestamp']).strftime("%I:%M:%S %p")),
+                            QTableWidgetItem(packet_info['src_ip']),
+                            QTableWidgetItem(packet_info['dst_ip']),
+                            QTableWidgetItem(protocol),
+                            QTableWidgetItem(packet_info['layer']),
+                            QTableWidgetItem(packet_info['macsrc']),
+                            QTableWidgetItem(packet_info['macdst']),
+                            QTableWidgetItem(str(packet_info['sport']) if packet_info['sport'] else "N/A"),
+                            QTableWidgetItem(str(packet_info['dport']) if packet_info['dport'] else "N/A"),
+                            QTableWidgetItem(str(packet_info['length'])),
+                            QTableWidgetItem(packet_info['ip_version'])
+                        ]
+                        
+                        # Apply background color to each item
+                        if row_color != "transparent":
+                            for item in items:
+                                item.setBackground(qcolor)
+                                if "100, 100" in row_color or "100, 170" in row_color:
+                                    item.setForeground(QColor(255, 255, 255))
+                        
+                        # Set items in the table
+                        for col, item in enumerate(items):
+                            self.ui.tableWidget.setItem(row_position, col, item)
+
+                # Update indices
+                if packetInput == 0 and self.process_packet_index < len(self.qued_packets):
+                    self.process_packet_index += 1
+                elif packetInput == 1 and self.pcap_process_packet_index < len(self.qued_packets):
+                    self.pcap_process_packet_index += 1
+
+                # Update time series
+                window.time_series[packet_info['timestamp']] = len(self.packets)
+
+                # Update bandwidth data
+                readable_time = datetime.fromtimestamp(packet_info['timestamp']).strftime("%I:%M:%S %p")
+                if len(self.bandwidth_data) == 0 or self.bandwidth_data[-1][0] != readable_time:
+                    self.bandwidth_data.append((readable_time, packet_info['length']))
+                else:
+                    self.bandwidth_data[-1] = (readable_time, self.bandwidth_data[-1][1] + packet_info['length'])
+            self.flag_process_packet = False
         except Exception as e:
             print(f"Error processing packet: {e}")
             tb = traceback.format_exc()
@@ -1669,7 +1660,7 @@ class PacketSystem:
 class PacketSnifferThread(QThread):
     packet_captured = pyqtSignal(object)
     readPackets = []
-
+    
     def run(self):
         try:
             global packetInput, packetFile, packetIndex
