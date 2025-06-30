@@ -12,459 +12,1908 @@ from PyQt6 import QtCore, QtGui, QtWidgets
 class Ui_Naswail_Tool(object):
     def setupUi(self, Naswail_Tool):
         Naswail_Tool.setObjectName("Naswail_Tool")
-        Naswail_Tool.resize(1600, 900)
-        Naswail_Tool.setMinimumSize(QtCore.QSize(1200, 800))
-        Naswail_Tool.setStyleSheet("/* Main Application Background */\n"
-"QWidget {\n"
-"    background-color: #2D2A2E;\n"
-"    color: #40E0D0; /* Turquoise text */\n"
-"    font-family: \"Consolas\", \"Monospace\";\n"
-"    font-size: 14px;\n"
+        Naswail_Tool.resize(1575, 3555)
+        Naswail_Tool.setMinimumSize(QtCore.QSize(1000, 1000))
+        Naswail_Tool.setStyleSheet("QWidget:window {                    /* Borders around the code editor and debug window */\n"
+"        border: 1px solid #263238;\n"
+"        background-color: #263238;\n"
 "}\n"
 "\n"
-"/* Table View Text */\n"
-"QTableView {\n"
-"    color: #FFFFFF; /* White text for table content */\n"
-"}\n"
-"\n"
-"/* Buttons */\n"
-"QPushButton {\n"
-"    background-color: #40E0D0; /* Turquoise */\n"
-"    color: #2D2A2E;\n"
-"    border: 1px solid #40E0D0;\n"
-"    border-radius: 4px;\n"
-"    padding: 5px 10px;\n"
-"    font-size: 14px;\n"
-"}\n"
-"\n"
-"QPushButton:hover {\n"
-"    background-color: #36C9B0;\n"
-"    border: 1px solid #36C9B0;\n"
-"}\n"
-"\n"
-"QPushButton:pressed {\n"
-"    background-color: #2DB39E;\n"
-"    border: 1px solid #2DB39E;\n"
-"}\n"
-"\n"
-"/* Text Inputs */\n"
-"QLineEdit, QTextEdit {\n"
-"    background-color: #3E3D40;\n"
-"    color: #40E0D0; /* Turquoise text */\n"
-"    border: 1px solid #5A595C;\n"
-"    border-radius: 4px;\n"
+"QToolTip {\n"
+"        background-color: #80CBC4;\n"
+"        color: black;\n"
 "    padding: 5px;\n"
-"    font-size: 14px;\n"
+"    border-radius: 0;\n"
+"    opacity: 200;\n"
 "}\n"
 "\n"
-"QLineEdit:focus, QTextEdit:focus {\n"
-"    border: 1px solid #40E0D0;\n"
-"}\n"
-"\n"
-"/* Labels */\n"
+"/* ==================== Dialog ==================== */\n"
 "QLabel {\n"
-"    color: #40E0D0;\n"
-"    font-size: 14px;\n"
+"        background: transparent;\n"
+"        color: #CFD8DC;                /* Not sure about this one */\n"
 "}\n"
 "\n"
-"/* Scrollbars */\n"
-"QScrollBar:vertical, QScrollBar:horizontal {\n"
-"    background-color: transparent;\n"
+"QDialog, QListView {\n"
+"        background-color: #263238;\n"
+"        color: #546E7A;\n"
+"        outline: 0;\n"
+"        border: 2px solid transparent;\n"
 "}\n"
 "\n"
-"QScrollBar::handle:vertical, QScrollBar::handle:horizontal {\n"
-"    background-color: rgba(90, 89, 92, 150);\n"
-"    border-radius: 6px;\n"
+"QListView::item:hover {\n"
+"        color: #AFBDC4;\n"
+"        background: transparent;\n"
 "}\n"
 "\n"
-"/* Graphics View */\n"
-"QGraphicsView {\n"
-"    border: 1px solid transparent;\n"
+"\n"
+"QListView::item:selected {\n"
+"        color: #ffffff;\n"
+"        background: transparent;\n"
 "}\n"
 "\n"
-"/* Menus */\n"
-"QMenuBar {\n"
-"    background-color: #2D2A2E;\n"
-"    color: #40E0D0;\n"
+"/* === QTabBar === */\n"
+"QTabBar {\n"
+"        background: #263238;\n"
 "}\n"
 "\n"
-"QMenuBar::item:selected {\n"
-"    background-color: #5A595C;\n"
+"QTabWidget::pane {\n"
+"        background: transparent;    /* Only at the very bottom of the tabs */\n"
 "}\n"
 "\n"
-"QMenu {\n"
-"    background-color: #3E3D40;\n"
-"    color: #40E0D0;\n"
-"    border: 1px solid #5A595C;\n"
-"}\n"
-"\n"
-"/* Tabs */\n"
 "QTabBar::tab {\n"
-"    color: #40E0D0;\n"
+"        background: transparent;\n"
+"        border: 0px solid transparent;\n"
+"        border-bottom: 2px solid transparent;\n"
+"        color: #546E7A;\n"
+"        padding-left: 10px;\n"
+"        padding-right: 10px;\n"
+"        padding-top: 3px;\n"
+"        padding-bottom: 3px;\n"
 "}\n"
 "\n"
 "QTabBar::tab:hover {\n"
-"    background-color: #40E0D0;\n"
+"        background-color: transparent;\n"
+"        border: 0px solid transparent;\n"
+"        border-bottom: 2px solid #80CBC4;\n"
+"        color: #AFBDC4;\n"
 "}\n"
 "\n"
-"/* Sliders */\n"
-"QSlider::handle:horizontal {\n"
-"    background-color: #40E0D0;\n"
+"QTabBar::tab:selected {\n"
+"        background-color: transparent;\n"
+"        border: 0px solid transparent;\n"
+"        border-top: none;\n"
+"        border-bottom: 2px solid #80CBC4;\n"
+"        color: #FFFFFF;\n"
 "}\n"
 "\n"
-"/* Progress Bars */\n"
-"QProgressBar {\n"
-"    color: #40E0D0;\n"
+"QStackedWidget {\n"
+"        background: #263238;    /* This covers a bunch of things, I was thinking about making it transparent, */\n"
+"                                                        /* but I would have to find all the other elements... but QTabWidget::pane may be it */\n"
 "}\n"
 "\n"
-"QProgressBar::chunk {\n"
-"    background-color: #40E0D0;\n"
-"}\n"
 "\n"
-"/* Checkboxes/Radio */\n"
-"QCheckBox, QRadioButton {\n"
-"    color: #40E0D0;\n"
-"}\n"
-"\n"
-"QCheckBox::indicator:checked, QRadioButton::indicator:checked {\n"
-"    background-color: #40E0D0;\n"
-"}\n"
-"\n"
-"/* Group Boxes */\n"
+"/* === QGroupBox === */\n"
 "QGroupBox {\n"
-"    color: #40E0D0;\n"
-"    border: 1px solid #40E0D0;\n"
-"    border-radius: 4px;\n"
-"    margin-top: 10px;\n"
-"    padding-top: 15px;\n"
+"    border: 1px solid transparent;\n"
+"    margin-top: 1em;\n"
+"}\n"
+"\n"
+"QGroupBox::title {\n"
+"        color: #80CBC4;\n"
+"    subcontrol-origin: margin;\n"
+"    left: 6px;\n"
+"    padding: 0 3px 0 3px;\n"
+"}\n"
+"\n"
+"QComboBox {\n"
+"        color: #546E7A;\n"
+"        background-color: transparent;\n"
+"        selection-background-color: transparent;\n"
+"        outline: 0;\n"
+"}\n"
+"\n"
+"QComboBox QAbstractItemView\n"
+"{\n"
+"    selection-background-color: transparent;\n"
+"        outline: 0;\n"
+"}\n"
+"\n"
+"QToolTip {\n"
+"    border: 1px solid #76797C;\n"
+"    background-color: #5A7566;\n"
+"    color: white;\n"
+"    padding: 0px;                /*remove padding, for fix combobox tooltip.*/\n"
+"    opacity: 200;\n"
+"}\n"
+"\n"
+"QWidget {\n"
+"    color: #eff0f1;\n"
+"    background-color: #31363b;\n"
+"    selection-background-color: #3daee9;\n"
+"    selection-color: #eff0f1;\n"
+"    background-clip: border;\n"
+"    border-image: none;\n"
+"    border: 0px transparent black;\n"
+"    outline: 0;\n"
+"}\n"
+"\n"
+"QWidget:item:hover {\n"
+"    background-color: #18465d;\n"
+"    color: #eff0f1;\n"
+"}\n"
+"\n"
+"QWidget:item:selected {\n"
+"    background-color: #18465d;\n"
+"}\n"
+"\n"
+"QRadioButton {\n"
+"    spacing: 5px;\n"
+"    outline: none;\n"
+"    color: #eff0f1;\n"
+"    margin-bottom: 2px;\n"
+"}\n"
+"\n"
+"QRadioButton:disabled {\n"
+"    color: #76797C;\n"
+"}\n"
+"\n"
+"QRadioButton::indicator {\n"
+"    width: 21px;\n"
+"    height: 21px;\n"
+"}\n"
+"\n"
+"QRadioButton::indicator:unchecked {\n"
+"    image: url(:/qss_icons/rc/radio_unchecked.png);\n"
+"}\n"
+"\n"
+"QRadioButton::indicator:unchecked:hover,\n"
+"QRadioButton::indicator:unchecked:focus,\n"
+"QRadioButton::indicator:unchecked:pressed {\n"
+"    border: none;\n"
+"    outline: none;\n"
+"    image: url(:/qss_icons/rc/radio_unchecked_focus.png);\n"
+"}\n"
+"\n"
+"QRadioButton::indicator:checked {\n"
+"    border: none;\n"
+"    outline: none;\n"
+"    image: url(:/qss_icons/rc/radio_checked.png);\n"
+"}\n"
+"\n"
+"QRadioButton::indicator:checked:hover,\n"
+"QRadioButton::indicator:checked:focus,\n"
+"QRadioButton::indicator:checked:pressed {\n"
+"    border: none;\n"
+"    outline: none;\n"
+"    image: url(:/qss_icons/rc/radio_checked_focus.png);\n"
+"}\n"
+"\n"
+"QRadioButton::indicator:checked:disabled {\n"
+"    outline: none;\n"
+"    image: url(:/qss_icons/rc/radio_checked_disabled.png);\n"
+"}\n"
+"\n"
+"QRadioButton::indicator:unchecked:disabled {\n"
+"    image: url(:/qss_icons/rc/radio_unchecked_disabled.png);\n"
+"}\n"
+"\n"
+"QMenuBar {\n"
+"    background-color: #31363b;\n"
+"    color: #eff0f1;\n"
+"}\n"
+"\n"
+"QMenuBar::item {\n"
+"    background: transparent;\n"
+"}\n"
+"\n"
+"QMenuBar::item:selected {\n"
+"    background: transparent;\n"
+"    border: 1px solid #76797C;\n"
+"}\n"
+"\n"
+"QMenuBar::item:pressed {\n"
+"    border: 1px solid #76797C;\n"
+"    background-color: #3daee9;\n"
+"    color: #eff0f1;\n"
+"    margin-bottom: -1px;\n"
+"    padding-bottom: 1px;\n"
+"}\n"
+"\n"
+"QMenu {\n"
+"    border: 1px solid #76797C;\n"
+"    color: #eff0f1;\n"
+"    margin: 2px;\n"
+"}\n"
+"\n"
+"QMenu::icon {\n"
+"    margin: 5px;\n"
+"}\n"
+"\n"
+"QMenu::item {\n"
+"    padding: 5px 30px 5px 30px;\n"
+"    border: 1px solid transparent;\n"
+"    /* reserve space for selection border */\n"
+"}\n"
+"\n"
+"QMenu::item:selected {\n"
+"    color: #eff0f1;\n"
+"}\n"
+"\n"
+"QMenu::separator {\n"
+"    height: 2px;\n"
+"    background: lightblue;\n"
+"    margin-left: 10px;\n"
+"    margin-right: 5px;\n"
+"}\n"
+"\n"
+"QMenu::indicator {\n"
+"    width: 18px;\n"
+"    height: 18px;\n"
+"}\n"
+"\n"
+"\n"
+"/* non-exclusive indicator = check box style indicator\n"
+"   (see QActionGroup::setExclusive) */\n"
+"\n"
+"QMenu::indicator:non-exclusive:unchecked {\n"
+"    image: url(:/qss_icons/rc/checkbox_unchecked.png);\n"
+"}\n"
+"\n"
+"QMenu::indicator:non-exclusive:unchecked:selected {\n"
+"    image: url(:/qss_icons/rc/checkbox_unchecked_disabled.png);\n"
+"}\n"
+"\n"
+"QMenu::indicator:non-exclusive:checked {\n"
+"    image: url(:/qss_icons/rc/checkbox_checked.png);\n"
+"}\n"
+"\n"
+"QMenu::indicator:non-exclusive:checked:selected {\n"
+"    image: url(:/qss_icons/rc/checkbox_checked_disabled.png);\n"
+"}\n"
+"\n"
+"\n"
+"/* exclusive indicator = radio button style indicator (see QActionGroup::setExclusive) */\n"
+"\n"
+"QMenu::indicator:exclusive:unchecked {\n"
+"    image: url(:/qss_icons/rc/radio_unchecked.png);\n"
+"}\n"
+"\n"
+"QMenu::indicator:exclusive:unchecked:selected {\n"
+"    image: url(:/qss_icons/rc/radio_unchecked_disabled.png);\n"
+"}\n"
+"\n"
+"QMenu::indicator:exclusive:checked {\n"
+"    image: url(:/qss_icons/rc/radio_checked.png);\n"
+"}\n"
+"\n"
+"QMenu::indicator:exclusive:checked:selected {\n"
+"    image: url(:/qss_icons/rc/radio_checked_disabled.png);\n"
+"}\n"
+"\n"
+"QMenu::right-arrow {\n"
+"    margin: 5px;\n"
+"    image: url(:/qss_icons/rc/right_arrow.png)\n"
+"}\n"
+"\n"
+"QWidget:disabled {\n"
+"    color: #454545;\n"
+"    background-color: #31363b;\n"
+"}\n"
+"\n"
+"QAbstractItemView {\n"
+"    alternate-background-color: #31363b;\n"
+"    color: #eff0f1;\n"
+"    border: 1px solid #3A3939;\n"
+"    border-radius: 2px;\n"
+"}\n"
+"\n"
+"QWidget:focus,\n"
+"QMenuBar:focus {\n"
+"    border: 1px solid #3daee9;\n"
+"}\n"
+"\n"
+"QTabWidget:focus,\n"
+"QCheckBox:focus,\n"
+"QRadioButton:focus,\n"
+"QSlider:focus {\n"
+"    border: none;\n"
+"}\n"
+"\n"
+"QLineEdit {\n"
+"    background-color: #232629;\n"
+"    padding: 5px;\n"
+"    border-style: solid;\n"
+"    border: 1px solid #76797C;\n"
+"    border-radius: 2px;\n"
+"    color: #eff0f1;\n"
+"}\n"
+"\n"
+"QAbstractItemView QLineEdit {\n"
+"    padding: 0;\n"
+"}\n"
+"\n"
+"QGroupBox {\n"
+"    border: 1px solid #76797C;\n"
+"    border-radius: 2px;\n"
+"    margin-top: 20px;\n"
 "}\n"
 "\n"
 "QGroupBox::title {\n"
 "    subcontrol-origin: margin;\n"
 "    subcontrol-position: top center;\n"
-"    padding: 0 5px;\n"
+"    padding-left: 10px;\n"
+"    padding-right: 10px;\n"
+"    padding-top: 10px;\n"
 "}\n"
 "\n"
-"/* ComboBox */\n"
-"QComboBox {\n"
-"    background-color: #3E3D40;\n"
-"    color: #40E0D0;\n"
-"    border: 1px solid #5A595C;\n"
+"QAbstractScrollArea {\n"
+"    border-radius: 2px;\n"
+"    border: 1px solid #76797C;\n"
+"    background-color: transparent;\n"
+"}\n"
+"\n"
+"QScrollBar:horizontal {\n"
+"    height: 15px;\n"
+"    margin: 3px 15px 3px 15px;\n"
+"    border: 1px transparent #2A2929;\n"
 "    border-radius: 4px;\n"
+"    background-color: #2A2929;\n"
+"}\n"
+"\n"
+"QScrollBar::handle:horizontal {\n"
+"    background-color: #605F5F;\n"
+"    min-width: 5px;\n"
+"    border-radius: 4px;\n"
+"}\n"
+"\n"
+"QScrollBar::add-line:horizontal {\n"
+"    margin: 0px 3px 0px 3px;\n"
+"    border-image: url(:/qss_icons/rc/right_arrow_disabled.png);\n"
+"    width: 10px;\n"
+"    height: 10px;\n"
+"    subcontrol-position: right;\n"
+"    subcontrol-origin: margin;\n"
+"}\n"
+"\n"
+"QScrollBar::sub-line:horizontal {\n"
+"    margin: 0px 3px 0px 3px;\n"
+"    border-image: url(:/qss_icons/rc/left_arrow_disabled.png);\n"
+"    height: 10px;\n"
+"    width: 10px;\n"
+"    subcontrol-position: left;\n"
+"    subcontrol-origin: margin;\n"
+"}\n"
+"\n"
+"QScrollBar::add-line:horizontal:hover,\n"
+"QScrollBar::add-line:horizontal:on {\n"
+"    border-image: url(:/qss_icons/rc/right_arrow.png);\n"
+"    height: 10px;\n"
+"    width: 10px;\n"
+"    subcontrol-position: right;\n"
+"    subcontrol-origin: margin;\n"
+"}\n"
+"\n"
+"QScrollBar::sub-line:horizontal:hover,\n"
+"QScrollBar::sub-line:horizontal:on {\n"
+"    border-image: url(:/qss_icons/rc/left_arrow.png);\n"
+"    height: 10px;\n"
+"    width: 10px;\n"
+"    subcontrol-position: left;\n"
+"    subcontrol-origin: margin;\n"
+"}\n"
+"\n"
+"QScrollBar::up-arrow:horizontal,\n"
+"QScrollBar::down-arrow:horizontal {\n"
+"    background: none;\n"
+"}\n"
+"\n"
+"QScrollBar::add-page:horizontal,\n"
+"QScrollBar::sub-page:horizontal {\n"
+"    background: none;\n"
+"}\n"
+"\n"
+"QScrollBar:vertical {\n"
+"    background-color: #2A2929;\n"
+"    width: 15px;\n"
+"    margin: 15px 3px 15px 3px;\n"
+"    border: 1px transparent #2A2929;\n"
+"    border-radius: 4px;\n"
+"}\n"
+"\n"
+"QScrollBar::handle:vertical {\n"
+"    background-color: #605F5F;\n"
+"    min-height: 5px;\n"
+"    border-radius: 4px;\n"
+"}\n"
+"\n"
+"QScrollBar::sub-line:vertical {\n"
+"    margin: 3px 0px 3px 0px;\n"
+"    border-image: url(:/qss_icons/rc/up_arrow_disabled.png);\n"
+"    height: 10px;\n"
+"    width: 10px;\n"
+"    subcontrol-position: top;\n"
+"    subcontrol-origin: margin;\n"
+"}\n"
+"\n"
+"QScrollBar::add-line:vertical {\n"
+"    margin: 3px 0px 3px 0px;\n"
+"    border-image: url(:/qss_icons/rc/down_arrow_disabled.png);\n"
+"    height: 10px;\n"
+"    width: 10px;\n"
+"    subcontrol-position: bottom;\n"
+"    subcontrol-origin: margin;\n"
+"}\n"
+"\n"
+"QScrollBar::sub-line:vertical:hover,\n"
+"QScrollBar::sub-line:vertical:on {\n"
+"    border-image: url(:/qss_icons/rc/up_arrow.png);\n"
+"    height: 10px;\n"
+"    width: 10px;\n"
+"    subcontrol-position: top;\n"
+"    subcontrol-origin: margin;\n"
+"}\n"
+"\n"
+"QScrollBar::add-line:vertical:hover,\n"
+"QScrollBar::add-line:vertical:on {\n"
+"    border-image: url(:/qss_icons/rc/down_arrow.png);\n"
+"    height: 10px;\n"
+"    width: 10px;\n"
+"    subcontrol-position: bottom;\n"
+"    subcontrol-origin: margin;\n"
+"}\n"
+"\n"
+"QScrollBar::up-arrow:vertical,\n"
+"QScrollBar::down-arrow:vertical {\n"
+"    background: none;\n"
+"}\n"
+"\n"
+"QScrollBar::add-page:vertical,\n"
+"QScrollBar::sub-page:vertical {\n"
+"    background: none;\n"
+"}\n"
+"\n"
+"QTextEdit {\n"
+"    background-color: #232629;\n"
+"    color: #eff0f1;\n"
+"    border: 1px solid #76797C;\n"
+"}\n"
+"\n"
+"QPlainTextEdit {\n"
+"    background-color: #232629;\n"
+"    ;\n"
+"    color: #eff0f1;\n"
+"    border-radius: 2px;\n"
+"    border: 1px solid #76797C;\n"
+"}\n"
+"\n"
+"QHeaderView::section {\n"
+"    background-color: #76797C;\n"
+"    color: #eff0f1;\n"
 "    padding: 5px;\n"
+"    border: 1px solid #76797C;\n"
+"}\n"
+"\n"
+"QSizeGrip {\n"
+"    image: url(:/qss_icons/rc/sizegrip.png);\n"
+"    width: 12px;\n"
+"    height: 12px;\n"
+"}\n"
+"\n"
+"QMainWindow::separator {\n"
+"    background-color: #31363b;\n"
+"    color: white;\n"
+"    padding-left: 4px;\n"
+"    spacing: 2px;\n"
+"    border: 1px dashed #76797C;\n"
+"}\n"
+"\n"
+"QMainWindow::separator:hover {\n"
+"    background-color: #787876;\n"
+"    color: white;\n"
+"    padding-left: 4px;\n"
+"    border: 1px solid #76797C;\n"
+"    spacing: 2px;\n"
+"}\n"
+"\n"
+"QMenu::separator {\n"
+"    height: 1px;\n"
+"    background-color: #76797C;\n"
+"    color: white;\n"
+"    padding-left: 4px;\n"
+"    margin-left: 10px;\n"
+"    margin-right: 5px;\n"
+"}\n"
+"\n"
+"QFrame {\n"
+"    border-radius: 2px;\n"
+"    border: 1px solid #76797C;\n"
+"}\n"
+"\n"
+"QFrame[frameShape=\"0\"] {\n"
+"    border-radius: 2px;\n"
+"    border: 1px transparent #76797C;\n"
+"}\n"
+"\n"
+"QStackedWidget {\n"
+"    border: 1px transparent black;\n"
+"}\n"
+"\n"
+"QToolBar {\n"
+"    border: 1px transparent #393838;\n"
+"    background: 1px solid #31363b;\n"
+"    font-weight: bold;\n"
+"}\n"
+"\n"
+"QToolBar::handle:horizontal {\n"
+"    image: url(:/qss_icons/rc/Hmovetoolbar.png);\n"
+"}\n"
+"\n"
+"QToolBar::handle:vertical {\n"
+"    image: url(:/qss_icons/rc/Vmovetoolbar.png);\n"
+"}\n"
+"\n"
+"QToolBar::separator:horizontal {\n"
+"    image: url(:/qss_icons/rc/Hsepartoolbar.png);\n"
+"}\n"
+"\n"
+"QToolBar::separator:vertical {\n"
+"    image: url(:/qss_icons/rc/Vsepartoolbar.png);\n"
+"}\n"
+"\n"
+"QToolButton#qt_toolbar_ext_button {\n"
+"    background: #58595a\n"
+"}\n"
+"\n"
+"\n"
+"\n"
+"QComboBox {\n"
+"    selection-background-color: #3daee9;\n"
+"    border-style: solid;\n"
+"    border: 1px solid #76797C;\n"
+"    border-radius: 2px;\n"
+"    padding: 5px;\n"
+"    min-width: 75px;\n"
+"}\n"
+"\n"
+"QPushButton {\n"
+"    border: 2px solid #8f8f91 transparent;\n"
+"    border-radius: 6px;\n"
+"    background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,\n"
+"                                      stop: 0 #0D71AC, stop: 1 transparent);\n"
+"    min-width: 80px;\n"
+"}\n"
+"\n"
+"QPushButton:pressed {\n"
+"    background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,\n"
+"                                      stop: 0 #dadbde, stop: 1 transparent);\n"
+"}\n"
+"\n"
+"QPushButton:flat {\n"
+"    border: none; /* no border for a flat push button */\n"
+"}\n"
+"\n"
+"QPushButton:default {\n"
+"    border-color: navy; /* make the default button prominent */\n"
+"}\n"
+"\n"
+"QPushButton:open { /* when the button has its menu open */\n"
+"    background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,\n"
+"                                      stop: 0 #dadbde, stop: 1 #f6f7fa);\n"
+"}\n"
+"\n"
+"QPushButton::menu-indicator {\n"
+"    image: url(menu_indicator.png);\n"
+"    subcontrol-origin: padding;\n"
+"    subcontrol-position: bottom right;\n"
+"}\n"
+"\n"
+"QPushButton::menu-indicator:pressed, QPushButton::menu-indicator:open {\n"
+"    position: relative;\n"
+"    top: 2px; left: 2px; /* shift the arrow by 2 px */\n"
+"}\n"
+"\n"
+"QComboBox:hover,\n"
+"QAbstractSpinBox:hover,\n"
+"QLineEdit:hover,\n"
+"QTextEdit:hover,\n"
+"QPlainTextEdit:hover,\n"
+"QAbstractView:hover,\n"
+"QTreeView:hover {\n"
+"border: 1px solid #3daee9;\n"
+"color: #eff0f1;\n"
+"}\n"
+"\n"
+"QComboBox:on {\n"
+"    padding-top: 3px;\n"
+"    padding-left: 4px;\n"
+"    selection-background-color: #4a4a4a;\n"
+"}\n"
+"\n"
+"QComboBox QAbstractItemView {\n"
+"    background-color: #232629;\n"
+"    border-radius: 2px;\n"
+"    border: 1px solid #76797C;\n"
+"    selection-background-color: #18465d;\n"
 "}\n"
 "\n"
 "QComboBox::drop-down {\n"
-"    border: none;\n"
+"    subcontrol-origin: padding;\n"
+"    subcontrol-position: top right;\n"
+"    width: 15px;\n"
+"    border-left-width: 0px;\n"
+"    border-left-color: darkgray;\n"
+"    border-left-style: solid;\n"
+"    border-top-right-radius: 3px;\n"
+"    border-bottom-right-radius: 3px;\n"
 "}\n"
 "\n"
 "QComboBox::down-arrow {\n"
-"    image: url(:/icons/down_arrow.png);\n"
+"    image: url(:/qss_icons/rc/down_arrow_disabled.png);\n"
+"}\n"
+"\n"
+"QComboBox::down-arrow:on,\n"
+"QComboBox::down-arrow:hover,\n"
+"QComboBox::down-arrow:focus {\n"
+"    image: url(:/qss_icons/rc/down_arrow.png);\n"
+"}\n"
+"\n"
+"QAbstractSpinBox {\n"
+"    padding: 5px;\n"
+"    border: 1px solid #76797C;\n"
+"    background-color: #232629;\n"
+"    color: #eff0f1;\n"
+"    border-radius: 2px;\n"
+"    min-width: 75px;\n"
+"}\n"
+"\n"
+"QAbstractSpinBox:up-button {\n"
+"    background-color: transparent;\n"
+"    subcontrol-origin: border;\n"
+"    subcontrol-position: center right;\n"
+"}\n"
+"\n"
+"QAbstractSpinBox:down-button {\n"
+"    background-color: transparent;\n"
+"    subcontrol-origin: border;\n"
+"    subcontrol-position: center left;\n"
+"}\n"
+"\n"
+"QAbstractSpinBox::up-arrow,\n"
+"QAbstractSpinBox::up-arrow:disabled,\n"
+"QAbstractSpinBox::up-arrow:off {\n"
+"    image: url(:/qss_icons/rc/up_arrow_disabled.png);\n"
 "    width: 10px;\n"
 "    height: 10px;\n"
 "}\n"
 "\n"
-"QComboBox QAbstractItemView {\n"
-"    background-color: #3E3D40;\n"
-"    color: #40E0D0;\n"
-"    selection-background-color: #5A595C;\n"
+"QAbstractSpinBox::up-arrow:hover {\n"
+"    image: url(:/qss_icons/rc/up_arrow.png);\n"
 "}\n"
+"\n"
+"QAbstractSpinBox::down-arrow,\n"
+"QAbstractSpinBox::down-arrow:disabled,\n"
+"QAbstractSpinBox::down-arrow:off {\n"
+"    image: url(:/qss_icons/rc/down_arrow_disabled.png);\n"
+"    width: 10px;\n"
+"    height: 10px;\n"
+"}\n"
+"\n"
+"QAbstractSpinBox::down-arrow:hover {\n"
+"    image: url(:/qss_icons/rc/down_arrow.png);\n"
+"}\n"
+"\n"
+"QLabel {\n"
+"    border: 0px solid black;\n"
+"}\n"
+"\n"
+"QTabWidget {\n"
+"    border: 0px transparent black;\n"
+"}\n"
+"\n"
+"QTabWidget::pane {\n"
+"    border: 1px solid #76797C;\n"
+"    padding: 5px;\n"
+"    margin: 0px;\n"
+"}\n"
+"\n"
+"QTabWidget::tab-bar {\n"
+"    /* left: 5px; move to the right by 5px */\n"
+"}\n"
+"\n"
+"QTabBar {\n"
+"    qproperty-drawBase: 0;\n"
+"    border-radius: 3px;\n"
+"}\n"
+"\n"
+"QTabBar:focus {\n"
+"    border: 0px transparent black;\n"
+"}\n"
+"\n"
+"QTabBar::close-button {\n"
+"    image: url(:/qss_icons/rc/close.png);\n"
+"    background: transparent;\n"
+"}\n"
+"\n"
+"QTabBar::close-button:hover {\n"
+"    image: url(:/qss_icons/rc/close-hover.png);\n"
+"    background: transparent;\n"
+"}\n"
+"\n"
+"QTabBar::close-button:pressed {\n"
+"    image: url(:/qss_icons/rc/close-pressed.png);\n"
+"    background: transparent;\n"
+"}\n"
+"\n"
+"\n"
+"/* TOP TABS */\n"
+"\n"
+"QTabBar::tab:top {\n"
+"    color: #eff0f1;\n"
+"    border: 1px solid #76797C;\n"
+"    border-bottom: 1px transparent black;\n"
+"    background-color: #31363b;\n"
+"    padding: 5px;\n"
+"    min-width: 50px;\n"
+"    border-top-left-radius: 2px;\n"
+"    border-top-right-radius: 2px;\n"
+"}\n"
+"\n"
+"QTabBar::tab:top:selected {\n"
+"    color: #eff0f1;\n"
+"    background-color: #54575B;\n"
+"    border: 1px solid #76797C;\n"
+"    border-bottom: 2px solid #3daee9;\n"
+"    border-top-left-radius: 2px;\n"
+"    border-top-right-radius: 2px;\n"
+"}\n"
+"\n"
+"QTabBar::tab:top:!selected:hover {\n"
+"    background-color: #3daee9;\n"
+"}\n"
+"\n"
+"\n"
+"/* BOTTOM TABS */\n"
+"\n"
+"QTabBar::tab:bottom {\n"
+"    color: #eff0f1;\n"
+"    border: 1px solid #76797C;\n"
+"    border-top: 1px transparent black;\n"
+"    background-color: #31363b;\n"
+"    padding: 5px;\n"
+"    border-bottom-left-radius: 2px;\n"
+"    border-bottom-right-radius: 2px;\n"
+"    min-width: 50px;\n"
+"}\n"
+"\n"
+"QTabBar::tab:bottom:selected {\n"
+"    color: #eff0f1;\n"
+"    background-color: #54575B;\n"
+"    border: 1px solid #76797C;\n"
+"    border-top: 2px solid #3daee9;\n"
+"    border-bottom-left-radius: 2px;\n"
+"    border-bottom-right-radius: 2px;\n"
+"}\n"
+"\n"
+"QTabBar::tab:bottom:!selected:hover {\n"
+"    background-color: #3daee9;\n"
+"}\n"
+"\n"
+"\n"
+"/* LEFT TABS */\n"
+"\n"
+"QTabBar::tab:left {\n"
+"    color: #eff0f1;\n"
+"    border: 1px solid #76797C;\n"
+"    border-left: 1px transparent black;\n"
+"    background-color: #31363b;\n"
+"    padding: 5px;\n"
+"    border-top-right-radius: 2px;\n"
+"    border-bottom-right-radius: 2px;\n"
+"    min-height: 50px;\n"
+"}\n"
+"\n"
+"QTabBar::tab:left:selected {\n"
+"    color: #eff0f1;\n"
+"    background-color: #54575B;\n"
+"    border: 1px solid #76797C;\n"
+"    border-left: 2px solid #3daee9;\n"
+"    border-top-right-radius: 2px;\n"
+"    border-bottom-right-radius: 2px;\n"
+"}\n"
+"\n"
+"QTabBar::tab:left:!selected:hover {\n"
+"    background-color: #3daee9;\n"
+"}\n"
+"\n"
+"\n"
+"/* RIGHT TABS */\n"
+"\n"
+"QTabBar::tab:right {\n"
+"    color: #eff0f1;\n"
+"    border: 1px solid #76797C;\n"
+"    border-right: 1px transparent black;\n"
+"    background-color: #31363b;\n"
+"    padding: 5px;\n"
+"    border-top-left-radius: 2px;\n"
+"    border-bottom-left-radius: 2px;\n"
+"    min-height: 50px;\n"
+"}\n"
+"\n"
+"QTabBar::tab:right:selected {\n"
+"    color: #eff0f1;\n"
+"    background-color: #54575B;\n"
+"    border: 1px solid #76797C;\n"
+"    border-right: 2px solid #3daee9;\n"
+"    border-top-left-radius: 2px;\n"
+"    border-bottom-left-radius: 2px;\n"
+"}\n"
+"\n"
+"QTabBar::tab:right:!selected:hover {\n"
+"    background-color: #3daee9;\n"
+"}\n"
+"\n"
+"QTabBar QToolButton::right-arrow:enabled {\n"
+"    image: url(:/qss_icons/rc/right_arrow.png);\n"
+"}\n"
+"\n"
+"QTabBar QToolButton::left-arrow:enabled {\n"
+"    image: url(:/qss_icons/rc/left_arrow.png);\n"
+"}\n"
+"\n"
+"QTabBar QToolButton::right-arrow:disabled {\n"
+"    image: url(:/qss_icons/rc/right_arrow_disabled.png);\n"
+"}\n"
+"\n"
+"QTabBar QToolButton::left-arrow:disabled {\n"
+"    image: url(:/qss_icons/rc/left_arrow_disabled.png);\n"
+"}\n"
+"\n"
+"QDockWidget {\n"
+"    background: #31363b;\n"
+"    border: 1px solid #403F3F;\n"
+"    titlebar-close-icon: url(:/qss_icons/rc/close.png);\n"
+"    titlebar-normal-icon: url(:/qss_icons/rc/undock.png);\n"
+"}\n"
+"\n"
+"QDockWidget::close-button,\n"
+"QDockWidget::float-button {\n"
+"    border: 1px solid transparent;\n"
+"    border-radius: 2px;\n"
+"    background: transparent;\n"
+"}\n"
+"\n"
+"QDockWidget::close-button:hover,\n"
+"QDockWidget::float-button:hover {\n"
+"    background: rgba(255, 255, 255, 10);\n"
+"}\n"
+"\n"
+"QDockWidget::close-button:pressed,\n"
+"QDockWidget::float-button:pressed {\n"
+"    padding: 1px -1px -1px 1px;\n"
+"    background: rgba(255, 255, 255, 10);\n"
+"}\n"
+"\n"
+"QTreeView,\n"
+"QListView {\n"
+"    border: 1px solid #76797C;\n"
+"    background-color: #232629;\n"
+"}\n"
+"\n"
+"QTreeView:branch:selected,\n"
+"QTreeView:branch:hover {\n"
+"    background: url(:/qss_icons/rc/transparent.png);\n"
+"}\n"
+"\n"
+"QTreeView::branch:has-siblings:!adjoins-item {\n"
+"    border-image: url(:/qss_icons/rc/transparent.png);\n"
+"}\n"
+"\n"
+"QTreeView::branch:has-siblings:adjoins-item {\n"
+"    border-image: url(:/qss_icons/rc/transparent.png);\n"
+"}\n"
+"\n"
+"QTreeView::branch:!has-children:!has-siblings:adjoins-item {\n"
+"    border-image: url(:/qss_icons/rc/transparent.png);\n"
+"}\n"
+"\n"
+"QTreeView::branch:has-children:!has-siblings:closed,\n"
+"QTreeView::branch:closed:has-children:has-siblings {\n"
+"    image: url(:/qss_icons/rc/branch_closed.png);\n"
+"}\n"
+"\n"
+"QTreeView::branch:open:has-children:!has-siblings,\n"
+"QTreeView::branch:open:has-children:has-siblings {\n"
+"    image: url(:/qss_icons/rc/branch_open.png);\n"
+"}\n"
+"\n"
+"QTreeView::branch:has-children:!has-siblings:closed:hover,\n"
+"QTreeView::branch:closed:has-children:has-siblings:hover {\n"
+"    image: url(:/qss_icons/rc/branch_closed-on.png);\n"
+"}\n"
+"\n"
+"QTreeView::branch:open:has-children:!has-siblings:hover,\n"
+"QTreeView::branch:open:has-children:has-siblings:hover {\n"
+"    image: url(:/qss_icons/rc/branch_open-on.png);\n"
+"}\n"
+"\n"
+"QListView::item:!selected:hover,\n"
+"QTreeView::item:!selected:hover {\n"
+"    background: #18465d;\n"
+"    outline: 0;\n"
+"    color: #eff0f1\n"
+"}\n"
+"\n"
+"QListView::item:selected:hover,\n"
+"QTreeView::item:selected:hover {\n"
+"    background: #287399;\n"
+"    color: #eff0f1;\n"
+"}\n"
+"\n"
+"QTreeView::indicator:checked,\n"
+"QListView::indicator:checked {\n"
+"    image: url(:/qss_icons/rc/checkbox_checked.png);\n"
+"}\n"
+"\n"
+"QTreeView::indicator:unchecked,\n"
+"QListView::indicator:unchecked {\n"
+"    image: url(:/qss_icons/rc/checkbox_unchecked.png);\n"
+"}\n"
+"\n"
+"QTreeView::indicator:indeterminate,\n"
+"QListView::indicator:indeterminate {\n"
+"    image: url(:/qss_icons/rc/checkbox_indeterminate.png);\n"
+"}\n"
+"\n"
+"QTreeView::indicator:checked:hover,\n"
+"QTreeView::indicator:checked:focus,\n"
+"QTreeView::indicator:checked:pressed,\n"
+"QListView::indicator:checked:hover,\n"
+"QListView::indicator:checked:focus,\n"
+"QListView::indicator:checked:pressed {\n"
+"    image: url(:/qss_icons/rc/checkbox_checked_focus.png);\n"
+"}\n"
+"\n"
+"QTreeView::indicator:unchecked:hover,\n"
+"QTreeView::indicator:unchecked:focus,\n"
+"QTreeView::indicator:unchecked:pressed,\n"
+"QListView::indicator:unchecked:hover,\n"
+"QListView::indicator:unchecked:focus,\n"
+"QListView::indicator:unchecked:pressed {\n"
+"    image: url(:/qss_icons/rc/checkbox_unchecked_focus.png);\n"
+"}\n"
+"\n"
+"QTreeView::indicator:indeterminate:hover,\n"
+"QTreeView::indicator:indeterminate:focus,\n"
+"QTreeView::indicator:indeterminate:pressed,\n"
+"QListView::indicator:indeterminate:hover,\n"
+"QListView::indicator:indeterminate:focus,\n"
+"QListView::indicator:indeterminate:pressed {\n"
+"    image: url(:/qss_icons/rc/checkbox_indeterminate_focus.png);\n"
+"}\n"
+"\n"
+"QSlider::groove:horizontal {\n"
+"    border: 1px solid #565a5e;\n"
+"    height: 4px;\n"
+"    background: #565a5e;\n"
+"    margin: 0px;\n"
+"    border-radius: 2px;\n"
+"}\n"
+"\n"
+"QSlider::handle:horizontal {\n"
+"    background: #232629;\n"
+"    border: 1px solid #565a5e;\n"
+"    width: 16px;\n"
+"    height: 16px;\n"
+"    margin: -8px 0;\n"
+"    border-radius: 9px;\n"
+"}\n"
+"\n"
+"QSlider::groove:vertical {\n"
+"    border: 1px solid #565a5e;\n"
+"    width: 4px;\n"
+"    background: #565a5e;\n"
+"    margin: 0px;\n"
+"    border-radius: 3px;\n"
+"}\n"
+"\n"
+"QSlider::handle:vertical {\n"
+"    background: #232629;\n"
+"    border: 1px solid #565a5e;\n"
+"    width: 16px;\n"
+"    height: 16px;\n"
+"    margin: 0 -8px;\n"
+"    border-radius: 9px;\n"
+"}\n"
+"\n"
+"QToolButton {\n"
+"    background-color: transparent;\n"
+"    border: 1px transparent #76797C;\n"
+"    border-radius: 2px;\n"
+"    margin: 3px;\n"
+"    padding: 5px;\n"
+"}\n"
+"\n"
+"QToolButton[popupMode=\"1\"] {\n"
+"    /* only for MenuButtonPopup */\n"
+"    padding-right: 20px;\n"
+"    /* make way for the popup button */\n"
+"    border: 1px #76797C;\n"
+"    border-radius: 5px;\n"
+"}\n"
+"\n"
+"QToolButton[popupMode=\"2\"] {\n"
+"    /* only for InstantPopup */\n"
+"    padding-right: 10px;\n"
+"    /* make way for the popup button */\n"
+"    border: 1px #76797C;\n"
+"}\n"
+"\n"
+"QToolButton:hover,\n"
+"QToolButton::menu-button:hover {\n"
+"    background-color: transparent;\n"
+"    border: 1px solid #3daee9;\n"
+"    padding: 5px;\n"
+"}\n"
+"\n"
+"QToolButton:checked,\n"
+"QToolButton:pressed,\n"
+"QToolButton::menu-button:pressed {\n"
+"    background-color: #3daee9;\n"
+"    border: 1px solid #3daee9;\n"
+"    padding: 5px;\n"
+"}\n"
+"\n"
+"\n"
+"/* the subcontrol below is used only in the InstantPopup or DelayedPopup mode */\n"
+"\n"
+"QToolButton::menu-indicator {\n"
+"    image: url(:/qss_icons/rc/down_arrow.png);\n"
+"    top: -7px;\n"
+"    left: -2px;\n"
+"    /* shift it a bit */\n"
+"}\n"
+"\n"
+"\n"
+"/* the subcontrols below are used only in the MenuButtonPopup mode */\n"
+"\n"
+"QToolButton::menu-button {\n"
+"    border: 1px transparent #76797C;\n"
+"    border-top-right-radius: 6px;\n"
+"    border-bottom-right-radius: 6px;\n"
+"    /* 16px width + 4px for border = 20px allocated above */\n"
+"    width: 16px;\n"
+"    outline: none;\n"
+"}\n"
+"\n"
+"QToolButton::menu-arrow {\n"
+"    image: url(:/qss_icons/rc/down_arrow.png);\n"
+"}\n"
+"\n"
+"QToolButton::menu-arrow:open {\n"
+"    border: 1px solid #76797C;\n"
+"}\n"
+"\n"
+"\n"
+"\n"
+"QTableView {\n"
+"    border: 1px solid #76797C;\n"
+"    gridline-color: #31363b;\n"
+"    background-color: #232629;\n"
+"}\n"
+"\n"
+"QTableView,\n"
+"QHeaderView {\n"
+"    border-radius: 0px;\n"
+"}\n"
+"\n"
+"QTableView::item:pressed,\n"
+"QListView::item:pressed,\n"
+"QTreeView::item:pressed {\n"
+"    background: #18465d;\n"
+"    color: #eff0f1;\n"
+"}\n"
+"\n"
+"QTableView::item:selected:active,\n"
+"QTreeView::item:selected:active,\n"
+"QListView::item:selected:active {\n"
+"    background: #287399;\n"
+"    color: #eff0f1;\n"
+"}\n"
+"\n"
+"QHeaderView {\n"
+"    background-color: #31363b;\n"
+"    border: 1px transparent;\n"
+"    border-radius: 0px;\n"
+"    margin: 0px;\n"
+"    padding: 0px;\n"
+"}\n"
+"\n"
+"QHeaderView::section {\n"
+"    background-color: #31363b;\n"
+"    color: #eff0f1;\n"
+"    padding: 5px;\n"
+"    border: 1px solid #76797C;\n"
+"    border-radius: 0px;\n"
+"    text-align: center;\n"
+"}\n"
+"\n"
+"QHeaderView::section::vertical::first,\n"
+"QHeaderView::section::vertical::only-one {\n"
+"    border-top: 1px solid #76797C;\n"
+"}\n"
+"\n"
+"QHeaderView::section::vertical {\n"
+"    border-top: transparent;\n"
+"}\n"
+"\n"
+"QHeaderView::section::horizontal::first,\n"
+"QHeaderView::section::horizontal::only-one {\n"
+"    border-left: 1px solid #76797C;\n"
+"}\n"
+"\n"
+"QHeaderView::section::horizontal {\n"
+"    border-left: transparent;\n"
+"}\n"
+"\n"
+"QHeaderView::section:checked {\n"
+"    color: white;\n"
+"    background-color: #334e5e;\n"
+"}\n"
+"\n"
+"\n"
+"/* style the sort indicator */\n"
+"\n"
+"QHeaderView::down-arrow {\n"
+"    image: url(:/qss_icons/rc/down_arrow.png);\n"
+"}\n"
+"\n"
+"QHeaderView::up-arrow {\n"
+"    image: url(:/qss_icons/rc/up_arrow.png);\n"
+"}\n"
+"\n"
+"QTableCornerButton::section {\n"
+"    background-color: #31363b;\n"
+"    border: 1px transparent #76797C;\n"
+"    border-radius: 0px;\n"
+"}\n"
+"\n"
+"QToolBox {\n"
+"    padding: 5px;\n"
+"    border: 1px transparent black;\n"
+"}\n"
+"\n"
+"QToolBox::tab {\n"
+"    color: #eff0f1;\n"
+"    background-color: #31363b;\n"
+"    border: 1px solid #76797C;\n"
+"    border-bottom: 1px transparent #31363b;\n"
+"    border-top-left-radius: 5px;\n"
+"    border-top-right-radius: 5px;\n"
+"}\n"
+"\n"
+"QToolBox::tab:selected {\n"
+"    /* italicize selected tabs */\n"
+"    font: italic;\n"
+"    background-color: #31363b;\n"
+"    border-color: #3daee9;\n"
+"}\n"
+"\n"
+"QStatusBar::item {\n"
+"    border: 0px transparent dark;\n"
+"}\n"
+"\n"
+"QFrame[height=\"3\"],\n"
+"QFrame[width=\"3\"] {\n"
+"    background-color: #76797C;\n"
+"}\n"
+"\n"
+"QSplitter::handle {\n"
+"    border: 1px dashed #76797C;\n"
+"}\n"
+"\n"
+"QSplitter::handle:hover {\n"
+"    background-color: #787876;\n"
+"    border: 1px solid #76797C;\n"
+"}\n"
+"\n"
+"QSplitter::handle:horizontal {\n"
+"    width: 1px;\n"
+"}\n"
+"\n"
+"QSplitter::handle:vertical {\n"
+"    height: 1px;\n"
+"}\n"
+"\n"
+"QProgressBar {\n"
+"    border: 1px solid #76797C;\n"
+"    border-radius: 5px;\n"
+"    text-align: center;\n"
+"}\n"
+"\n"
+"QProgressBar::chunk {\n"
+"    background-color: #05B8CC;\n"
+"}\n"
+"\n"
+"QDateEdit {\n"
+"    selection-background-color: #3daee9;\n"
+"    border-style: solid;\n"
+"    border: 1px solid #3375A3;\n"
+"    border-radius: 2px;\n"
+"    padding: 1px;\n"
+"    min-width: 75px;\n"
+"}\n"
+"\n"
+"QDateEdit:on {\n"
+"    padding-top: 3px;\n"
+"    padding-left: 4px;\n"
+"    selection-background-color: #4a4a4a;\n"
+"}\n"
+"\n"
+"QDateEdit QAbstractItemView {\n"
+"    background-color: #232629;\n"
+"    border-radius: 2px;\n"
+"    border: 1px solid #3375A3;\n"
+"    selection-background-color: #3daee9;\n"
+"}\n"
+"\n"
+"QDateEdit::drop-down {\n"
+"    subcontrol-origin: padding;\n"
+"    subcontrol-position: top right;\n"
+"    width: 15px;\n"
+"    border-left-width: 0px;\n"
+"    border-left-color: darkgray;\n"
+"    border-left-style: solid;\n"
+"    border-top-right-radius: 3px;\n"
+"    border-bottom-right-radius: 3px;\n"
+"}\n"
+"\n"
+"QDateEdit::down-arrow {\n"
+"    image: url(:/qss_icons/rc/down_arrow_disabled.png);\n"
+"}\n"
+"\n"
+"QDateEdit::down-arrow:on,\n"
+"QDateEdit::down-arrow:hover,\n"
+"QDateEdit::down-arrow:focus {\n"
+"    image: url(:/qss_icons/rc/down_arrow.png);\n"
+"}\n"
+"\n"
+"QTreeView {\n"
+"        background-color: transparent;\n"
+"        color: #546E7A;\n"
+"        outline: 0;\n"
+"        border: 0;\n"
+"}\n"
+"\n"
+"QTreeView::item:hover {\n"
+"        background-color: transparent;\n"
+"        color: #AFBDC4;\n"
+"}\n"
+"\n"
+"QTreeView::item:selected {\n"
+"        background-color: transparent;\n"
+"        color: #FFFFFF;\n"
+"}\n"
+"\n"
+"QTreeView QHeaderView:section {\n"
+"        background-color: #263238;\n"
+"        color: #CFD8DC;\n"
+"        border: 0;\n"
+"}\n"
+"\n"
+"QTreeView::indicator:checked {\n"
+"        background-color: qradialgradient(cx:0.5, cy:0.5, fx:0.25, fy:0.15, radius:0.3, stop:0 #80CBC4, stop:1 #263238);\n"
+"        border: 1px solid #536D79;\n"
+"        selection-background-color: transparent;\n"
+"}\n"
+"\n"
+"QTreeView::indicator:unchecked {            /* This and the one above style the checkbox in the Options -> Keyboard */\n"
+"        background-color: #263238;                /* This is still a hover over in blue I can\'t get rid of */\n"
+"        border: 1px solid #536D79;\n"
+"        selection-background-color: transparent;\n"
+"}\n"
+"\n"
+"/*QTreeView QScrollBar {\n"
+"        background-color: #263238\n"
+"}*/\n"
+"\n"
+"QTreeView::branch {\n"
+"        /* Skip - applies to everything */\n"
+"}\n"
+"\n"
+"QTreeView::branch:has-siblings:adjoins-item {\n"
+"        /* Skip - files */\n"
+"}\n"
+"\n"
+"QTreeView::branch:has-siblings:!adjoins-item {\n"
+"        /* Skip - applies to almost all on the left side */\n"
+"}\n"
+"\n"
+"QTreeView::branch:closed:has-children:has-siblings {\n"
+"        background: url(\'./images/rightarrowgray.png\') center center no-repeat;\n"
+"}\n"
+"\n"
+"QTreeView::branch:has-children:!has-siblings:closed {\n"
+"        background: url(\'./images/rightarrowgray.png\') center center no-repeat;\n"
+"}\n"
+"\n"
+"QTreeView::branch:!has-children:!has-siblings:adjoins-item {\n"
+"        /* Skip - files */\n"
+"}\n"
+"\n"
+"QTreeView::branch:open:has-children:has-siblings {\n"
+"        background: url(\'./images/downarrowgray.png\') center center no-repeat;\n"
+"}\n"
+"\n"
+"QTreeView::branch:open:has-children:!has-siblings {\n"
+"        background: url(\'./images/downarrowgray.png\') center center no-repeat;\n"
+"}\n"
+"\n"
+"/* === QScrollBar:horizontal === */\n"
+"QScrollBar:horizontal {\n"
+"        background: #263238;                /* Background where slider is not */\n"
+"        height: 10px;\n"
+"        margin: 0;\n"
+"}\n"
+"\n"
+"QScrollBar:vertical {\n"
+"        background: #263238;                /* Background where slider is not */\n"
+"        width: 10px;\n"
+"        margin: 0;\n"
+"}\n"
+"\n"
+"QScrollBar::handle:horizontal {\n"
+"    background: #37474F;                    /* Slider color */\n"
+"    min-width: 16px;\n"
+"        border-radius: 5px;\n"
+"}\n"
+"\n"
+"QScrollBar::handle:vertical {\n"
+"    background: #37474F;                    /* Slider color */\n"
+"    min-height: 16px;\n"
+"        border-radius: 5px;\n"
+"}\n"
+"\n"
+"QScrollBar::add-page:horizontal, QScrollBar::sub-page:horizontal,\n"
+"QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {\n"
+"        background: none;                                                /* Removes the dotted background */\n"
+"}\n"
+"\n"
+"QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal,\n"
+"QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {    /* Hides the slider arrows */\n"
+"      border: none;\n"
+"      background: none;\n"
+"}\n"
+"\n"
+"QLineEdit {\n"
+"        background: transparent;\n"
+"        border: 1px solid transparent;\n"
+"        color: #546E7A;\n"
+"}\n"
+"\n"
+"QSpinBox {\n"
+"        background: transparent;\n"
+"        border: 1px solid transparent;\n"
+"        color: #546E7A;\n"
+"}\n"
+"\n"
+"/*****************************************************************************\n"
+"Main Screen\n"
+"*****************************************************************************/\n"
+"QTreeView {\n"
+"        background-color: #263238;\n"
+"}\n"
+"\n"
+"QMenu {\n"
+"        background-color: #263238;        /* File Menu Background color */\n"
+"        color: #546E7A;\n"
+"}\n"
+"\n"
+"QMenu::item:selected {\n"
+"        color: #AFBDC4;\n"
+"}\n"
+"\n"
+"QMenu::item:pressed {\n"
+"        color: #FFFFFF;\n"
+"}\n"
+"\n"
+"QMenu::separator {\n"
+"        height: 1px;\n"
+"        background: transparent;            /* Could change this to #546E7A and reduce the margin top and bottom to 1px */\n"
+"        margin-left: 10px;\n"
+"        margin-right: 10px;\n"
+"        margin-top: 5px;\n"
+"        margin-bottom: 5px;\n"
+"}\n"
+"\n"
+"/* === QMenuBar === */\n"
+"QMenuBar {\n"
+"        background-color: #263238;\n"
+"        color: #546E7A;\n"
+"}\n"
+"\n"
+"QMenuBar::item {\n"
+"        background: transparent;\n"
+"}\n"
+"\n"
+"QMenuBar::item:disabled {\n"
+"        color: gray;\n"
+"}\n"
+"\n"
+"QMenuBar::item:selected {\n"
+"        color: #AFBDC4;\n"
+"}\n"
+"\n"
+"QMenuBar::item:pressed {\n"
+"        color: #FFFFFF;\n"
+"}\n"
+"\n"
+"QToolBar {\n"
+"        background: #263238;\n"
+"        border: 1px solid transparent;\n"
+"}\n"
+"\n"
+"QToolBar:handle {\n"
+"        background: transparent;\n"
+"        border-left: 2px dotted #80CBC4;    /* Fix the 4 handle dots so it doesn\'t look crappy */\n"
+"        color: transparent;\n"
+"}\n"
+"\n"
+"QToolBar::separator {\n"
+"        border: 0;\n"
+"}\n"
+"\n"
+"/* === QToolButton === */\n"
+"QToolButton:hover, QToolButton:pressed {\n"
+"        background-color: transparent;\n"
+"}\n"
+"\n"
+"QToolButton::menu-button {\n"
+"        background: url(\'./images/downarrowgray.png\') center center no-repeat;\n"
+"        background-color: #263238;                                                /* This needs to be set to ensure the other brown arrows don\'t show */\n"
+"}\n"
+"\n"
+"QToolButton::menu-button:hover, QToolButton::menu-button:pressed {\n"
+"        background-color: #263238;\n"
+"}\n"
+"\n"
 "")
-
-        # Navigation Bar - EXACTLY as in UI_Main.py but adapted for QWidget
-        self.graphicsView = QtWidgets.QGraphicsView(parent=Naswail_Tool)
-        self.graphicsView.setGeometry(QtCore.QRect(10, 0, 71, 61))
-        self.graphicsView.setObjectName("graphicsView")
-        
-        self.label_4 = QtWidgets.QLabel(parent=Naswail_Tool)
-        self.label_4.setGeometry(QtCore.QRect(81, 3, 220, 53))
-        font = QtGui.QFont()
-        font.setFamily("Segoe UI Variable Small Semibol")
-        font.setPointSize(32)
-        font.setBold(True)
-        font.setWeight(85)
-        self.label_4.setFont(font)
-        self.label_4.setObjectName("label_4")
-        
         self.horizontalLayoutWidget = QtWidgets.QWidget(parent=Naswail_Tool)
-        self.horizontalLayoutWidget.setGeometry(QtCore.QRect(266, 10, 1031, 41))
+        self.horizontalLayoutWidget.setGeometry(QtCore.QRect(240, 0, 1301, 101))
         self.horizontalLayoutWidget.setObjectName("horizontalLayoutWidget")
-        
         self.horizontalLayout = QtWidgets.QHBoxLayout(self.horizontalLayoutWidget)
         self.horizontalLayout.setContentsMargins(0, 0, 0, 0)
         self.horizontalLayout.setObjectName("horizontalLayout")
-        
         self.pushButton_4 = QtWidgets.QPushButton(parent=self.horizontalLayoutWidget)
         self.pushButton_4.setObjectName("pushButton_4")
         self.horizontalLayout.addWidget(self.pushButton_4)
-        
-        self.pushButton_8 = QtWidgets.QPushButton(parent=self.horizontalLayoutWidget)
-        self.pushButton_8.setObjectName("pushButton_8")
-        self.horizontalLayout.addWidget(self.pushButton_8)
-        
         self.pushButton_3 = QtWidgets.QPushButton(parent=self.horizontalLayoutWidget)
         self.pushButton_3.setObjectName("pushButton_3")
         self.horizontalLayout.addWidget(self.pushButton_3)
-        
         self.pushButton_2 = QtWidgets.QPushButton(parent=self.horizontalLayoutWidget)
         self.pushButton_2.setObjectName("pushButton_2")
         self.horizontalLayout.addWidget(self.pushButton_2)
-        
-        self.horizontalLayout.addSpacing(10)
-        
-        # Notification Button (exactly like in UI_Main)
-        self.notificationButton = QtWidgets.QPushButton(parent=self.horizontalLayoutWidget)
-        self.notificationButton.setText("🔔")
-        self.notificationButton.setFixedSize(40, 30)
-        self.notificationButton.setObjectName("notificationButton")
-        self.notificationButton.setStyleSheet("""
-                QPushButton {
-                background-color: #40E0D0;
-                color: #2D2A2E;
-                border: 1px solid #40E0D0;
-                border-radius: 15px;
-                font-size: 16px;
-                }
-                QPushButton:hover {
-                background-color: #36C9B0;
-                border: 1px solid #36C9B0;
-                }
-                QPushButton:pressed {
-                background-color: #2DB39E;
-                border: 1px solid #2DB39E;
-                }
-        """)
-        self.horizontalLayout.addWidget(self.notificationButton)
-        
-        # Notification Menu - matching UI_Main
-        self.notificationMenu = QtWidgets.QMenu(parent=Naswail_Tool)
-        self.notificationMenu.setStyleSheet("""
-                QMenu {
-                background-color: #3E3D40;
-                color: #FFFFFF;
-                border: 1px solid #5A595C;
-                border-radius: 5px;
-                padding: 5px;
-                }
-        """)
-        
-        self.notificationList = QtWidgets.QListWidget()
-        self.notificationList.setFixedSize(300, 200)
-        self.notificationList.setStyleSheet("""
-                QListWidget {
-                background-color: #3E3D40;
-                border: none;
-                font-size: 14px;
-                }
-        """)
-        
-        notificationWidgetAction = QtWidgets.QWidgetAction(self.notificationMenu)
-        notificationWidgetAction.setDefaultWidget(self.notificationList)
-        self.notificationMenu.addAction(notificationWidgetAction)
-
-        # Scroll Area for Content
+        self.label_4 = QtWidgets.QLabel(parent=Naswail_Tool)
+        self.label_4.setGeometry(QtCore.QRect(0, 0, 241, 101))
+        font = QtGui.QFont()
+        font.setFamily("Segoe UI Variable Small Semibol")
+        font.setPointSize(18)
+        font.setBold(True)
+        font.setWeight(75)
+        self.label_4.setFont(font)
+        self.label_4.setObjectName("label_4")
         self.scrollArea = QtWidgets.QScrollArea(parent=Naswail_Tool)
-        self.scrollArea.setGeometry(QtCore.QRect(20, 70, 1560, 800))
-        self.scrollArea.setWidgetResizable(True)
+        self.scrollArea.setGeometry(QtCore.QRect(-10, 70, 1531, 3401))
+        self.scrollArea.setMinimumSize(QtCore.QSize(1000, 0))
+        self.scrollArea.setLineWidth(1)
         self.scrollArea.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarPolicy.ScrollBarAlwaysOn)
         self.scrollArea.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarPolicy.ScrollBarAsNeeded)
-        
+        self.scrollArea.setSizeAdjustPolicy(QtWidgets.QAbstractScrollArea.SizeAdjustPolicy.AdjustToContents)
+        self.scrollArea.setWidgetResizable(True)
+        self.scrollArea.setAlignment(QtCore.Qt.AlignmentFlag.AlignLeading|QtCore.Qt.AlignmentFlag.AlignLeft|QtCore.Qt.AlignmentFlag.AlignTop)
+        self.scrollArea.setObjectName("scrollArea")
         self.scrollAreaWidgetContents = QtWidgets.QWidget()
-        self.scrollAreaWidgetContents.setMinimumSize(QtCore.QSize(1400, 2500))
-        
-        # Main content layout
-        self.contentLayout = QtWidgets.QVBoxLayout(self.scrollAreaWidgetContents)
-        self.contentLayout.setContentsMargins(40, 25, 40, 60)
-        self.contentLayout.setSpacing(50)
-
-        # SECTION 1: Traffic Prediction
-        self.predictionGroupBox = QtWidgets.QGroupBox("Traffic Prediction")
-        predictionLayout = QtWidgets.QVBoxLayout(self.predictionGroupBox)
-        predictionLayout.setContentsMargins(30, 25, 30, 25)
-        predictionLayout.setSpacing(20)
-
-        # Prediction table and graph
-        self.predictionDisplayLayout = QtWidgets.QHBoxLayout()
-        
-        # Left side: Table with input controls underneath
-        self.leftPredictionLayout = QtWidgets.QVBoxLayout()
-        
-        # Time table with increased width
-        self.tableWidget_3 = QtWidgets.QTableWidget()
-        self.tableWidget_3.setMinimumWidth(450)  # Further increased width to avoid truncation
-        self.tableWidget_3.setColumnCount(2)
-        self.tableWidget_3.setRowCount(7)
-        self.tableWidget_3.setHorizontalHeaderLabels(["Time", "Packet Estimate"])
-        self.tableWidget_3.setVerticalHeaderLabels(["Current", "Desired Time", "+ 1 Hour", "+ 3 Hour", "+ 6 Hour", "+ 12 Hour", "+ 24 Hour"])
-        
-        # Add table to layout
-        self.leftPredictionLayout.addWidget(self.tableWidget_3)
-        self.leftPredictionLayout.addSpacing(15)
-        
-        # Add input controls under the table
-        self.inputControlsLayout = QtWidgets.QHBoxLayout()
-        self.label_5 = QtWidgets.QLabel("Enter Number of Hours:")
-        self.lineEdit = QtWidgets.QLineEdit()
-        self.lineEdit.setMaximumWidth(100)
-        self.pushButton = QtWidgets.QPushButton("Predict")
-        self.pushButton.setMinimumWidth(120)
-        
-        self.inputControlsLayout.addWidget(self.label_5)
-        self.inputControlsLayout.addWidget(self.lineEdit)
-        self.inputControlsLayout.addWidget(self.pushButton)
-        self.inputControlsLayout.addStretch()
-        
-        self.leftPredictionLayout.addLayout(self.inputControlsLayout)
-        
-        # Add left side layout to main prediction layout
-        self.predictionDisplayLayout.addLayout(self.leftPredictionLayout)
-        
-        # Right side: Graph
-        self.widget = QtWidgets.QWidget()
-        self.widget.setMinimumSize(QtCore.QSize(800, 450))
-        
-        # Add graph to layout with stretch priority
-        self.predictionDisplayLayout.addWidget(self.widget, 1)
-        
-        predictionLayout.addLayout(self.predictionDisplayLayout)
-        self.contentLayout.addWidget(self.predictionGroupBox)
-
-        # SECTION 2: Network Activity Monitoring
-        self.networkActivityGroupBox = QtWidgets.QGroupBox("Network Activity Monitoring")
-        networkActivityLayout = QtWidgets.QVBoxLayout(self.networkActivityGroupBox)
-        networkActivityLayout.setContentsMargins(30, 25, 30, 25)
-        networkActivityLayout.setSpacing(20)
-
-        # Network activity list
-        self.listView_2 = QtWidgets.QListView()
-        self.listView_2.setMinimumHeight(450)
-        networkActivityLayout.addWidget(self.listView_2)
-
-        # Network activity controls - moved to bottom and centered
-        self.networkControlsLayout = QtWidgets.QHBoxLayout()
-        self.pushButton_5 = QtWidgets.QPushButton("Save")
-        self.pushButton_5.setMinimumWidth(200)
-        self.pushButton_7 = QtWidgets.QPushButton("Refresh")
-        self.pushButton_7.setMinimumWidth(200)
-        self.networkControlsLayout.addStretch()
-        self.networkControlsLayout.addWidget(self.pushButton_5)
-        self.networkControlsLayout.addSpacing(30)
-        self.networkControlsLayout.addWidget(self.pushButton_7)
-        self.networkControlsLayout.addStretch()
-        networkActivityLayout.addLayout(self.networkControlsLayout)
-
-        self.contentLayout.addWidget(self.networkActivityGroupBox)
-
-        # SECTION 3: Corrupted Packets
-        self.corruptedPacketsGroupBox = QtWidgets.QGroupBox("Corrupted Packets")
-        corruptedPacketsLayout = QtWidgets.QVBoxLayout(self.corruptedPacketsGroupBox)
-        corruptedPacketsLayout.setContentsMargins(30, 25, 30, 25)
-        corruptedPacketsLayout.setSpacing(20)
-
-        # Corrupted packets table - moved to top
-        self.tableWidget_6 = QtWidgets.QTableWidget()
-        self.tableWidget_6.setMinimumHeight(350)
-        self.tableWidget_6.setColumnCount(11)
-        self.tableWidget_6.setHorizontalHeaderLabels(
-            ["Timestamp", "Source", "Destination", "Protocol", "Layer", "MAC Src", "MAC Dst", "Src Port", "Dst Port", "Length", "IP Version"]
-        )
-        corruptedPacketsLayout.addWidget(self.tableWidget_6)
-
-        # Filter controls - moved to bottom
-        self.filterControlsLayout = QtWidgets.QHBoxLayout()
-        self.pushButton_11 = QtWidgets.QPushButton("Apply Filter")
-        self.pushButton_11.setMinimumWidth(180)
-        self.pushButton_6 = QtWidgets.QPushButton("Reset Filter")
-        self.pushButton_6.setMinimumWidth(180)
-        self.filterControlsLayout.addStretch()
-        self.filterControlsLayout.addWidget(self.pushButton_11)
-        self.filterControlsLayout.addSpacing(30)
-        self.filterControlsLayout.addWidget(self.pushButton_6)
-        self.filterControlsLayout.addStretch()
-        corruptedPacketsLayout.addLayout(self.filterControlsLayout)
-
-        # Filter options - moved under the table
-        self.filterOptionsGroup = QtWidgets.QGroupBox("Filter Options")
-        self.filterOptionsGroup.setMaximumHeight(240)
-        self.filterOptionsLayout = QtWidgets.QHBoxLayout(self.filterOptionsGroup)
-        self.filterOptionsLayout.setContentsMargins(20, 20, 20, 20)
-        self.filterOptionsLayout.setSpacing(40)
-        
-        # Protocol filters - Updated to match UI_Main.py
-        self.protocolFiltersGroup = QtWidgets.QGroupBox("Protocol Filters")
-        protocolFiltersLayout = QtWidgets.QFormLayout(self.protocolFiltersGroup)
-        protocolFiltersLayout.setContentsMargins(15, 20, 15, 15)
-        protocolFiltersLayout.setVerticalSpacing(12)
-        protocolFiltersLayout.setHorizontalSpacing(20)
-        
-        # Create checkboxes in the same layout as UI_Main.py
-        self.checkBox_21 = QtWidgets.QCheckBox("UDP")
-        self.checkBox_22 = QtWidgets.QCheckBox("TCP")
-        self.checkBox_23 = QtWidgets.QCheckBox("ICMP")
-        self.checkBox_24 = QtWidgets.QCheckBox("DNS")
-        self.checkBox_25 = QtWidgets.QCheckBox("HTTP")
-        self.checkBox_26 = QtWidgets.QCheckBox("HTTPS")
-        self.checkBox_30 = QtWidgets.QCheckBox("TELNET")
-        self.checkBox_27 = QtWidgets.QCheckBox("FTP")
-        self.checkBox_28 = QtWidgets.QCheckBox("DHCP")
-        self.checkBox_29 = QtWidgets.QCheckBox("Other")
-
-        # Add to layout in matching pattern
-        protocolFiltersLayout.addRow(self.checkBox_21, self.checkBox_25)
-        protocolFiltersLayout.addRow(self.checkBox_22, self.checkBox_26)
-        protocolFiltersLayout.addRow(self.checkBox_23, self.checkBox_30)
-        protocolFiltersLayout.addRow(self.checkBox_24, self.checkBox_27)
-        protocolFiltersLayout.addRow(self.checkBox_28, self.checkBox_29)
-        
-        self.filterOptionsLayout.addWidget(self.protocolFiltersGroup)
-
-        # IP filters
-        self.ipFiltersGroup = QtWidgets.QGroupBox("IP Filters")
-        ipFiltersLayout = QtWidgets.QFormLayout(self.ipFiltersGroup)
-        ipFiltersLayout.setContentsMargins(20, 20, 20, 20)
-        ipFiltersLayout.setVerticalSpacing(15)
-        ipFiltersLayout.setHorizontalSpacing(20)
-        self.lineEdit_8 = QtWidgets.QLineEdit()
-        self.lineEdit_9 = QtWidgets.QLineEdit()
-        self.comboBox_3 = QtWidgets.QComboBox()
-        self.comboBox_3.addItems(["All", "Inside Traffic", "Outside Traffic"])
-        
-        ipFiltersLayout.addRow("Source IP:", self.lineEdit_8)
-        ipFiltersLayout.addRow("Destination IP:", self.lineEdit_9)
-        ipFiltersLayout.addRow("Traffic Type:", self.comboBox_3)
-        
-        self.filterOptionsLayout.addWidget(self.ipFiltersGroup)
-        
-        corruptedPacketsLayout.addWidget(self.filterOptionsGroup)
-
-        self.contentLayout.addWidget(self.corruptedPacketsGroupBox)
-
-        # Add some space at the bottom
-        self.contentLayout.addSpacing(40)
-
-        # Set the scroll area widget
+        self.scrollAreaWidgetContents.setGeometry(QtCore.QRect(0, 0, 1519, 13291))
+        self.scrollAreaWidgetContents.setMinimumSize(QtCore.QSize(1291, 13291))
+        self.scrollAreaWidgetContents.setObjectName("scrollAreaWidgetContents")
+        self.label_2 = QtWidgets.QLabel(parent=self.scrollAreaWidgetContents)
+        self.label_2.setGeometry(QtCore.QRect(40, 760, 1101, 31))
+        font = QtGui.QFont()
+        font.setFamily("Yu Gothic UI Semibold")
+        font.setPointSize(14)
+        font.setBold(True)
+        font.setWeight(75)
+        self.label_2.setFont(font)
+        self.label_2.setStyleSheet("QLabel {\n"
+"    color: white;\n"
+"}\n"
+"")
+        self.label_2.setObjectName("label_2")
+        self.tableWidget = QtWidgets.QTableWidget(parent=self.scrollAreaWidgetContents)
+        self.tableWidget.setGeometry(QtCore.QRect(80, 830, 1221, 501))
+        self.tableWidget.setObjectName("tableWidget")
+        self.tableWidget.setColumnCount(0)
+        self.tableWidget.setRowCount(0)
+        self.label_15 = QtWidgets.QLabel(parent=self.scrollAreaWidgetContents)
+        self.label_15.setGeometry(QtCore.QRect(75, 20, 1101, 31))
+        font = QtGui.QFont()
+        font.setFamily("Yu Gothic UI Semibold")
+        font.setPointSize(14)
+        font.setBold(True)
+        font.setWeight(75)
+        self.label_15.setFont(font)
+        self.label_15.setStyleSheet("QLabel {\n"
+"    color: white;\n"
+"}\n"
+"")
+        self.label_15.setObjectName("label_15")
+        self.tableWidget_3 = QtWidgets.QTableWidget(parent=self.scrollAreaWidgetContents)
+        self.tableWidget_3.setGeometry(QtCore.QRect(80, 90, 641, 501))
+        self.tableWidget_3.setObjectName("tableWidget_3")
+        self.tableWidget_3.setColumnCount(0)
+        self.tableWidget_3.setRowCount(0)
+        self.tabWidget_3 = QtWidgets.QTabWidget(parent=self.scrollAreaWidgetContents)
+        self.tabWidget_3.setGeometry(QtCore.QRect(280, 1340, 921, 311))
+        self.tabWidget_3.setObjectName("tabWidget_3")
+        self.tab_5 = QtWidgets.QWidget()
+        self.tab_5.setObjectName("tab_5")
+        self.label_22 = QtWidgets.QLabel(parent=self.tab_5)
+        self.label_22.setGeometry(QtCore.QRect(10, 0, 161, 21))
+        self.label_22.setStyleSheet("QLabel {\n"
+"    color: white;\n"
+"}\n"
+"")
+        self.label_22.setObjectName("label_22")
+        self.dateTimeEdit_5 = QtWidgets.QDateTimeEdit(parent=self.tab_5)
+        self.dateTimeEdit_5.setGeometry(QtCore.QRect(0, 110, 194, 38))
+        self.dateTimeEdit_5.setObjectName("dateTimeEdit_5")
+        self.label_23 = QtWidgets.QLabel(parent=self.tab_5)
+        self.label_23.setGeometry(QtCore.QRect(10, 80, 161, 21))
+        self.label_23.setStyleSheet("QLabel {\n"
+"    color: white;\n"
+"}\n"
+"")
+        self.label_23.setObjectName("label_23")
+        self.dateTimeEdit_6 = QtWidgets.QDateTimeEdit(parent=self.tab_5)
+        self.dateTimeEdit_6.setGeometry(QtCore.QRect(0, 30, 194, 38))
+        self.dateTimeEdit_6.setObjectName("dateTimeEdit_6")
+        self.formLayoutWidget_3 = QtWidgets.QWidget(parent=self.tab_5)
+        self.formLayoutWidget_3.setGeometry(QtCore.QRect(240, 40, 187, 220))
+        self.formLayoutWidget_3.setObjectName("formLayoutWidget_3")
+        self.formLayout_3 = QtWidgets.QFormLayout(self.formLayoutWidget_3)
+        self.formLayout_3.setContentsMargins(0, 0, 0, 0)
+        self.formLayout_3.setObjectName("formLayout_3")
+        self.checkBox_21 = QtWidgets.QCheckBox(parent=self.formLayoutWidget_3)
+        self.checkBox_21.setChecked(False)
+        self.checkBox_21.setObjectName("checkBox_21")
+        self.formLayout_3.setWidget(0, QtWidgets.QFormLayout.ItemRole.LabelRole, self.checkBox_21)
+        self.checkBox_22 = QtWidgets.QCheckBox(parent=self.formLayoutWidget_3)
+        self.checkBox_22.setObjectName("checkBox_22")
+        self.formLayout_3.setWidget(1, QtWidgets.QFormLayout.ItemRole.LabelRole, self.checkBox_22)
+        self.checkBox_23 = QtWidgets.QCheckBox(parent=self.formLayoutWidget_3)
+        self.checkBox_23.setObjectName("checkBox_23")
+        self.formLayout_3.setWidget(2, QtWidgets.QFormLayout.ItemRole.LabelRole, self.checkBox_23)
+        self.checkBox_24 = QtWidgets.QCheckBox(parent=self.formLayoutWidget_3)
+        self.checkBox_24.setObjectName("checkBox_24")
+        self.formLayout_3.setWidget(3, QtWidgets.QFormLayout.ItemRole.LabelRole, self.checkBox_24)
+        self.checkBox_25 = QtWidgets.QCheckBox(parent=self.formLayoutWidget_3)
+        self.checkBox_25.setObjectName("checkBox_25")
+        self.formLayout_3.setWidget(0, QtWidgets.QFormLayout.ItemRole.FieldRole, self.checkBox_25)
+        self.checkBox_26 = QtWidgets.QCheckBox(parent=self.formLayoutWidget_3)
+        self.checkBox_26.setObjectName("checkBox_26")
+        self.formLayout_3.setWidget(1, QtWidgets.QFormLayout.ItemRole.FieldRole, self.checkBox_26)
+        self.checkBox_27 = QtWidgets.QCheckBox(parent=self.formLayoutWidget_3)
+        self.checkBox_27.setObjectName("checkBox_27")
+        self.formLayout_3.setWidget(3, QtWidgets.QFormLayout.ItemRole.FieldRole, self.checkBox_27)
+        self.checkBox_28 = QtWidgets.QCheckBox(parent=self.formLayoutWidget_3)
+        self.checkBox_28.setObjectName("checkBox_28")
+        self.formLayout_3.setWidget(4, QtWidgets.QFormLayout.ItemRole.LabelRole, self.checkBox_28)
+        self.checkBox_29 = QtWidgets.QCheckBox(parent=self.formLayoutWidget_3)
+        self.checkBox_29.setObjectName("checkBox_29")
+        self.formLayout_3.setWidget(4, QtWidgets.QFormLayout.ItemRole.FieldRole, self.checkBox_29)
+        self.checkBox_30 = QtWidgets.QCheckBox(parent=self.formLayoutWidget_3)
+        self.checkBox_30.setObjectName("checkBox_30")
+        self.formLayout_3.setWidget(2, QtWidgets.QFormLayout.ItemRole.FieldRole, self.checkBox_30)
+        self.label_25 = QtWidgets.QLabel(parent=self.tab_5)
+        self.label_25.setGeometry(QtCore.QRect(250, 10, 171, 20))
+        self.label_25.setStyleSheet("QLabel {\n"
+"    color: white;\n"
+"}\n"
+"")
+        self.label_25.setObjectName("label_25")
+        self.lineEdit_8 = QtWidgets.QLineEdit(parent=self.tab_5)
+        self.lineEdit_8.setGeometry(QtCore.QRect(460, 40, 142, 38))
+        self.lineEdit_8.setObjectName("lineEdit_8")
+        self.label_26 = QtWidgets.QLabel(parent=self.tab_5)
+        self.label_26.setGeometry(QtCore.QRect(460, 20, 151, 20))
+        self.label_26.setStyleSheet("QLabel {\n"
+"    color: white;\n"
+"}\n"
+"")
+        self.label_26.setObjectName("label_26")
+        self.label_27 = QtWidgets.QLabel(parent=self.tab_5)
+        self.label_27.setGeometry(QtCore.QRect(460, 80, 151, 20))
+        self.label_27.setStyleSheet("QLabel {\n"
+"    color: white;\n"
+"}\n"
+"")
+        self.label_27.setObjectName("label_27")
+        self.lineEdit_9 = QtWidgets.QLineEdit(parent=self.tab_5)
+        self.lineEdit_9.setGeometry(QtCore.QRect(460, 100, 142, 38))
+        self.lineEdit_9.setObjectName("lineEdit_9")
+        self.comboBox_3 = QtWidgets.QComboBox(parent=self.tab_5)
+        self.comboBox_3.setGeometry(QtCore.QRect(460, 150, 150, 38))
+        self.comboBox_3.setObjectName("comboBox_3")
+        self.comboBox_3.addItem("")
+        self.comboBox_3.addItem("")
+        self.comboBox_3.addItem("")
+        self.label_28 = QtWidgets.QLabel(parent=self.tab_5)
+        self.label_28.setGeometry(QtCore.QRect(460, 130, 151, 20))
+        self.label_28.setStyleSheet("QLabel {\n"
+"    color: white;\n"
+"}\n"
+"")
+        self.label_28.setObjectName("label_28")
+        self.pushButton_6 = QtWidgets.QPushButton(parent=self.tab_5)
+        self.pushButton_6.setGeometry(QtCore.QRect(660, 80, 126, 41))
+        self.pushButton_6.setObjectName("pushButton_6")
+        self.pushButton_11 = QtWidgets.QPushButton(parent=self.tab_5)
+        self.pushButton_11.setGeometry(QtCore.QRect(470, 210, 126, 41))
+        self.pushButton_11.setObjectName("pushButton_11")
+        self.tabWidget_3.addTab(self.tab_5, "")
+        self.tab_7 = QtWidgets.QWidget()
+        self.tab_7.setObjectName("tab_7")
+        self.listView_4 = QtWidgets.QListView(parent=self.tab_7)
+        self.listView_4.setGeometry(QtCore.QRect(0, 0, 861, 271))
+        self.listView_4.setObjectName("listView_4")
+        self.tabWidget_3.addTab(self.tab_7, "")
+        self.tab_6 = QtWidgets.QWidget()
+        self.tab_6.setObjectName("tab_6")
+        self.listView_3 = QtWidgets.QListView(parent=self.tab_6)
+        self.listView_3.setGeometry(QtCore.QRect(0, 0, 861, 271))
+        self.listView_3.setObjectName("listView_3")
+        self.tabWidget_3.addTab(self.tab_6, "")
+        self.widget = QtWidgets.QWidget(parent=self.scrollAreaWidgetContents)
+        self.widget.setGeometry(QtCore.QRect(730, 90, 761, 341))
+        self.widget.setObjectName("widget")
+        self.label_5 = QtWidgets.QLabel(parent=self.scrollAreaWidgetContents)
+        self.label_5.setGeometry(QtCore.QRect(750, 440, 131, 21))
+        self.label_5.setObjectName("label_5")
+        self.lineEdit = QtWidgets.QLineEdit(parent=self.scrollAreaWidgetContents)
+        self.lineEdit.setGeometry(QtCore.QRect(750, 470, 113, 21))
+        self.lineEdit.setObjectName("lineEdit")
+        self.pushButton = QtWidgets.QPushButton(parent=self.scrollAreaWidgetContents)
+        self.pushButton.setGeometry(QtCore.QRect(750, 510, 84, 23))
+        self.pushButton.setObjectName("pushButton")
+        self.listView_2 = QtWidgets.QListView(parent=self.scrollAreaWidgetContents)
+        self.listView_2.setGeometry(QtCore.QRect(110, 1750, 1291, 571))
+        self.listView_2.setObjectName("listView_2")
+        self.label_19 = QtWidgets.QLabel(parent=self.scrollAreaWidgetContents)
+        self.label_19.setGeometry(QtCore.QRect(120, 1690, 1101, 31))
+        font = QtGui.QFont()
+        font.setFamily("Yu Gothic UI Semibold")
+        font.setPointSize(14)
+        font.setBold(True)
+        font.setWeight(75)
+        self.label_19.setFont(font)
+        self.label_19.setStyleSheet("QLabel {\n"
+"    color: white;\n"
+"}\n"
+"")
+        self.label_19.setObjectName("label_19")
+        self.pushButton_5 = QtWidgets.QPushButton(parent=self.scrollAreaWidgetContents)
+        self.pushButton_5.setGeometry(QtCore.QRect(210, 2350, 441, 28))
+        font = QtGui.QFont()
+        font.setPointSize(10)
+        font.setBold(True)
+        font.setWeight(75)
+        self.pushButton_5.setFont(font)
+        self.pushButton_5.setObjectName("pushButton_5")
+        self.pushButton_7 = QtWidgets.QPushButton(parent=self.scrollAreaWidgetContents)
+        self.pushButton_7.setGeometry(QtCore.QRect(730, 2350, 441, 28))
+        font = QtGui.QFont()
+        font.setPointSize(10)
+        font.setBold(True)
+        font.setWeight(75)
+        self.pushButton_7.setFont(font)
+        self.pushButton_7.setObjectName("pushButton_7")
+        self.label_18 = QtWidgets.QLabel(parent=self.scrollAreaWidgetContents)
+        self.label_18.setGeometry(QtCore.QRect(90, 2430, 1101, 31))
+        font = QtGui.QFont()
+        font.setFamily("Yu Gothic UI Semibold")
+        font.setPointSize(14)
+        font.setBold(True)
+        font.setWeight(75)
+        self.label_18.setFont(font)
+        self.label_18.setStyleSheet("QLabel {\n"
+"    color: white;\n"
+"}\n"
+"")
+        self.label_18.setObjectName("label_18")
+        self.tableWidget_6 = QtWidgets.QTableWidget(parent=self.scrollAreaWidgetContents)
+        self.tableWidget_6.setGeometry(QtCore.QRect(130, 2500, 1251, 501))
+        self.tableWidget_6.setObjectName("tableWidget_6")
+        self.tableWidget_6.setColumnCount(0)
+        self.tableWidget_6.setRowCount(0)
+        self.tabWidget = QtWidgets.QTabWidget(parent=self.scrollAreaWidgetContents)
+        self.tabWidget.setGeometry(QtCore.QRect(250, 3010, 871, 311))
+        self.tabWidget.setObjectName("tabWidget")
+        self.tab = QtWidgets.QWidget()
+        self.tab.setObjectName("tab")
+        self.label_7 = QtWidgets.QLabel(parent=self.tab)
+        self.label_7.setGeometry(QtCore.QRect(10, 0, 161, 21))
+        self.label_7.setStyleSheet("QLabel {\n"
+"    color: white;\n"
+"}\n"
+"")
+        self.label_7.setObjectName("label_7")
+        self.dateTimeEdit_2 = QtWidgets.QDateTimeEdit(parent=self.tab)
+        self.dateTimeEdit_2.setGeometry(QtCore.QRect(0, 110, 194, 38))
+        self.dateTimeEdit_2.setObjectName("dateTimeEdit_2")
+        self.label_8 = QtWidgets.QLabel(parent=self.tab)
+        self.label_8.setGeometry(QtCore.QRect(10, 80, 161, 21))
+        self.label_8.setStyleSheet("QLabel {\n"
+"    color: white;\n"
+"}\n"
+"")
+        self.label_8.setObjectName("label_8")
+        self.dateTimeEdit = QtWidgets.QDateTimeEdit(parent=self.tab)
+        self.dateTimeEdit.setGeometry(QtCore.QRect(0, 30, 194, 38))
+        self.dateTimeEdit.setObjectName("dateTimeEdit")
+        self.formLayoutWidget = QtWidgets.QWidget(parent=self.tab)
+        self.formLayoutWidget.setGeometry(QtCore.QRect(240, 40, 187, 220))
+        self.formLayoutWidget.setObjectName("formLayoutWidget")
+        self.formLayout = QtWidgets.QFormLayout(self.formLayoutWidget)
+        self.formLayout.setContentsMargins(0, 0, 0, 0)
+        self.formLayout.setObjectName("formLayout")
+        self.checkBox = QtWidgets.QCheckBox(parent=self.formLayoutWidget)
+        self.checkBox.setChecked(False)
+        self.checkBox.setObjectName("checkBox")
+        self.formLayout.setWidget(0, QtWidgets.QFormLayout.ItemRole.LabelRole, self.checkBox)
+        self.checkBox_2 = QtWidgets.QCheckBox(parent=self.formLayoutWidget)
+        self.checkBox_2.setObjectName("checkBox_2")
+        self.formLayout.setWidget(1, QtWidgets.QFormLayout.ItemRole.LabelRole, self.checkBox_2)
+        self.checkBox_3 = QtWidgets.QCheckBox(parent=self.formLayoutWidget)
+        self.checkBox_3.setObjectName("checkBox_3")
+        self.formLayout.setWidget(2, QtWidgets.QFormLayout.ItemRole.LabelRole, self.checkBox_3)
+        self.checkBox_4 = QtWidgets.QCheckBox(parent=self.formLayoutWidget)
+        self.checkBox_4.setObjectName("checkBox_4")
+        self.formLayout.setWidget(3, QtWidgets.QFormLayout.ItemRole.LabelRole, self.checkBox_4)
+        self.checkBox_5 = QtWidgets.QCheckBox(parent=self.formLayoutWidget)
+        self.checkBox_5.setObjectName("checkBox_5")
+        self.formLayout.setWidget(0, QtWidgets.QFormLayout.ItemRole.FieldRole, self.checkBox_5)
+        self.checkBox_6 = QtWidgets.QCheckBox(parent=self.formLayoutWidget)
+        self.checkBox_6.setObjectName("checkBox_6")
+        self.formLayout.setWidget(1, QtWidgets.QFormLayout.ItemRole.FieldRole, self.checkBox_6)
+        self.checkBox_8 = QtWidgets.QCheckBox(parent=self.formLayoutWidget)
+        self.checkBox_8.setObjectName("checkBox_8")
+        self.formLayout.setWidget(3, QtWidgets.QFormLayout.ItemRole.FieldRole, self.checkBox_8)
+        self.checkBox_9 = QtWidgets.QCheckBox(parent=self.formLayoutWidget)
+        self.checkBox_9.setObjectName("checkBox_9")
+        self.formLayout.setWidget(4, QtWidgets.QFormLayout.ItemRole.LabelRole, self.checkBox_9)
+        self.checkBox_10 = QtWidgets.QCheckBox(parent=self.formLayoutWidget)
+        self.checkBox_10.setObjectName("checkBox_10")
+        self.formLayout.setWidget(4, QtWidgets.QFormLayout.ItemRole.FieldRole, self.checkBox_10)
+        self.checkBox_7 = QtWidgets.QCheckBox(parent=self.formLayoutWidget)
+        self.checkBox_7.setObjectName("checkBox_7")
+        self.formLayout.setWidget(2, QtWidgets.QFormLayout.ItemRole.FieldRole, self.checkBox_7)
+        self.label = QtWidgets.QLabel(parent=self.tab)
+        self.label.setGeometry(QtCore.QRect(250, 10, 171, 20))
+        self.label.setStyleSheet("QLabel {\n"
+"    color: white;\n"
+"}\n"
+"")
+        self.label.setObjectName("label")
+        self.lineEdit_2 = QtWidgets.QLineEdit(parent=self.tab)
+        self.lineEdit_2.setGeometry(QtCore.QRect(460, 40, 142, 38))
+        self.lineEdit_2.setObjectName("lineEdit_2")
+        self.label_10 = QtWidgets.QLabel(parent=self.tab)
+        self.label_10.setGeometry(QtCore.QRect(460, 20, 151, 20))
+        self.label_10.setStyleSheet("QLabel {\n"
+"    color: white;\n"
+"}\n"
+"")
+        self.label_10.setObjectName("label_10")
+        self.label_16 = QtWidgets.QLabel(parent=self.tab)
+        self.label_16.setGeometry(QtCore.QRect(460, 80, 151, 20))
+        self.label_16.setStyleSheet("QLabel {\n"
+"    color: white;\n"
+"}\n"
+"")
+        self.label_16.setObjectName("label_16")
+        self.lineEdit_5 = QtWidgets.QLineEdit(parent=self.tab)
+        self.lineEdit_5.setGeometry(QtCore.QRect(460, 100, 142, 38))
+        self.lineEdit_5.setObjectName("lineEdit_5")
+        self.comboBox = QtWidgets.QComboBox(parent=self.tab)
+        self.comboBox.setGeometry(QtCore.QRect(460, 150, 150, 38))
+        self.comboBox.setObjectName("comboBox")
+        self.comboBox.addItem("")
+        self.comboBox.addItem("")
+        self.comboBox.addItem("")
+        self.label_3 = QtWidgets.QLabel(parent=self.tab)
+        self.label_3.setGeometry(QtCore.QRect(460, 130, 151, 20))
+        self.label_3.setStyleSheet("QLabel {\n"
+"    color: white;\n"
+"}\n"
+"")
+        self.label_3.setObjectName("label_3")
+        self.pushButton_9 = QtWidgets.QPushButton(parent=self.tab)
+        self.pushButton_9.setGeometry(QtCore.QRect(470, 210, 126, 41))
+        self.pushButton_9.setObjectName("pushButton_9")
+        self.tabWidget.addTab(self.tab, "")
+        self.tab_2 = QtWidgets.QWidget()
+        self.tab_2.setObjectName("tab_2")
+        self.listView = QtWidgets.QListView(parent=self.tab_2)
+        self.listView.setGeometry(QtCore.QRect(0, 0, 851, 261))
+        self.listView.setObjectName("listView")
+        self.tabWidget.addTab(self.tab_2, "")
         self.scrollArea.setWidget(self.scrollAreaWidgetContents)
 
         self.retranslateUi(Naswail_Tool)
+        self.tabWidget_3.setCurrentIndex(0)
+        self.tabWidget.setCurrentIndex(0)
         QtCore.QMetaObject.connectSlotsByName(Naswail_Tool)
 
     def retranslateUi(self, Naswail_Tool):
         _translate = QtCore.QCoreApplication.translate
-        Naswail_Tool.setWindowTitle(_translate("Naswail_Tool", "Naswail - Tools"))
-        self.label_4.setText(_translate("Naswail_Tool", "Naswail"))
+        Naswail_Tool.setWindowTitle(_translate("Naswail_Tool", "Form"))
         self.pushButton_4.setText(_translate("Naswail_Tool", "Home"))
-        self.pushButton_8.setText(_translate("Naswail_Tool", "Incident Response"))
         self.pushButton_3.setText(_translate("Naswail_Tool", "Tools"))
         self.pushButton_2.setText(_translate("Naswail_Tool", "Analysis"))
+        self.label_4.setText(_translate("Naswail_Tool", "      Naswail"))
+        self.label_2.setText(_translate("Naswail_Tool", "                                                                                Suspicious Packets Analyzer"))
+        self.label_15.setText(_translate("Naswail_Tool", "                                                                             Predict Future Traffic"))
+        self.label_22.setText(_translate("Naswail_Tool", "Start Time"))
+        self.label_23.setText(_translate("Naswail_Tool", "End Time"))
+        self.checkBox_21.setText(_translate("Naswail_Tool", "UDP"))
+        self.checkBox_22.setText(_translate("Naswail_Tool", "TCP"))
+        self.checkBox_23.setText(_translate("Naswail_Tool", "ICMP"))
+        self.checkBox_24.setText(_translate("Naswail_Tool", "DNS"))
+        self.checkBox_25.setText(_translate("Naswail_Tool", "HTTP"))
+        self.checkBox_26.setText(_translate("Naswail_Tool", "HTTPS"))
+        self.checkBox_27.setText(_translate("Naswail_Tool", "FTP"))
+        self.checkBox_28.setText(_translate("Naswail_Tool", "DHCP"))
+        self.checkBox_29.setText(_translate("Naswail_Tool", "Other"))
+        self.checkBox_30.setText(_translate("Naswail_Tool", "TELNET"))
+        self.label_25.setText(_translate("Naswail_Tool", "  Filter by Protocol"))
+        self.label_26.setText(_translate("Naswail_Tool", "Filter by source IP"))
+        self.label_27.setText(_translate("Naswail_Tool", "Filter by Destination IP"))
+        self.comboBox_3.setItemText(0, _translate("Naswail_Tool", "All"))
+        self.comboBox_3.setItemText(1, _translate("Naswail_Tool", "Inside Traffic"))
+        self.comboBox_3.setItemText(2, _translate("Naswail_Tool", "Outside Traffic"))
+        self.label_28.setText(_translate("Naswail_Tool", "Type Of Traffic"))
+        self.pushButton_6.setText(_translate("Naswail_Tool", "Reset"))
+        self.pushButton_11.setText(_translate("Naswail_Tool", "Apply"))
+        self.tabWidget_3.setTabText(self.tabWidget_3.indexOf(self.tab_5), _translate("Naswail_Tool", "Packet Filter"))
+        self.tabWidget_3.setTabText(self.tabWidget_3.indexOf(self.tab_7), _translate("Naswail_Tool", "Decode"))
+        self.tabWidget_3.setTabText(self.tabWidget_3.indexOf(self.tab_6), _translate("Naswail_Tool", "Packet Details"))
         self.label_5.setText(_translate("Naswail_Tool", "Enter Number of Hours:"))
         self.pushButton.setText(_translate("Naswail_Tool", "Predict"))
+        self.label_19.setText(_translate("Naswail_Tool", "                                                                   Network Activity Monitoring"))
         self.pushButton_5.setText(_translate("Naswail_Tool", "Save"))
         self.pushButton_7.setText(_translate("Naswail_Tool", "Refresh"))
-        self.pushButton_6.setText(_translate("Naswail_Tool", "Reset Filter"))
-        self.pushButton_11.setText(_translate("Naswail_Tool", "Apply Filter"))
-        self.filterOptionsGroup.setTitle(_translate("Naswail_Tool", "Filter Options"))
-        self.protocolFiltersGroup.setTitle(_translate("Naswail_Tool", "Protocol Filters"))
-        self.ipFiltersGroup.setTitle(_translate("Naswail_Tool", "IP Filters"))
+        self.label_18.setText(_translate("Naswail_Tool", "                                                                             Corrupted Packets"))
+        self.label_7.setText(_translate("Naswail_Tool", "Start Time"))
+        self.label_8.setText(_translate("Naswail_Tool", "End Time"))
+        self.checkBox.setText(_translate("Naswail_Tool", "UDP"))
+        self.checkBox_2.setText(_translate("Naswail_Tool", "TCP"))
+        self.checkBox_3.setText(_translate("Naswail_Tool", "ICMP"))
+        self.checkBox_4.setText(_translate("Naswail_Tool", "DNS"))
+        self.checkBox_5.setText(_translate("Naswail_Tool", "HTTP"))
+        self.checkBox_6.setText(_translate("Naswail_Tool", "HTTPS"))
+        self.checkBox_8.setText(_translate("Naswail_Tool", "FTP"))
+        self.checkBox_9.setText(_translate("Naswail_Tool", "DHCP"))
+        self.checkBox_10.setText(_translate("Naswail_Tool", "Other"))
+        self.checkBox_7.setText(_translate("Naswail_Tool", "TELNET"))
+        self.label.setText(_translate("Naswail_Tool", "  Filter by Protocol"))
+        self.label_10.setText(_translate("Naswail_Tool", "Filter by source IP"))
+        self.label_16.setText(_translate("Naswail_Tool", "Filter by Destination IP"))
+        self.comboBox.setItemText(0, _translate("Naswail_Tool", "All"))
+        self.comboBox.setItemText(1, _translate("Naswail_Tool", "Inside Traffic"))
+        self.comboBox.setItemText(2, _translate("Naswail_Tool", "Outside Traffic"))
+        self.label_3.setText(_translate("Naswail_Tool", "Type Of Traffic"))
+        self.pushButton_9.setText(_translate("Naswail_Tool", "Apply"))
+        self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab), _translate("Naswail_Tool", "Packet Filter"))
+        self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_2), _translate("Naswail_Tool", "Packet Details"))
 
 
 if __name__ == "__main__":

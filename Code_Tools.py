@@ -1,19 +1,27 @@
 import sys
 import numpy as np
-import threading
+import pandas as pd
+import time
+import multiprocessing
+import psutil
+import os
+import ipaddress
 from datetime import datetime, timedelta
+from sklearn.svm import OneClassSVM
 from PyQt6.QtWidgets import *
 from PyQt6.QtCore import *
-from scapy.all import sniff, IP, TCP, UDP
+from scapy.all import sniff, IP, TCP, UDP 
+
+from statistics import mean, median, mode, stdev, variance
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LinearRegression
-from sklearn.metrics import r2_score
+from sklearn.tree import DecisionTreeRegressor
+from sklearn.metrics import mean_squared_error, r2_score
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
+import matplotlib.pyplot as plt
 from datetime import datetime, timedelta
 from UI_Tools import Ui_Naswail_Tool
-import time
-
 class NetworkActivity:
     def __init__(self,ui):
         self.packetsysobj=None
@@ -43,68 +51,48 @@ class NetworkActivity:
                 file.write(self.filecontent)
         except Exception as e:
             print(e)
-
-class RegressionPrediction(threading.Thread):
-    def __init__(self,ui, packets, time_series):
-        super().__init__()
+class RegressionPrediction:
+    def __init__(self,ui, packets):
         self.ui=ui
         self.futureTraffic = []
         self.r2 = 0
         self.noHours = None
         self.packets = packets
-        self.time_series = time_series
         self.model = LinearRegression()
-        self.prediction_running = False  # Flag to prevent concurrent predictions
-        self.last_update_time = 0  # Track last update time
-        self.start()  
+        #print(self.packets)
         
-    def pred_traffic(self):
+    def pred_traffic(self, time_series):
         #Train Regression Model
         try:
-            # Prevent concurrent predictions
-            if self.prediction_running:
-                return
-                
-            self.prediction_running = True
-            
             if(len(self.packets) > 10):
-                # Convert time series to numpy arrays directly
-                X = np.array([timestamp - list(self.time_series.keys())[0] for timestamp in self.time_series.keys()]).reshape(-1, 1)
-                y = np.array(list(self.time_series.values()))
-                
-                # Use smaller test size for better performance with small datasets
-                test_size = min(0.2, 10/len(self.packets))
-                X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size, random_state=42)
-                
+                #print(datetime.strptime(list(time_series.keys())[0], "%H:%M:%S"))
+                X = [timestamp - list(time_series.keys())[0] for timestamp in time_series.keys()]
+
+                X = np.array(list(map(int, X))).reshape(-1, 1)
+                y = list(time_series.values())
+                X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, train_size=0.8, random_state=42)
                 self.model.fit(X_train, y_train)
 
                 currentTime = datetime.now()
-                # Pre-allocate arrays for better performance
+                TimeLater = []
                 Intervals = [0, 1, 3, 6, 12, 24]
-                TimeLater = np.zeros(6)
-                
                 for i in range(6):
-                    if i != 0:
-                        TimeLater[i] = currentTime.second + 3600 * Intervals[i]
+                    if(i != 0):
+                        TimeLater.append(currentTime.second + 3600 * Intervals[i])
                     else:
-                        TimeLater[i] = (currentTime.second + 3600 * self.noHours) if self.noHours is not None else 0
+                        TimeLater.append((currentTime.second + 3600 * self.noHours) if self.noHours is not None else 0)
                 
-                # Reshape once
-                TimeLater = TimeLater.reshape(-1, 1)
-                
-                # Make predictions
+                TimeLater = np.array(TimeLater).reshape(-1, 1)
+
                 self.futureTraffic = self.model.predict(TimeLater)
-                self.futureTraffic = np.maximum(0, self.futureTraffic - len(self.packets))
-                
-                # Calculate R² score only if we have test data
-                if len(X_test) > 0:
-                    y_pred = self.model.predict(X_test)
-                    self.r2 = r2_score(y_test, y_pred)
-            
-            self.prediction_running = False
+                for i in range(len(self.futureTraffic)):
+                    self.futureTraffic[i] -= len(self.packets)
+                y_pred = self.model.predict(X_test)
+                self.r2 = r2_score(y_test, y_pred)
+
+                print(self.r2)
         except Exception as e:
-            self.prediction_running = False
-            print(f"Error in prediction: {e}")
+            print(e)
 
     def setHours(self):
         try:
@@ -149,93 +137,38 @@ class RegressionPrediction(threading.Thread):
         except Exception as e:
             print(e)
 
-    def display_advanced_graph(self):
+    def display_graph(self):
         try:
-            # Only redraw if it's been a while since the last update
-            current_time = time.time()
-            if current_time - self.last_update_time < 5:  # Don't update more than once every 5 seconds
-                return
-                
-            self.last_update_time = current_time
-                
-            # Create a figure with better proportions and smaller size for performance
-            figure = Figure(figsize=(8, 6))
+            counts = []
+            labels = ["Current", "Desired Time", "+1 Hours", "+3 Hours", "+6 Hours", "+12 Hours" + "+24 Hours"]
+            counts.append(len(self.packets))
+            for i in range(0, len(self.futureTraffic) - 1):
+                counts.append(int(self.futureTraffic[i]))
+
+            # Create the graph
+            figure = Figure(figsize=(4, 4))
             canvas = FigureCanvas(figure)
-            
-            # Main plot for predictions
-            ax1 = figure.add_subplot(211)  # 2 rows, 1 column, first plot
-            
-            # Prediction data
-            pred_labels = ["Now", "Desired", "+1h", "+3h", "+6h", "+12h", "+24h"]
-            pred_times = list(range(len(pred_labels)))
-            pred_values = [len(self.packets)] + [int(val) for val in self.futureTraffic]
-            
-            # Plot predictions as a line with points
-            ax1.plot(pred_times, pred_values, marker='o', color='#40E0D0', linewidth=2, label='Prediction')
-            
-            # Add confidence region (simplified for performance)
-            confidence = 0.1 * np.array(pred_values) * (1 + (1-max(0.1, self.r2))*2)
-            ax1.fill_between(pred_times, pred_values - confidence, pred_values + confidence, 
-                           color='#40E0D0', alpha=0.2)
-            
-            ax1.set_title(f"Network Traffic Prediction")
-            ax1.set_ylabel("Packet Count")
-            ax1.set_xticks(pred_times)
-            ax1.set_xticklabels(pred_labels, rotation=15)
-            ax1.grid(True, linestyle='--', alpha=0.5)
-            
-            # Percentage change plot
-            ax2 = figure.add_subplot(212)  # 2 rows, 1 column, second plot
-            
-            # Calculate percent change
-            base = pred_values[0] if pred_values[0] > 0 else 1
-            pct_change = [(val - base)/base * 100 for val in pred_values]
-            
-            # Create color map
-            colors = ['#40E0D0' if x >= 0 else '#FF6B6B' for x in pct_change]
-            
-            # Plot percentage changes
-            bars = ax2.bar(pred_times, pct_change, color=colors, alpha=0.7)
-            
-            # Add value labels on bars (only for significant changes)
-            for bar, pct in zip(bars, pct_change):
-                if abs(pct) > 1.0:  # Only label significant changes
-                    height = bar.get_height()
-                    y_pos = height + 1 if height >= 0 else height - 5
-                    ax2.text(bar.get_x() + bar.get_width()/2., y_pos,
-                           f'{pct:.1f}%', ha='center', va='bottom', color='white', fontsize=8)
-            
-            ax2.set_title("Percentage Change in Traffic")
-            ax2.set_ylabel("% Change")
-            ax2.set_xticks(pred_times)
-            ax2.set_xticklabels(pred_labels, rotation=15)
-            ax2.grid(True, linestyle='--', alpha=0.5)
-            ax2.axhline(y=0, color='white', linestyle='-', alpha=0.3)
-            
-            # Add R² score without using figure.text for better performance
-            ax2.annotate(f"R²: {self.r2:.2f}", xy=(0.02, 0.02), xycoords='axes fraction', fontsize=8)
-            
-            figure.tight_layout()
+            ax = figure.add_subplot(111)
+            ax.plot(labels, counts, marker='o', linestyle='-', color='b')
+            ax.set_title("Prediction Graph")
+            ax.set_xlabel("Time Intervals")
+            ax.set_ylabel("Estimated Packet Amount")
             canvas.draw()
-            
-            # Update layout
+
             if self.ui.widget.layout() is None:
                 layout = QVBoxLayout(self.ui.widget)
                 self.ui.widget.setLayout(layout)
             else:
                 layout = self.ui.widget.layout()
+                # Clear the previous widgets in the layout
                 for i in range(layout.count()):
                     child = layout.itemAt(i).widget()
                     if child is not None:
                         child.deleteLater()
-            
+
             layout.addWidget(canvas)
         except Exception as e:
-            print(f"Error in advanced graph: {e}")
-
-    def run(self):
-        print("Thread is running...")
-        self.pred_traffic()
+            print(e)
 
 class SuspiciousAnalysis:
     def __init__(self,ui, anomalies, packet):
@@ -285,21 +218,21 @@ class SuspiciousAnalysis:
 
     def decode_packet(self, row, column):
         try:
-            if not self.packetobj.filterapplied:  
+            if not self.packetobj.filterapplied:  # Check if the filter is not applied
                 packet = self.packetobj.packets[row]
                 
-                
+                # Get the raw content of the packet
                 raw_content = bytes(packet)
                 
-                
+                # Prepare the formatted content with hex and ASCII
                 formatted_content = []
-                for i in range(0, len(raw_content), 16):  #  16 bytes per line
+                for i in range(0, len(raw_content), 16):  # Process 16 bytes per line
                     chunk = raw_content[i:i + 16]
                     
                     # Hexadecimal representation
                     hex_part = " ".join(f"{byte:02x}" for byte in chunk)
                     
-                    # ASCII representation 
+                    # ASCII representation (printable characters or dots for non-printable ones)
                     ascii_part = "".join(
                         chr(byte) if 32 <= byte <= 126 else "." for byte in chunk
                     )
@@ -307,7 +240,7 @@ class SuspiciousAnalysis:
                     # Combine hex and ASCII parts
                     formatted_content.append(f"{hex_part:<48}  {ascii_part}")
                 
-               
+                # Create a QStringListModel and set it to the listView_2
                 model = QStringListModel()
                 model.setStringList(formatted_content)
                 self.ui.listView_4.setModel(model)
@@ -336,7 +269,8 @@ class SuspiciousAnalysis:
 
     def apply_filter(self):
         try:
-            
+            """Filter packets based on selected protocols, source/destination IPs, and ComboBox selection."""
+            # Map checkbox states to protocol names
             protocol_filters = {
                 "udp": self.ui.checkBox_21.isChecked(),
                 "tcp": self.ui.checkBox_22.isChecked(),
@@ -351,32 +285,32 @@ class SuspiciousAnalysis:
             }
             
 
-            
+            # Check if all protocol filters are unchecked and both src and dst filters are empty
             src_filter = self.ui.lineEdit_8.text().strip()
             dst_filter = self.ui.lineEdit_9.text().strip()
 
-                
+                # Check if all protocol filters are unchecked and both src and dst filters are empty
             if not any(protocol_filters.values()) and not src_filter and not dst_filter:
                     print("No protocols selected, and both source and destination filters are empty.")
                     self.filterapplied=False
                     self.ui.tableWidget.setRowCount(0)
                     self.process_packet_index=0
                     self.pcap_process_packet_index=0
-                    return  
+                    return  # Or handle this case appropriately
                 #
             self.filterapplied = True
 
-            
+            # Determine which protocols to filter
             selected_protocols = [protocol for protocol, checked in protocol_filters.items() if checked]
-            
+            # Get the source and destination IP filters
             src_filter = self.ui.lineEdit_8.text().strip()
             dst_filter = self.ui.lineEdit_9.text().strip()
-            
+            # Get ComboBox selection
             combo_selection = self.ui.comboBox_3.currentText()  # 'Inside' or 'Outside'
-            
+            # Clear the table before adding filtered packets
             self.ui.tableWidget.setRowCount(0)
 
-            
+            # Filter packets
             self.filtered_packets = []
             x = self.anomalies
             
@@ -385,11 +319,11 @@ class SuspiciousAnalysis:
                 dst_ip = packet["IP"].dst if packet.haslayer("IP") else "N/A"
                 protocol = self.packetobj.get_protocol(packet)
 
-                
+                # Determine if source/destination IPs are local
                 src_is_local = self.packetobj.is_local_ip(src_ip)
                 dst_is_local = self.packetobj.is_local_ip(dst_ip)
 
-                
+                # Check if the packet matches the selected protocols
                 layer = "UDP" if packet.haslayer("UDP") else "TCP" if packet.haslayer("TCP") else "Other"
                 protocol_match = protocol in selected_protocols if selected_protocols else True
                 if "udp" in selected_protocols and layer == "UDP":
@@ -416,20 +350,20 @@ class SuspiciousAnalysis:
                 else:
                     ip_match = True  # Default: no filter based on inside/outside
 
-                
+                # Include packet if it matches all criteria
                 if protocol_match and src_match and dst_match and ip_match:
 
                     self.filtered_packets.append(packet)
                     macsrc = packet["Ethernet"].src if packet.haslayer("Ethernet") else "N/A"
                     macdst = packet["Ethernet"].dst if packet.haslayer("Ethernet") else "N/A"
-                
+                    # Extract packet length
                     packet_length = int(len(packet))
                     payload = packet["Raw"].load if packet.haslayer("Raw") else "N/A"
 
-                
+                # Extract IP version
                     ip_version = "IPv6" if packet.haslayer("IPv6") else "IPv4" if packet.haslayer("IP") else "N/A"
                     layer = "udp" if packet.haslayer("UDP") else "tcp" if packet.haslayer("TCP") else "Other"
-                
+                    # Extract port information for TCP/UDP
                     sport = None
                     dport = None
                     if packet.haslayer("TCP"):
@@ -461,7 +395,7 @@ class ErrorPacketSystem:
             self.error_packets = []
             self.packetobj=None
             self.ui=ui
-            self._last_packet_count = 0  # Track packet count for optimized updates
+            
         
         def add_error_packet(self, packet):
                 self.packetobj=packet
@@ -469,71 +403,39 @@ class ErrorPacketSystem:
 
         def display(self):
                 try:
-                    # Only redraw if we have new packets
-                    if self.packetobj and hasattr(self.packetobj, 'corrupted_packet'):
-                        current_count = len(self.packetobj.corrupted_packet)
-                        if current_count == self._last_packet_count:
-                            return  # Skip redraw if no new packets
-                        
-                        # If table already has rows and we're just adding new ones
-                        if self._last_packet_count > 0 and current_count > self._last_packet_count:
-                            # Only process the new packets
-                            start_idx = self._last_packet_count
-                        else:
-                            # Full redraw
-                            self.ui.tableWidget_6.setRowCount(0)
-                            start_idx = 0
+                    self.ui.tableWidget_6.setRowCount(0)
+                    for packet in self.packetobj.corrupted_packet:
                             
-                        # Update our packet count tracker
-                        self._last_packet_count = current_count
-                        
-                        # Add only the new packets
-                        for idx in range(start_idx, current_count):
-                            packet = self.packetobj.corrupted_packet[idx]
-                            
-                            # Extract data once to avoid redundant calls
-                            has_ip = packet.haslayer("IP")
-                            src_ip = packet["IP"].src if has_ip else "N/A"
-                            dst_ip = packet["IP"].dst if has_ip else "N/A"
-                            
-                            has_eth = packet.haslayer("Ethernet")
-                            macsrc = packet["Ethernet"].src if has_eth else "N/A"
-                            macdst = packet["Ethernet"].dst if has_eth else "N/A"
-                            
-                            has_tcp = packet.haslayer("TCP")
-                            has_udp = packet.haslayer("UDP")
-                            
-                            # Determine layer and protocol
-                            if has_tcp:
-                                layer = "tcp"
-                                sport = packet["TCP"].sport
-                                dport = packet["TCP"].dport
-                            elif has_udp:
-                                layer = "udp"
-                                sport = packet["UDP"].sport
-                                dport = packet["UDP"].dport
-                            else:
-                                layer = "Other"
-                                sport = None
-                                dport = None
-                            
+                            #print("in error packet")
+                            src_ip = packet["IP"].src if packet.haslayer("IP") else "N/A"
+                            dst_ip = packet["IP"].dst if packet.haslayer("IP") else "N/A"
                             protocol = self.packetobj.get_protocol(packet)
-                            packet_length = len(packet)
-                            ip_version = "IPv6" if packet.haslayer("IPv6") else "IPv4" if has_ip else "N/A"
-                            
-                            # Format timestamp once
-                            timestamp_str = datetime.fromtimestamp(float(packet.time)).strftime("%I:%M:%S %p")
-                            
-                            # Add row with optimized QTableWidgetItem creation
+                            layer = "UDP" if packet.haslayer("UDP") else "TCP" if packet.haslayer("TCP") else "Other"
+                            packet_time = datetime.fromtimestamp(float(packet.time))
+                            macsrc = packet["Ethernet"].src if packet.haslayer("Ethernet") else "N/A"
+                            macdst = packet["Ethernet"].dst if packet.haslayer("Ethernet") else "N/A"
+                            # Extract packet length
+                            packet_length = int(len(packet))
+                            # Extract IP version
+                            ip_version = "IPv6" if packet.haslayer("IPv6") else "IPv4" if packet.haslayer("IP") else "N/A"
+                            layer = "udp" if packet.haslayer("UDP") else "tcp" if packet.haslayer("TCP") else "Other"
+                            # Extract port information for TCP/UDP
+                            sport = None
+                            dport = None
+                            if packet.haslayer("TCP"):
+                                    sport = packet["TCP"].sport
+                                    dport = packet["TCP"].dport
+                            elif packet.haslayer("UDP"):
+                                    sport = packet["UDP"].sport
+                                    dport = packet["UDP"].dport
                             row_position = self.ui.tableWidget_6.rowCount()
                             self.ui.tableWidget_6.insertRow(row_position)
-                            
-                            # Populate row efficiently
-                            self.ui.tableWidget_6.setItem(row_position, 0, QTableWidgetItem(timestamp_str))
+                            self.ui.tableWidget_6.setItem(row_position, 0, QTableWidgetItem(datetime.fromtimestamp(float(packet.time)).strftime("%I:%M:%S %p")))
                             self.ui.tableWidget_6.setItem(row_position, 1, QTableWidgetItem(src_ip))
                             self.ui.tableWidget_6.setItem(row_position, 2, QTableWidgetItem(dst_ip))
                             self.ui.tableWidget_6.setItem(row_position, 3, QTableWidgetItem(protocol))
                             self.ui.tableWidget_6.setItem(row_position, 4, QTableWidgetItem(layer))
+                                    # Add MAC addresses and port info to the table
                             self.ui.tableWidget_6.setItem(row_position, 5, QTableWidgetItem(macsrc))
                             self.ui.tableWidget_6.setItem(row_position, 6, QTableWidgetItem(macdst))
                             self.ui.tableWidget_6.setItem(row_position, 7, QTableWidgetItem(str(sport) if sport else "N/A"))
@@ -542,18 +444,18 @@ class ErrorPacketSystem:
                             self.ui.tableWidget_6.setItem(row_position, 10, QTableWidgetItem(ip_version))
                 except Exception as e:
                     print(f"Error in display function: {e}")
-
+           
 class Window_Tools(QWidget, Ui_Naswail_Tool):
     def __init__(self, main_window):
         super().__init__()
-        self.main_window = main_window 
+        self.main_window = main_window  # Reference to the main window
 
-        self.ui = Ui_Naswail_Tool()  
-        self.ui.setupUi(self)  
+        self.ui = Ui_Naswail_Tool()  # Create an instance of the UI class
+        self.ui.setupUi(self)  # Set up the UI for this widget
         self.init_ui()
         self.ErrorPacketSystemobj = ErrorPacketSystem(self.ui)
-        self.RegPred = RegressionPrediction(self.ui, self.main_window.PacketSystemobj.packets, self.main_window.time_series)
-        # self.SuAn = SuspiciousAnalysis(self.ui, self.main_window.PacketSystemobj.anomalies, self.main_window.PacketSystemobj)
+        self.RegPred = RegressionPrediction(self.ui, self.main_window.PacketSystemobj.packets)
+        self.SuAn = SuspiciousAnalysis(self.ui, self.main_window.PacketSystemobj.anomalies, self.main_window.PacketSystemobj)
         self.networkactobj=NetworkActivity(self.ui)
         self.networkactobj.set_packetobj(self.main_window.PacketSystemobj)
         self.networkactobj.display()
@@ -573,86 +475,57 @@ class Window_Tools(QWidget, Ui_Naswail_Tool):
         self.ui.pushButton.clicked.connect(self.RegPred.setHours)
         self.ui.pushButton_6.clicked.connect(self.resetfilter)
 
-        # self.ui.tableWidget.setColumnCount(10)
-        # self.ui.tableWidget.setHorizontalHeaderLabels(
-        #     ["Timestamp", "Source IP", "Destination IP", "MAC Src", "MAC Dst", "Src Port", "Dst Port", "Protocol", "Length", "Payload"]
-        # )
-        # self.ui.tableWidget.cellClicked.connect(self.SuAn.display_packet_details)
-        # self.ui.tableWidget.cellClicked.connect(self.SuAn.decode_packet)   # UDP
-        # self.ui.checkBox_21.stateChanged.connect(self.SuAn.apply_filter)    # TCP
-        # self.ui.checkBox_22.stateChanged.connect(self.SuAn.apply_filter)    # ICMP
-        # self.ui.checkBox_23.stateChanged.connect(self.SuAn.apply_filter)    # DNS
-        # self.ui.checkBox_24.stateChanged.connect(self.SuAn.apply_filter)    # DHCP
-        # self.ui.checkBox_28.stateChanged.connect(self.SuAn.apply_filter)    # HTTP
-        # self.ui.checkBox_25.stateChanged.connect(self.SuAn.apply_filter)    # HTTPS
-        # self.ui.checkBox_26.stateChanged.connect(self.SuAn.apply_filter)    # TELNET
-        # self.ui.checkBox_30.stateChanged.connect(self.SuAn.apply_filter)    # FTP
-        # self.ui.checkBox_27.stateChanged.connect(self.SuAn.apply_filter)
-        # self.ui.checkBox_29.stateChanged.connect(self.SuAn.apply_filter)      # Other
-        # self.ui.pushButton_11.clicked.connect(self.SuAn.apply_filter)
+        self.ui.tableWidget.setColumnCount(10)
+        self.ui.tableWidget.setHorizontalHeaderLabels(
+            ["Timestamp", "Source IP", "Destination IP", "MAC Src", "MAC Dst", "Src Port", "Dst Port", "Protocol", "Length", "Payload"]
+        )
+        self.ui.tableWidget.cellClicked.connect(self.SuAn.display_packet_details)
+        self.ui.tableWidget.cellClicked.connect(self.SuAn.decode_packet)   # UDP
+        self.ui.checkBox_21.stateChanged.connect(self.SuAn.apply_filter)    # TCP
+        self.ui.checkBox_22.stateChanged.connect(self.SuAn.apply_filter)    # ICMP
+        self.ui.checkBox_23.stateChanged.connect(self.SuAn.apply_filter)    # DNS
+        self.ui.checkBox_24.stateChanged.connect(self.SuAn.apply_filter)    # DHCP
+        self.ui.checkBox_28.stateChanged.connect(self.SuAn.apply_filter)    # HTTP
+        self.ui.checkBox_25.stateChanged.connect(self.SuAn.apply_filter)    # HTTPS
+        self.ui.checkBox_26.stateChanged.connect(self.SuAn.apply_filter)    # TELNET
+        self.ui.checkBox_30.stateChanged.connect(self.SuAn.apply_filter)    # FTP
+        self.ui.checkBox_27.stateChanged.connect(self.SuAn.apply_filter)
+        self.ui.checkBox_29.stateChanged.connect(self.SuAn.apply_filter)      # Other
+        self.ui.pushButton_11.clicked.connect(self.SuAn.apply_filter)
         self.ui.pushButton_7.clicked.connect(self.networkactobj.display)
         self.ui.pushButton_5.clicked.connect(self.networkactobj.save_activity)
-        
-        # Use a more efficient timer strategy with reduced frequency
+        # Initialize and start the timer
         self.timer = QTimer(self)
         self.timer.timeout.connect(self.ttTime)
-        self.timer.start(3000)  # Update every 3 seconds instead of every 1 second
+        self.timer.start(1000)  # Call every 1000 milliseconds (1 second)
         self.sec = 0
         
-        # Set up a second, slower timer for heavy operations
-        self.heavy_timer = QTimer(self)
-        self.heavy_timer.timeout.connect(self.heavy_update)
-        self.heavy_timer.start(15000)  # Run heavy operations every 15 seconds
         
-        # Add cleanup when window is closed
-        self.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose, True)
         
     def init_ui(self):
         self.showMaximized()
         self.ui.pushButton_4.clicked.connect(self.show_main_window)
         self.ui.pushButton_2.clicked.connect(self.show_analysis_window)
-        self.ui.pushButton_8.clicked.connect(self.show_incidentresponse_window)
         
 
     def ttTime(self):
-        # Only update the error packet display - light operation
+        """Call the display method of the ErrorPacketSystem every second."""
         self.ErrorPacketSystemobj.display()
-        self.sec += 3  # Increment by 3 since we're running every 3 seconds
-    
-    def heavy_update(self):
-        # Handle heavy operations on a separate timer
-        try:
-            # Run prediction if not already running
-            if not self.RegPred.prediction_running:
-                self.RegPred.pred_traffic()
-                if self.RegPred.r2 > 0.50:
-                    self.RegPred.display()
-                    self.RegPred.display_advanced_graph()
-        except Exception as e:
-            print(f"Error in heavy update: {e}")
-            
-    def closeEvent(self, event):
-        # Cleanup resources when window is closed
-        self.timer.stop()
-        self.heavy_timer.stop()
-        
-        # Clean up matplotlib resources
-        if self.ui.widget.layout() is not None:
-            layout = self.ui.widget.layout()
-            for i in range(layout.count()):
-                child = layout.itemAt(i).widget()
-                if child is not None:
-                    child.deleteLater()
-        
-        # Accept the close event
-        event.accept()
+        self.SuAn.display()
+        if(self.sec % 30 == 0):
+            self.RegPred.pred_traffic(self.main_window.time_series)
+            if(self.RegPred.r2 > 0.50):
+                self.RegPred.display()
+                self.RegPred.display_graph()
+                pass
+        self.sec += 1
 
     def resetfilter(self):
         try:
-            # self.SuAn.process_packet_index=0
-            # self.SuAn.pcap_process_packet_index=0
-            # self.ui.tableWidget.setRowCount(0)
-            # self.SuAn.filterapplied=False
+            self.SuAn.process_packet_index=0
+            self.SuAn.pcap_process_packet_index=0
+            self.ui.tableWidget.setRowCount(0)
+            self.SuAn.filterapplied=False
             self.ui.lineEdit_8.setText("")
             self.ui.lineEdit_9.setText("")
             checkboxes = [
@@ -669,30 +542,19 @@ class Window_Tools(QWidget, Ui_Naswail_Tool):
             ]
             for checkbox in checkboxes:
                 checkbox.setCheckState(Qt.CheckState.Unchecked)
-            # self.SuAn.filterapplied = False
+            self.SuAn.filterapplied = False
         except Exception as e:
             print(f"Error in resetfilter function: {e}")
 
     def show_analysis_window(self):
-        try:
-            self.secondary_widget = self.main_window.open_analysis()
-            self.hide()
-        except Exception as e:
-            print(f"Error in show_analysis_window function: {e}")
-    
-    def show_incidentresponse_window(self):
-        try:
-            self.secondary_widget = self.main_window.open_incidentresponse()
-            self.hide()
-        except Exception as e:
-            print(f"Error in show_incidentresponse_window function: {e}")
+        """Show the analysis window and hide this widget."""
+        self.secondary_widget = self.main_window.open_analysis()
+        self.hide()
 
     def show_main_window(self):
-        try:
-            self.main_window.show()
-            self.hide()
-        except Exception as e:
-            print(f"Error in show_main_window function: {e}")
+        """Show the main window and hide this widget."""
+        self.main_window.show()
+        self.hide()
 
 
 
