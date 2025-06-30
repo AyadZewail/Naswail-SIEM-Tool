@@ -567,7 +567,7 @@ class PacketSystem:
         self.packetfile = 1
         self.local_packets = []
         self.processpacket()
-        
+        self.alert_timer_started = False
         self.snort_alerts = defaultdict(list)
         system = platform.system()
         system = platform.system().lower()
@@ -685,7 +685,6 @@ class PacketSystem:
             while True:
                 line = f.readline()
                 if not line:
-                    print("el goofy")
                     time.sleep(10)  # Avoid CPU overuse
                     continue
 
@@ -1147,6 +1146,9 @@ class PacketSystem:
                         self.new_packet_features.append([packet_info['length'], packet_info['timestamp'], protocol])
                         
                         # Check for anomalies
+                        # if not self.alert_timer_started:
+                        #     self.alert_timer_started = True
+                        #     threading.Timer(15.0, lambda: self.snort_alerts[(packet_info['src_ip'], packet_info['dst_ip'])].append("Port Scanning")).start()
                         if (packet_info['src_ip'], packet_info['dst_ip']) in self.snort_alerts:
                             self.anomalies.append(packet)
                             attack_label = self.snort_alerts[(packet_info['src_ip'], packet_info['dst_ip'])][0]

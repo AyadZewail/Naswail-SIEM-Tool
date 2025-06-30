@@ -7,7 +7,6 @@ import subprocess
 import json
 import re
 import requests
-import time
 import geoip2.database
 import socket
 import paramiko
@@ -16,8 +15,25 @@ import urllib.parse
 import binascii
 import codecs
 import threading
+import asyncio
 import concurrent.futures
 import functools
+import asyncio
+import aiohttp
+from bs4 import BeautifulSoup
+from urllib.parse import quote_plus
+import logging
+import time
+from sentence_transformers import SentenceTransformer, util
+import spacy
+import torch
+import pandas as pd
+import numpy as np
+from selenium import webdriver
+from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.common.by import By
+import random
+from tenacity import retry, stop_after_attempt, wait_exponential
 from PyQt6.QtWidgets import *
 from PyQt6.QtCore import *
 from PyQt6.QtGui import *
@@ -41,72 +57,305 @@ thread_pool = concurrent.futures.ThreadPoolExecutor(max_workers=4)
 function_cache = {}
 
 # Function decorator for caching results
-def cache_result(func):
-    @functools.wraps(func)
-    def wrapper(*args, **kwargs):
-        key = str(args) + str(kwargs)
-        if key not in function_cache:
-            function_cache[key] = func(*args, **kwargs)
-        return function_cache[key]
-    return wrapper
+# def cache_result(func):
+#     @functools.wraps(func)
+#     def wrapper(*args, **kwargs):
+#         key = str(args) + str(kwargs)
+#         if key not in function_cache:
+#             function_cache[key] = func(*args, **kwargs)
+#         return function_cache[key]
+#     return wrapper
 
-# Optimized function for scraping instructions
-@cache_result
-def run_scrap_instructions(attack_name, system):
-    try:
-        if system == "Linux":
-            cmd = [
-                "python",  # Use system python or adjust path if needed
-                "scrapInstructions.py",
-                f"{attack_name} mitigation and response"
-            ]
-        elif system == "Windows":
-            cmd = [
-                "python",
-                "scrapInstructions.py",
-                f"{attack_name} mitigation and response"
-            ]
-        
-        # Use Popen for non-blocking execution
-        if system == "Windows":
-            startupinfo = subprocess.STARTUPINFO()
-            startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
-            startupinfo.wShowWindow = subprocess.SW_HIDE
-            
-            # ABOVE_NORMAL_PRIORITY_CLASS = 0x00008000
-            process = subprocess.Popen(
-                cmd,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                startupinfo=startupinfo,
-                creationflags=0x00008000,
-                shell=False
-            )
-        else:
-            # Linux execution
-            process = subprocess.Popen(
-                cmd,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                shell=False,
-                preexec_fn=lambda: os.nice(-10) if system == "Linux" else None
-            )
-        
-        # Get binary output and decode it safely
-        stdout_data, stderr_data = process.communicate()
-        stdout = stdout_data.decode('utf-8', errors='replace')
-        stderr = stderr_data.decode('utf-8', errors='replace')
-        
-        return stdout, stderr
-    except subprocess.TimeoutExpired:
-        # Kill the process if it times out
-        process.kill()
-        stdout, stderr = process.communicate()
-        return stdout, f"Process timed out after 30 seconds. {stderr}"
-    except Exception as e:
-        return "", str(e)
+# # Optimized function for scraping instructions
+# @cache_result
+class ScraperComponent:
+    # Pool of User-Agents
+    USER_AGENTS = [
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.6478.57 Safari/537.36",
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.6478.57 Safari/537.36 Edg/126.0.2592.39",
+        "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.6478.57 Safari/537.36",
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_5) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Safari/605.1.15",
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:126.0) Gecko/20100101 Firefox/126.0",
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Safari/605.1.15",
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.6478.57 Safari/537.36 OPR/112.0.0.0",
+        "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:126.0) Gecko/20100101 Firefox/126.0",
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.6478.57 Safari/537.36 Edg/126.0.2592.39",
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.6478.57 Safari/537.36",
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.6478.57 Safari/537.36 Brave/126.0.6478.57",
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.6478.57 Safari/537.36 Vivaldi/6.7",
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.6478.57 Safari/537.36 Whale/3.0",
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.6478.57 Safari/537.36 Maxthon/7.0",
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.6478.57 Safari/537.36 360Browser/13.1"
+    ]
+    BING_SEARCH_URL = "https://www.bing.com/search"
+    MAX_RETRIES = 3
+    MAX_CONCURRENT_REQUESTS = 3
+    TIMEOUT = aiohttp.ClientTimeout(total=30)
+    BLACKLIST = ["bing.com", "go.microsoft.com", "microsoft.com/en-us", "support.microsoft.com"]
+    mit_emb_file = "mitigation_embeddings.pt"
+    selenium_driver = None
+    key_words = {"block", "blocking", "reject", "disable", "restrict", "terminate", "limit", "limiting", "rate", "rate-limiting"}
+    logger = logging.getLogger("ScraperComponent")
 
-# ======= Modified Stop Criteria =======
+    def __init__(self):
+        logging.basicConfig(
+            level=logging.INFO,
+            format='%(asctime)s - %(levelname)s - %(message)s'
+        )
+        self.model = SentenceTransformer('all-MiniLM-L6-v2')
+        self.nlp = spacy.load("en_core_web_sm", disable=["parser", "ner"])
+        self.nlp.add_pipe("sentencizer")
+        self.key_lemmas = {token.lemma_.lower() for token in self.nlp(" ".join(self.key_words))}
+
+    @staticmethod
+    def get_random_user_agent():
+        return random.choice(ScraperComponent.USER_AGENTS)
+
+    @staticmethod
+    def clean_url(url):
+        if not url.startswith(('http://', 'https://')):
+            url = 'https://' + url
+        return url.split('&')[0]
+
+    @classmethod
+    def init_selenium_driver(cls):
+        if cls.selenium_driver is None:
+            options = Options()
+            options.add_argument("--headless=new")
+            options.add_argument("--disable-gpu")
+            options.add_argument("--no-sandbox")
+            options.add_argument("--disable-dev-shm-usage")
+            options.add_argument("--log-level=3")
+            options.add_argument("--disable-blink-features=AutomationControlled")
+            options.add_argument("--disable-extensions")
+            options.add_argument("--disable-notifications")
+            options.add_argument("--disable-application-cache")
+            options.add_argument("--disable-logging")
+            options.add_argument("--output=/dev/null")
+            options.add_argument("--disk-cache-size=0")
+            options.add_argument("--disable-features=DiskCache")
+            options.add_argument("--blink-settings=imagesEnabled=false")
+            options.add_argument("--dns-prefetch-disable")
+            options.add_argument("--disable-popup-blocking")
+            options.add_argument("--disable-component-update")
+            options.add_argument("--disable-blink-features=AutomationControlled")
+            options.add_argument("--disable-infobars")
+            options.add_argument("--disable-notifications")
+            options.add_argument("--disable-popup-blocking")
+            options.add_argument("--disable-save-password-bubble")
+            options.add_argument("--disable-translate")
+            options.add_argument("--disable-web-security")
+            options.add_argument("--ignore-certificate-errors")
+            options.add_argument("--no-sandbox")
+            options.add_argument("--disable-dev-shm-usage")
+            options.add_argument("--disable-gpu")
+            options.add_argument("--window-size=1920,1080")
+            options.add_argument("--start-maximized")
+            options.add_argument("--disable-extensions")
+            options.add_argument("--disable-plugins-discovery")
+            options.add_argument("--disable-plugins")
+            options.add_argument("--disable-javascript")
+            prefs = {"profile.managed_default_content_settings.images": 2}
+            options.add_experimental_option("prefs", prefs)
+            options.add_experimental_option('excludeSwitches', ['enable-logging'])
+            user_agent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+            options.add_argument(f"user-agent={user_agent}")
+            options.page_load_strategy = "eager"
+            cls.selenium_driver = webdriver.Chrome(options=options)
+            cls.selenium_driver.set_page_load_timeout(8)
+            cls.logger.info("Initialized Selenium driver")
+
+    @classmethod
+    def scrape_bing_with_selenium(cls, keyword):
+        cls.init_selenium_driver()
+        cls.selenium_driver.get(f"{cls.BING_SEARCH_URL}?q={keyword}")
+        elements = cls.selenium_driver.find_elements(By.CSS_SELECTOR, "li.b_algo h2 a")
+        urls = []
+        for el in elements:
+            href = el.get_attribute("href")
+            if href and href.startswith("http") and not any(b in href for b in cls.BLACKLIST):
+                clean_href = cls.clean_url(href)
+                if clean_href not in urls:
+                    urls.append(clean_href)
+        cls.logger.info(f"Selenium found {len(urls)} search results")
+        return urls
+
+    @staticmethod
+    def is_valid(url):
+        return url.startswith(('http://', 'https://')) and \
+            not any(ext in url.lower() for ext in ('.pdf', '.jpg', '.png', '.doc', '.ppt')) and \
+            not url.startswith('mailto:')
+
+    @classmethod
+    @retry(stop=stop_after_attempt(MAX_RETRIES), wait=wait_exponential(multiplier=1, min=4, max=10))
+    async def scrape_bing_results(cls, keyword):
+        try:
+            headers = {"User-Agent": cls.get_random_user_agent()}
+            async with aiohttp.ClientSession(headers=headers, timeout=cls.TIMEOUT) as session:
+                encoded_query = quote_plus(keyword)
+                url = f"{cls.BING_SEARCH_URL}?q={encoded_query}"
+                async with session.get(url) as response:
+                    if response.status != 200:
+                        raise Exception(f"HTTP {response.status}")
+                    html = await response.text()
+                    soup = BeautifulSoup(html, 'html.parser')
+                    results = []
+                    for result in soup.select("li.b_algo"):
+                        link = result.select_one("h2 a")
+                        if link and link.get("href"):
+                            url = link["href"]
+                            if cls.is_valid(url) and not any(b in url for b in cls.BLACKLIST):
+                                results.append(cls.clean_url(url))
+                    if not results:
+                        results = await cls.scrape_with_selenium_fallback(keyword)
+                        if not results:
+                            raise Exception("No results found from both aiohttp and Selenium")
+                    return results[:10]
+        except Exception as e:
+            cls.logger.error(f"Error during scraping attempt: {str(e)}")
+            raise
+
+    @classmethod
+    async def scrape_with_selenium_fallback(cls, keyword):
+        try:
+            cls.init_selenium_driver()
+            cls.selenium_driver.get(f"{cls.BING_SEARCH_URL}?q={quote_plus(keyword)}")
+            time.sleep(2)
+            elements = cls.selenium_driver.find_elements(By.CSS_SELECTOR, "li.b_algo h2 a")
+            urls = []
+            for el in elements:
+                href = el.get_attribute("href")
+                if href and cls.is_valid(href) and not any(b in href for b in cls.BLACKLIST):
+                    clean_href = cls.clean_url(href)
+                    if clean_href not in urls:
+                        urls.append(clean_href)
+            return urls[:10]
+        except Exception as e:
+            cls.logger.error(f"Selenium fallback failed: {str(e)}")
+            return []
+
+    @classmethod
+    @retry(stop=stop_after_attempt(MAX_RETRIES), wait=wait_exponential(multiplier=1, min=4, max=10))
+    async def extract_text(cls, session, link):
+        try:
+            async with session.get(link, timeout=cls.TIMEOUT) as response:
+                if response.status == 200:
+                    content_type = response.headers.get('Content-Type', '')
+                    if 'text/html' not in content_type:
+                        return link, ""
+                    html = await response.text()
+                    soup = BeautifulSoup(html, 'html.parser')
+                    paragraphs = soup.find_all('p')
+                    text = "\n".join([p.get_text(strip=True) for p in paragraphs if p.get_text(strip=True)])
+                    return link, text if len(text) > 200 else None
+        except Exception as e:
+            cls.logger.error(f"Error processing {link}: {str(e)}")
+            raise
+
+    @classmethod
+    async def process_urls(cls, urls):
+        connector = aiohttp.TCPConnector(limit=cls.MAX_CONCURRENT_REQUESTS)
+        async with aiohttp.ClientSession(
+            headers={"User-Agent": cls.get_random_user_agent()},
+            timeout=cls.TIMEOUT,
+            connector=connector
+        ) as session:
+            tasks = []
+            for url in urls:
+                tasks.append(cls.extract_text(session, url))
+                await asyncio.sleep(0.5)
+            results = await asyncio.gather(*tasks)
+            return [result for result in results if result is not None]
+
+    def save_to_csv(self, data):
+        df = pd.DataFrame(data, columns=["URL", "Extracted Text"])
+        df.to_csv("output.csv", index=False)
+
+    def get_mitigation(self):
+        try:
+            mitigation_embeddings = torch.load(self.mit_emb_file, map_location='cpu')
+        except FileNotFoundError:
+            with open("D:\\Work\\University\\GradProject\\Naswail-SIEM-Tool\\mit_refs.txt", "r") as f:
+                mitigation_refs = [line.strip() for line in f.readlines()]
+            mitigation_embeddings = self.model.encode(mitigation_refs, convert_to_tensor=True)
+            torch.save(mitigation_embeddings, self.mit_emb_file, _use_new_zipfile_serialization=False)
+        data = pd.read_csv("output.csv")
+        docs = data["Extracted Text"].tolist()
+        docs = list(self.nlp.pipe(docs, batch_size=256))
+        sentences = [sent.text.strip() for doc in docs for sent in doc.sents]
+        mitigation_sentence, score = self.extract_mitigation_sentences(sentences, mitigation_embeddings)
+        return mitigation_sentence, score
+
+    def extract_mitigation_sentences(self, sentences, mitigation_embeddings):
+        if not sentences:
+            return "No sentences were retrieved", 0.0
+        embeddings = self.model.encode(sentences, convert_to_tensor=True)
+        scores = util.pytorch_cos_sim(embeddings, mitigation_embeddings).max(dim=1)[0]
+        mask = scores > 0.7
+        filtered_sentences = [sentences[i] for i in np.where(mask)[0]]
+        filtered_scores = scores[mask]
+        docs = list(self.nlp.pipe(filtered_sentences, batch_size=64))
+        filtered = []
+        for sent, score, doc in zip(filtered_sentences, filtered_scores, docs):
+            sent_lemmas = {token.lemma_.lower() for token in doc}
+            has_key = not self.key_lemmas.isdisjoint(sent_lemmas)
+            final_score = score + 0.2 if (has_key) else score
+            filtered.append((sent, final_score))
+        if not filtered:
+            filtered = list(zip(filtered_sentences, filtered_scores))
+        sorted_sentences = sorted(filtered, key=lambda x: x[1].item() if hasattr(x[1], 'item') else x[1], reverse=True)
+        top_entries = sorted_sentences[:1]
+        top_sentences = [sent for sent, _ in top_entries]
+        avg_score = torch.mean(torch.stack([s for _, s in top_entries])) if top_entries else 0.0
+        return ' '.join(top_sentences), avg_score.item() if hasattr(avg_score, 'item') else avg_score
+
+    async def run_async(self, search_query):
+        start_time = time.time()
+        retry_count = 0
+        max_retries = 3
+        while retry_count < max_retries:
+            try:
+                self.logger.info(f"Searching Bing for: {search_query}")
+                links = await self.scrape_bing_results(search_query)
+                if not links:
+                    raise Exception("No search results found")
+                end_time = time.time()
+                print(f"##########################\nScraping Runtime: {end_time - start_time:.2f} seconds\n")
+                print(f"Extracting content from {len(links)} pages...")
+                results = await self.process_urls(links)
+                if not results:
+                    raise Exception("No content extracted from links")
+                print("\n=== Results ===")
+                for url, paragraphs in results:
+                    print(f"URL: {url}")
+                extracted_data = [(url, text) for url, text in results if text]
+                if not extracted_data:
+                    raise Exception("No valid content extracted")
+                self.save_to_csv(extracted_data)
+                end_time = time.time()
+                print(f"##########################\nFile Processing Runtime: {end_time - start_time:.2f} seconds\n")
+                print("Analyzing content for mitigation strategies...")
+                mitigation_sentence, score = self.get_mitigation()
+                end_time = time.time()
+                print(f"\nTotal Runtime: {end_time - start_time:.2f} seconds")
+                print(f"\nRelevance Score: {score:.2f}")
+                print("\nExtracted Mitigation Strategy:")
+                print(mitigation_sentence)
+                return mitigation_sentence, score
+            except Exception as e:
+                retry_count += 1
+                self.logger.error(f"Attempt {retry_count} failed: {str(e)}")
+                if retry_count < max_retries:
+                    wait_time = 2 ** retry_count
+                    self.logger.info(f"Retrying in {wait_time} seconds...")
+                    await asyncio.sleep(wait_time)
+                else:
+                    self.logger.error("All retry attempts failed")
+                    print("Failed to retrieve results after multiple attempts. Please try again later.")
+                    return None, 0.0
+
+    def run(self, search_query):
+        return asyncio.run(self.run_async(search_query))
 
 class KaggleLLMClient:
     def __init__(self, ngrok_url, LogAP):
@@ -133,7 +382,7 @@ class Autopilot:
         
     def setup(self, prompt, ip, port, scrapetime):
         start_time = time.time()
-        NGROK_URL = "https://3c3b-35-234-63-106.ngrok-free.app"
+        NGROK_URL = "https://382d-34-53-70-81.ngrok-free.app"
         client = KaggleLLMClient(NGROK_URL, self.logModel)
         
         prompt_text = prompt
@@ -213,50 +462,8 @@ class Autopilot:
             print(f"Function '{function_name}' not found.")
             return False
 
-class WorkerSignals(QObject):
-    finished = pyqtSignal(str)  # Emits final result
-    error = pyqtSignal(str)     # Emits error messages
-
-# Async task runner - optimized for faster execution
-class SubprocessWorker(QRunnable):
-    def __init__(self, attack_name):
-        super().__init__()
-        self.attack_name = attack_name
-        self.signals = WorkerSignals()
-
-    @pyqtSlot()
-    def run(self):
-        try:
-            system = platform.system()
-            print(f"Starting subprocess for {self.attack_name}")
-            
-            # Direct function call instead of thread pool submission for faster execution
-            stdout, stderr = run_scrap_instructions(self.attack_name, system)
-            
-            output = ""
-            if stdout:
-                stdout_lines = stdout.strip().split("\n")
-                # Find the line containing the header
-                header_index = next(
-                    (i for i, line in enumerate(stdout_lines) 
-                    if "Extracted Mitigation Strategy:" in line),
-                    -1
-                )
-                
-                if header_index != -1:
-                    # Get all lines AFTER the header (including potential multi-line content)
-                    mitigation_lines = stdout_lines[header_index+1:]
-                    output = " ".join(line.strip() for line in mitigation_lines if line.strip())
-            
-            if not output and stderr:
-                raise Exception(f"Error in script execution: {stderr}")
-                
-            self.signals.finished.emit(output)
-        except Exception as e:
-            self.signals.error.emit(str(e))
-
 class AnomalousPackets():
-    def __init__(self, ui, anomalies, packet, AI, log):
+    def __init__(self, ui, anomalies, packet, AI, log, scraper):
         self.ui = ui
         self.AIobj = AI
         self.anomalies = anomalies
@@ -267,6 +474,7 @@ class AnomalousPackets():
         self.geoip_db_path = "GeoLite2-City.mmdb"
         self.logModel = log
         self.unique_anomalies = set()  # Track unique (src_ip, dst_ip, attack_name) tuples
+        self.scraper = scraper
         #self.preprocess_threat_for_AI("A Distributed Denial-of-Service (DDoS) attack overwhelms a network, service, or server with excessive traffic, disrupting legitimate user access. To effectively mitigate such attacks, consider the following strategies:Develop a DDoS Response Plan:Establish a comprehensive incident response plan that outlines roles, responsibilities, and procedures to follow during a DDoS attack. This proactive preparation ensures swift and coordinated action.esecurityplanet.comImplement Network Redundancies:Distribute resources across multiple data centers and networks to prevent single points of failure. This approach enhances resilience against DDoS attacks by ensuring that if one location is targeted, others can maintain operations. ")
     
 # Example usage
@@ -381,7 +589,7 @@ class AnomalousPackets():
         try:
             attack_name = self.attack_family
             self.stime = time.time()
-            worker = SubprocessWorker(attack_name)
+            worker = ScraperWorker(attack_name, self.scraper)
             worker.signals.finished.connect(self.on_result)
             worker.signals.error.connect(self.on_error)
             self.threadpool.start(worker)
@@ -814,6 +1022,36 @@ class ThreatMitigationEngine():
                 self.ui.tableWidget_2.removeRow(row)
                 break  # Stop after removing the first matching row
 
+class WorkerSignals(QObject):
+    finished = pyqtSignal(str)  # Emits final result
+    error = pyqtSignal(str)     # Emits error messages
+
+class ScraperWorker(QRunnable):
+    def __init__(self, attack_name, scraper):
+        super().__init__()
+        self.attack_name = attack_name
+        self.scraper = scraper
+        self.signals = WorkerSignals()
+        self.start_time = None
+
+    @pyqtSlot()
+    def run(self):
+        try:
+            self.start_time = time.time()
+            print(f"[WORKER] Starting scraper for {self.attack_name} at {self.start_time}")
+            # Run the scraper in a thread (blocking call)
+            mitigation_sentence, score = self.scraper.run(f"{self.attack_name} mitigation and response")
+            print(f"[WORKER] Scraper completed in {time.time() - self.start_time:.3f}s")
+            output = mitigation_sentence if mitigation_sentence else ""
+            if not output:
+                output = f"No mitigation found. Score: {score}"
+            print(f"[WORKER] Extracted output length: {len(output)} characters")
+            self.signals.finished.emit(output)
+        except Exception as e:
+            error_msg = f"Worker error after {time.time() - self.start_time:.3f}s: {str(e)}"
+            print(f"[WORKER] {error_msg}")
+            self.signals.error.emit(error_msg)
+
 class IncidentResponse(QWidget, Ui_IncidentResponse):
     def __init__(self, main_window):
         super().__init__()
@@ -840,8 +1078,9 @@ class IncidentResponse(QWidget, Ui_IncidentResponse):
         
         self.logAutopilot = LogWindow(self.model)
         self.threatMitEngine = ThreatMitigationEngine(self.ui, self.main_window.PacketSystemobj.blacklist, self.main_window.PacketSystemobj.blocked_ports, self.main_window.PacketSystemobj)
+        self.scraper = ScraperComponent()  # Initialize ONCE
         self.autopilotobj=Autopilot(self.threatMitEngine, self.logAutopilot)
-        self.anomalousPacketsObj = AnomalousPackets(self.ui, self.main_window.PacketSystemobj.anomalies, self.main_window.PacketSystemobj, self.autopilotobj, self.logAutopilot)
+        self.anomalousPacketsObj = AnomalousPackets(self.ui, self.main_window.PacketSystemobj.anomalies, self.main_window.PacketSystemobj, self.autopilotobj, self.logAutopilot, self.scraper)
         self.ui.tableWidget.setColumnCount(7)
         self.ui.tableWidget.setHorizontalHeaderLabels(
             ["Timestamp", "Source IP", "Destination IP", "Src Port", "Dst Port", "Protocol", "Attack"]
