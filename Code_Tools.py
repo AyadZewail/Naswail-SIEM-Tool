@@ -39,7 +39,7 @@ class NetworkActivity:
             print(e) 
     def save_activity(self):
         try:
-            with open("Activity.txt", "w") as file:
+            with open("data/Activity.txt", "w") as file:
                 file.write(self.filecontent)
         except Exception as e:
             print(e)

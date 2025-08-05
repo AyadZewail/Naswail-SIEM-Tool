@@ -41,7 +41,7 @@ class GeoMap(threading.Thread, QObject):
         self.ui = ui
         self.packets = packets
         self.anomalies = anomalies
-        self.geoip_db_path = "GeoLite2-City.mmdb"
+        self.geoip_db_path = "resources/GeoLite2-City.mmdb"
         self.lastindex = 0
         self.src_lats, self.src_lons = [], []
         self.dst_lats, self.dst_lons = [], []
@@ -159,9 +159,9 @@ class GeoMap(threading.Thread, QObject):
             pixmap_width, pixmap_height = 700, 450
             
             # Load the world map background
-            world_map_path = "newworldmap.png"  # Try the equirectangular map first
+            world_map_path = "resources/newworldmap.png"  # Try the equirectangular map first
             if not os.path.exists(world_map_path):
-                world_map_path = "worldmap.png"  # Fall back to original map
+                world_map_path = "resources/worldmap.png"  # Fall back to original map
             
             # Check if world map exists
             if not os.path.exists(world_map_path):
@@ -437,7 +437,7 @@ class GeoMap(threading.Thread, QObject):
             print(f"Created QPixmap with world map: {pixmap.width()}x{pixmap.height()}")
             
             # Save pixmap to file for debugging
-            image_path = "packet_map.png"
+            image_path = "resources/packet_map.png"
             pixmap.save(image_path)
             print(f"Map saved to {image_path}")
             
@@ -1401,7 +1401,7 @@ class Window_Analysis(QWidget, Ui_Naswail_Anlaysis):
         self.ui.comboBox_6.currentIndexChanged.connect(self.on_combobox_change)
         
         # Set up logo
-        pixmap = QPixmap(r"logo.jpg")  # Fixed to use logo.jpg instead of logo.png
+        pixmap = QPixmap(r"resources/logo.jpg")  # Fixed to use logo.jpg instead of logo.png
         self.pixmap_item = QGraphicsPixmapItem(pixmap)
         self.scene = QGraphicsScene(self)
         self.scene.addItem(self.pixmap_item)

@@ -17,7 +17,7 @@ class Ui_IncidentResponse(object):
         Form.setStyleSheet("/* Main Application Background */\n"
 "QWidget {\n"
 "    background-color: #2D2A2E;\n"
-"    color: #40E0D0; /* Turquoise text */\n"
+"    color: #40E0D0;\n"
 "    font-family: \"Consolas\", \"Monospace\";\n"
 "    font-size: 14px;\n"
 "}\n"
@@ -29,7 +29,7 @@ class Ui_IncidentResponse(object):
 "\n"
 "/* Buttons */\n"
 "QPushButton {\n"
-"    background-color: #40E0D0; /* Turquoise */\n"
+"    background-color: #40E0D0;\n"
 "    color: #2D2A2E;\n"
 "    border: 1px solid #40E0D0;\n"
 "    border-radius: 4px;\n"
@@ -50,7 +50,7 @@ class Ui_IncidentResponse(object):
 "/* Text Inputs */\n"
 "QLineEdit, QTextEdit {\n"
 "    background-color: #3E3D40;\n"
-"    color: #40E0D0; /* Turquoise text */\n"
+"    color: #40E0D0;\n"
 "    border: 1px solid #5A595C;\n"
 "    border-radius: 4px;\n"
 "    padding: 5px;\n"
@@ -75,6 +75,17 @@ class Ui_IncidentResponse(object):
 "QScrollBar::handle:vertical, QScrollBar::handle:horizontal {\n"
 "    background-color: rgba(90, 89, 92, 150);\n"
 "    border-radius: 6px;\n"
+"}\n"
+"\n"
+"/* Scroll Area */\n"
+"QScrollArea {\n"
+"    border: 1px solid #5A595C;\n"
+"    border-radius: 4px;\n"
+"    background-color: #2D2A2E;\n"
+"}\n"
+"\n"
+"QScrollArea > QWidget > QWidget {\n"
+"    background-color: #2D2A2E;\n"
 "}\n"
 "\n"
 "/* Graphics View */\n"
@@ -133,6 +144,41 @@ class Ui_IncidentResponse(object):
 "/* Group Boxes */\n"
 "QGroupBox {\n"
 "    color: #40E0D0;\n"
+"    border: 1px solid #40E0D0;\n"
+"    border-radius: 4px;\n"
+"    margin-top: 10px;\n"
+"    padding-top: 15px;\n"
+"}\n"
+"\n"
+"QGroupBox::title {\n"
+"    subcontrol-origin: margin;\n"
+"    subcontrol-position: top center;\n"
+"    padding: 0 5px;\n"
+"}\n"
+"\n"
+"/* ComboBox */\n"
+"QComboBox {\n"
+"    background-color: #3E3D40;\n"
+"    color: #40E0D0;\n"
+"    border: 1px solid #5A595C;\n"
+"    border-radius: 4px;\n"
+"    padding: 5px;\n"
+"}\n"
+"\n"
+"QComboBox::drop-down {\n"
+"    border: none;\n"
+"}\n"
+"\n"
+"QComboBox::down-arrow {\n"
+"    image: url(:/icons/down_arrow.png);\n"
+"    width: 10px;\n"
+"    height: 10px;\n"
+"}\n"
+"\n"
+"QComboBox QAbstractItemView {\n"
+"    background-color: #3E3D40;\n"
+"    color: #40E0D0;\n"
+"    selection-background-color: #5A595C;\n"
 "}\n"
 "")
         self.horizontalLayoutWidget = QtWidgets.QWidget(parent=Form)
@@ -163,23 +209,82 @@ class Ui_IncidentResponse(object):
         self.label_2.setFont(font)
         self.label_2.setObjectName("label_2")
         
-        # Main suspicious packets table (left side, top) - wider and taller
-        self.tableWidget = QtWidgets.QTableWidget(parent=Form)
-        self.tableWidget.setGeometry(QtCore.QRect(20, 100, 800, 420))
+        # Main suspicious packets table (left side, top) - adjusted height and spacing
+        self.suspiciousGroupBox = QtWidgets.QGroupBox("Suspicious Packets", parent=Form)
+        self.suspiciousGroupBox.setGeometry(QtCore.QRect(20, 80, 800, 380))  # Reduced height
+        self.suspiciousGroupBox.setStyleSheet("""
+            QGroupBox {
+                color: #40E0D0;
+                border: 1px solid #40E0D0;
+                border-radius: 4px;
+                margin-top: 10px;
+                padding-top: 15px;
+                font-weight: bold;
+            }
+            QGroupBox::title {
+                subcontrol-origin: margin;
+                subcontrol-position: top center;
+                padding: 0 5px;
+            }
+        """)
+        suspiciousLayout = QtWidgets.QVBoxLayout(self.suspiciousGroupBox)
+        suspiciousLayout.setContentsMargins(10, 20, 10, 10)  # Added margins
+        
+        self.tableWidget = QtWidgets.QTableWidget()
         self.tableWidget.setObjectName("tableWidget")
         self.tableWidget.setColumnCount(0)
         self.tableWidget.setRowCount(0)
+        suspiciousLayout.addWidget(self.tableWidget)
         
-        # Attack intelligence table (right side, top) - shifted further right
-        self.tableWidget_3 = QtWidgets.QTableWidget(parent=Form)
-        self.tableWidget_3.setGeometry(QtCore.QRect(850, 100, 510, 420))
+        # Attack intelligence table (right side, top) - adjusted height and spacing
+        self.intelligenceGroupBox = QtWidgets.QGroupBox("Attack Intelligence", parent=Form)
+        self.intelligenceGroupBox.setGeometry(QtCore.QRect(850, 80, 510, 380))  # Reduced height
+        self.intelligenceGroupBox.setStyleSheet("""
+            QGroupBox {
+                color: #40E0D0;
+                border: 1px solid #40E0D0;
+                border-radius: 4px;
+                margin-top: 10px;
+                padding-top: 15px;
+                font-weight: bold;
+            }
+            QGroupBox::title {
+                subcontrol-origin: margin;
+                subcontrol-position: top center;
+                padding: 0 5px;
+            }
+        """)
+        intelligenceLayout = QtWidgets.QVBoxLayout(self.intelligenceGroupBox)
+        intelligenceLayout.setContentsMargins(10, 20, 10, 10)  # Added margins
+        
+        self.tableWidget_3 = QtWidgets.QTableWidget()
         self.tableWidget_3.setObjectName("tableWidget_3")
         self.tableWidget_3.setColumnCount(0)
         self.tableWidget_3.setRowCount(0)
+        intelligenceLayout.addWidget(self.tableWidget_3)
         
-        # Auto-Pilot Activity Log (left side, bottom) - wider but shorter
-        self.treeView = QtWidgets.QTreeView(parent=Form)
-        self.treeView.setGeometry(QtCore.QRect(20, 570, 800, 260))
+        # Auto-Pilot Activity Log (left side, bottom) - adjusted position and height
+        self.logGroupBox = QtWidgets.QGroupBox("Auto-Pilot Activity Log", parent=Form)
+        self.logGroupBox.setGeometry(QtCore.QRect(20, 480, 800, 350))  # Moved up and increased height
+        self.logGroupBox.setStyleSheet("""
+            QGroupBox {
+                color: #40E0D0;
+                border: 1px solid #40E0D0;
+                border-radius: 4px;
+                margin-top: 10px;
+                padding-top: 15px;
+                font-weight: bold;
+            }
+            QGroupBox::title {
+                subcontrol-origin: margin;
+                subcontrol-position: top center;
+                padding: 0 5px;
+            }
+        """)
+        logLayout = QtWidgets.QVBoxLayout(self.logGroupBox)
+        logLayout.setContentsMargins(10, 20, 10, 10)  # Added margins
+        
+        self.treeView = QtWidgets.QTreeView()
         self.treeView.setStyleSheet("QTreeView {\n"
 "   border: 1px solid #76797C;\n"
 "    gridline-color: #31363b;\n"
@@ -187,22 +292,43 @@ class Ui_IncidentResponse(object):
 "}\n"
 "")
         self.treeView.setObjectName("treeView")
+        logLayout.addWidget(self.treeView)
         
-        # Tab widget (right side, bottom) - shifted further right
-        self.tabWidget = QtWidgets.QTabWidget(parent=Form)
-        self.tabWidget.setGeometry(QtCore.QRect(850, 570, 510, 260))
+        # Tab widget (right side, bottom) - adjusted position and height
+        self.mitigationGroupBox = QtWidgets.QGroupBox("Mitigation Controls", parent=Form)
+        self.mitigationGroupBox.setGeometry(QtCore.QRect(850, 480, 510, 350))  # Moved up and increased height
+        self.mitigationGroupBox.setStyleSheet("""
+            QGroupBox {
+                color: #40E0D0;
+                border: 1px solid #40E0D0;
+                border-radius: 4px;
+                margin-top: 10px;
+                padding-top: 15px;
+                font-weight: bold;
+            }
+            QGroupBox::title {
+                subcontrol-origin: margin;
+                subcontrol-position: top center;
+                padding: 0 5px;
+            }
+        """)
+        mitigationLayout = QtWidgets.QVBoxLayout(self.mitigationGroupBox)
+        mitigationLayout.setContentsMargins(10, 20, 10, 10)  # Added margins
+        
+        self.tabWidget = QtWidgets.QTabWidget()
         self.tabWidget.setObjectName("tabWidget")
+        mitigationLayout.addWidget(self.tabWidget)
         
         self.tab = QtWidgets.QWidget()
         self.tab.setObjectName("tab")
         self.listView = QtWidgets.QListView(parent=self.tab)
-        self.listView.setGeometry(QtCore.QRect(10, 10, 230, 200))
+        self.listView.setGeometry(QtCore.QRect(10, 10, 200, 240))  # Adjusted size
         self.listView.setObjectName("listView")
         self.label = QtWidgets.QLabel(parent=self.tab)
-        self.label.setGeometry(QtCore.QRect(260, 10, 220, 30))
+        self.label.setGeometry(QtCore.QRect(220, 10, 220, 25))  # Adjusted position
         self.label.setObjectName("label")
         self.lineEdit = QtWidgets.QLineEdit(parent=self.tab)
-        self.lineEdit.setGeometry(QtCore.QRect(260, 50, 220, 35))
+        self.lineEdit.setGeometry(QtCore.QRect(220, 40, 220, 30))  # Adjusted position
         self.lineEdit.setStyleSheet("QLineEdit{\n"
 "border: 1px solid #76797C;\n"
 "    gridline-color: #31363b;\n"
@@ -210,24 +336,25 @@ class Ui_IncidentResponse(object):
 "}")
         self.lineEdit.setObjectName("lineEdit")
         self.pushButton = QtWidgets.QPushButton(parent=self.tab)
-        self.pushButton.setGeometry(QtCore.QRect(260, 100, 105, 35))
+        self.pushButton.setGeometry(QtCore.QRect(220, 80, 105, 30))  # Adjusted position
         self.pushButton.setObjectName("pushButton")
         self.pushButton_9 = QtWidgets.QPushButton(parent=self.tab)
-        self.pushButton_9.setGeometry(QtCore.QRect(375, 100, 105, 35))
+        self.pushButton_9.setGeometry(QtCore.QRect(335, 80, 105, 30))  # Adjusted position
         self.pushButton_9.setObjectName("pushButton_9")
         self.tabWidget.addTab(self.tab, "")
+        
         self.tab_2 = QtWidgets.QWidget()
         self.tab_2.setObjectName("tab_2")
         self.tableWidget_2 = QtWidgets.QTableWidget(parent=self.tab_2)
-        self.tableWidget_2.setGeometry(QtCore.QRect(10, 10, 230, 200))
+        self.tableWidget_2.setGeometry(QtCore.QRect(10, 10, 200, 240))  # Adjusted size
         self.tableWidget_2.setObjectName("tableWidget_2")
         self.tableWidget_2.setColumnCount(0)
         self.tableWidget_2.setRowCount(0)
         self.label_3 = QtWidgets.QLabel(parent=self.tab_2)
-        self.label_3.setGeometry(QtCore.QRect(260, 10, 220, 30))
+        self.label_3.setGeometry(QtCore.QRect(220, 10, 220, 25))  # Adjusted position
         self.label_3.setObjectName("label_3")
         self.lineEdit_2 = QtWidgets.QLineEdit(parent=self.tab_2)
-        self.lineEdit_2.setGeometry(QtCore.QRect(260, 50, 220, 35))
+        self.lineEdit_2.setGeometry(QtCore.QRect(220, 40, 220, 30))  # Adjusted position
         self.lineEdit_2.setStyleSheet("QLineEdit{\n"
 "border: 1px solid #76797C;\n"
 "    gridline-color: #31363b;\n"
@@ -235,59 +362,29 @@ class Ui_IncidentResponse(object):
 "}")
         self.lineEdit_2.setObjectName("lineEdit_2")
         self.pushButton_10 = QtWidgets.QPushButton(parent=self.tab_2)
-        self.pushButton_10.setGeometry(QtCore.QRect(260, 100, 105, 35))
+        self.pushButton_10.setGeometry(QtCore.QRect(220, 80, 105, 30))  # Adjusted position
         self.pushButton_10.setObjectName("pushButton_10")
         self.pushButton_11 = QtWidgets.QPushButton(parent=self.tab_2)
-        self.pushButton_11.setGeometry(QtCore.QRect(375, 100, 105, 35))
+        self.pushButton_11.setGeometry(QtCore.QRect(335, 80, 105, 30))  # Adjusted position
         self.pushButton_11.setObjectName("pushButton_11")
         self.tabWidget.addTab(self.tab_2, "")
         
-        # Updated label positions
-        self.label_4 = QtWidgets.QLabel(parent=Form)
-        self.label_4.setGeometry(QtCore.QRect(20, 535, 241, 31))
-        font = QtGui.QFont()
-        font.setFamily("Yu Gothic UI")
-        font.setPointSize(11)
-        font.setBold(True)
-        font.setWeight(75)
-        self.label_4.setFont(font)
-        self.label_4.setObjectName("label_4")
-        
-        self.label_5 = QtWidgets.QLabel(parent=Form)
-        self.label_5.setGeometry(QtCore.QRect(1050, 60, 161, 31))
-        font = QtGui.QFont()
-        font.setFamily("Yu Gothic UI")
-        font.setPointSize(11)
-        font.setBold(True)
-        font.setWeight(75)
-        self.label_5.setFont(font)
-        self.label_5.setObjectName("label_5")
-        
-        self.label_6 = QtWidgets.QLabel(parent=Form)
-        self.label_6.setGeometry(QtCore.QRect(20, 60, 161, 31))
-        font = QtGui.QFont()
-        font.setFamily("Yu Gothic UI")
-        font.setPointSize(11)
-        font.setBold(True)
-        font.setWeight(75)
-        self.label_6.setFont(font)
-        self.label_6.setObjectName("label_6")
-
         # Terminate Process tab
         self.terminateTab = QtWidgets.QWidget()
         self.terminateTab.setObjectName("terminateTab")
 
-        # Create layout for terminate tab
+        # Create layout for terminate tab with adjusted margins
         self.terminateLayout = QtWidgets.QGridLayout(self.terminateTab)
         self.terminateLayout.setContentsMargins(10, 10, 10, 10)
         self.terminateLayout.setSpacing(10)
 
-        # Terminated processes list
+        # Terminated processes list with adjusted size
         self.terminatedLabel = QtWidgets.QLabel("Terminated Processes")
         self.terminatedLabel.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.terminatedList = QtWidgets.QListView()
+        self.terminatedList.setMinimumHeight(200)  # Set minimum height
 
-        # Process termination controls
+        # Process termination controls with adjusted spacing
         self.processLabel = QtWidgets.QLabel("Name of Process to Terminate")
         self.processLabel.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.processLineEdit = QtWidgets.QLineEdit()
@@ -297,8 +394,9 @@ class Ui_IncidentResponse(object):
 "    background-color: #232629;\n"
 "}")
         self.terminateButton = QtWidgets.QPushButton("Terminate")
+        self.terminateButton.setMinimumHeight(30)  # Set minimum height
 
-        # Add widgets to grid layout
+        # Add widgets to grid layout with better spacing
         self.terminateLayout.addWidget(self.terminatedLabel, 0, 0)
         self.terminateLayout.addWidget(self.terminatedList, 1, 0)
         self.terminateLayout.addWidget(self.processLabel, 0, 1)
@@ -309,17 +407,18 @@ class Ui_IncidentResponse(object):
         self.rateLimitTab = QtWidgets.QWidget()
         self.rateLimitTab.setObjectName("rateLimitTab")
 
-        # Create layout for rate limit tab
+        # Create layout for rate limit tab with adjusted margins
         self.rateLimitLayout = QtWidgets.QGridLayout(self.rateLimitTab)
         self.rateLimitLayout.setContentsMargins(10, 10, 10, 10)
         self.rateLimitLayout.setSpacing(10)
 
-        # Limited IPs list
+        # Limited IPs list with adjusted size
         self.limitedIPsLabel = QtWidgets.QLabel("Limited IPs")
         self.limitedIPsLabel.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.limitedIPsList = QtWidgets.QListView()
+        self.limitedIPsList.setMinimumHeight(200)  # Set minimum height
 
-        # Rate limiting controls
+        # Rate limiting controls with adjusted spacing
         self.ipLabel = QtWidgets.QLabel("IP Address to Limit")
         self.ipLabel.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.ipLineEdit = QtWidgets.QLineEdit()
@@ -340,8 +439,10 @@ class Ui_IncidentResponse(object):
 
         self.applyLimitButton = QtWidgets.QPushButton("Apply Limit")
         self.resetbutton = QtWidgets.QPushButton("Reset Limits")
+        self.applyLimitButton.setMinimumHeight(30)  # Set minimum height
+        self.resetbutton.setMinimumHeight(30)  # Set minimum height
 
-        # Add widgets to grid layout
+        # Add widgets to grid layout with better spacing
         self.rateLimitLayout.addWidget(self.limitedIPsLabel, 0, 0)
         self.rateLimitLayout.addWidget(self.limitedIPsList, 1, 0, 4, 1)  # span 4 rows
         self.rateLimitLayout.addWidget(self.ipLabel, 0, 1)
@@ -371,9 +472,6 @@ class Ui_IncidentResponse(object):
         self.pushButton_10.setText(_translate("Form", "Add"))
         self.pushButton_11.setText(_translate("Form", "Remove"))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_2), _translate("Form", "Port Blocking"))
-        self.label_4.setText(_translate("Form", " Auto-Pilot Activity Log"))
-        self.label_5.setText(_translate("Form", "Attack Intelligence"))
-        self.label_6.setText(_translate("Form", "Suspicious Packets"))
         self.tabWidget.addTab(self.terminateTab, "Terminate Process")
         self.tabWidget.addTab(self.rateLimitTab, "Packet Rate Limiting")
 
