@@ -38,6 +38,8 @@ from plugins.home.PacketDecoder import BasicPacketDecoder
 from plugins.home.PacketDetails import BasicPacketDetails
 from plugins.home.ProtocolExtractor import BasicProtocolExtractor
 from plugins.home.ErrorChecker import BasicErrorChecker
+from plugins.home.PacketStatistics import BasicPacketStatistics
+from plugins.home.PacketsExporter import BasicPacketExporter
 
 #sudo /home/hamada/Downloads/Naswail-SIEM-Tool-main/.venv/bin/python /home/hamada/Downloads/Naswail-SIEM-Tool-main/Code_Main.py
 
@@ -585,6 +587,7 @@ class PacketSystem:
             corrupted_packet_list = self.corrupted_packet,
             logger = self.networkLog
         )
+        self.packetStatistics = BasicPacketStatistics()
 
 
         if system == "windows":
@@ -960,49 +963,19 @@ class PacketSystem:
             print(f"Error updating network summary: {e}")
     
     def Packet_Statistics(self):
-
         try:
-            
-            total_packets = len(self.packets)
-        
-            self.packet_statics = {
-                "total": total_packets,
-                "tcp": self.tot_tcp_packets,
-                "udp": self.tot_udp_packets,
-                "icmp": self.tot_icmp_packets,
-                "dns": self.packet_stats.get("dns", 0),
-                "http": self.packet_stats.get("http", 0),
-                "https": self.packet_stats.get("https", 0),
-                "telnet": self.packet_stats.get("telnet", 0),
-                "ftp": self.packet_stats.get("ftp", 0),
-            }
-            
-            packet_values = [self.tot_tcp_packets, self.tot_udp_packets, self.tot_icmp_packets, self.packet_stats.get("dns", 0), self.packet_stats.get("http", 0), self.packet_stats.get("https", 0), self.packet_stats.get("telnet", 0), self.packet_stats.get("ftp", 0)]
-            packet_mean = mean(packet_values)
-            packet_range = max(packet_values) - min(packet_values)
-            packet_mode = mode(packet_values) if len(set(packet_values)) > 1 else "No Mode"  #  single-value case
-            packet_stdev = stdev(packet_values) if len(packet_values) > 1 else 0
-            
-            formatted_content = [
-                f"Total Packets: {self.packet_statics['total']}",
-                f"TCP Packets: {self.packet_statics['tcp']}",
-                f"UDP Packets: {self.packet_statics['udp']}",
-                f"ICMP Packets: {self.packet_statics['icmp']}",
-                f"DNS Packets: {self.packet_statics['dns']}",
-                f"HTTP Packets: {self.packet_statics['http']}",
-                f"HTTPS Packets: {self.packet_statics['https']}",
-                f"Telnet Packets: {self.packet_statics['telnet']}",
-                f"FTP Packets: {self.packet_statics['ftp']}",
-                "Statistical Metrics:",
-            f"Mean: {packet_mean:.2f}",
-            f"Range: {packet_range}",
-            f"Mode: {packet_mode}",
-            f"Standard Deviation: {packet_stdev:.2f}",
-            ]
+            stats_text = self.packetStatistics.analyze(
+                packets=self.packets,
+                totals={
+                    "tcp": self.tot_tcp_packets,
+                    "udp": self.tot_udp_packets,
+                    "icmp": self.tot_icmp_packets,
+                },
+                app_proto_counts=self.packet_stats
+            )
 
-            
             model = QStringListModel()
-            model.setStringList(formatted_content)
+            model.setStringList(stats_text)
             self.ui.listView_3.setModel(model)
 
         except Exception as e:
@@ -1601,7 +1574,7 @@ class Naswail(QMainWindow, Ui_MainWindow):
         self.Appsystemobj.set_packet_system(self.PacketSystemobj)
         #
         self.PacketSystemobj.draw_gauge()
-        
+
         # Create color legend
         self.create_color_legend()
         
@@ -1634,7 +1607,7 @@ class Naswail(QMainWindow, Ui_MainWindow):
         self.pushButton_6.clicked.connect(self.toggleCapture)
         self.pushButton_7.clicked.connect(self.SensorSystemobj.toggleSenFlag)
         self.actionImport_Packets.triggered.connect(self.import_file)
-        self.actionExport_Packets.triggered.connect(self.export_packets)
+        self.actionExport_Packets.triggered.connect(self.handle_export_packets)
         self.actionLive_Capture.triggered.connect(self.resetInput)
         self.buttonBox_2.clicked.connect(lambda _: self.SensorSystemobj.updateSensor(1))
         self.buttonBox_2.rejected.connect(lambda _: self.SensorSystemobj.updateSensor(2))
@@ -1681,6 +1654,18 @@ class Naswail(QMainWindow, Ui_MainWindow):
         title="Ayad be goofing"
         full_details=""" come on man its too ez btruh i just like the way i fight children i hate kids ama kidnap them"""
         self.add_notification(title,details,full_details)
+    
+    def handle_export_packets(self):
+        try:
+            packets = self.PacketSystemobj.captured_packets
+            path = "data/captured_packets.pcap"
+            success = BasicPacketExporter().export(packets, path)
+            if success:
+                print("Packets exported successfully.")
+            else:
+                print("Packet export failed.")
+        except Exception as e:
+            print(f"Export failed with error: {e}")
     
     def fix_navigation_bar(self):
         """Fix the navigation bar elements to ensure they're properly visible"""
@@ -1944,7 +1929,6 @@ class Naswail(QMainWindow, Ui_MainWindow):
 
         
     def toggleCapture(self):
-      
         self.capture *= -1
         self.PacketSystemobj.capture*=-1
 
@@ -1985,12 +1969,6 @@ class Naswail(QMainWindow, Ui_MainWindow):
                 print("No file selected")
         except Exception as e:
             print(f"Error in import_file function: {e}")
-    def export_packets(self):
-        try:
-            wrpcap("data/captured_packets.pcap", self.PacketSystemobj.captured_packets)
-            print("Packets exported successfully.")
-        except Exception as e:
-            print(f"Error exporting packets: {e}")
 
     def resetInput(self):
         try:

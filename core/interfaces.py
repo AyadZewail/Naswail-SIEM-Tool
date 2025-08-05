@@ -88,3 +88,34 @@ class IErrorChecker(ABC):
             True if packet is corrupted, False if valid, None if error.
         """
         pass
+
+class IPacketStatistics(ABC):
+    @abstractmethod
+    def analyze(self, packets: List[Any], totals: dict, app_proto_counts: dict) -> List[str]:
+        """
+        Analyze and summarize packet statistics.
+
+        Args:
+            packets: Full list of captured packets.
+            totals: Dict with counts of TCP, UDP, ICMP, etc.
+            app_proto_counts: Dict of application protocol packet counts (http, ftp, dns, etc.)
+
+        Returns:
+            List of formatted statistics as strings (1 per line).
+        """
+        pass
+
+class IPacketExporter(ABC):
+    @abstractmethod
+    def export(self, packets: List[Any], path: str) -> bool:
+        """
+        Export the given packets to a file.
+
+        Args:
+            packets: List of packet objects (e.g., Scapy packets)
+            path: Output file path
+
+        Returns:
+            True if successful, False otherwise
+        """
+        pass
