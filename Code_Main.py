@@ -42,6 +42,7 @@ from plugins.home.PacketStatistics import BasicPacketStatistics
 from plugins.home.PacketsExporter import BasicPacketExporter
 from plugins.home.PacketFabricator import BasicPacketFabricator
 from plugins.home.AnomalyDetector import SnortAnomalyDetector
+from plugins.home.PacketFilter import BasicPacketFilter
 
 #sudo /home/hamada/Downloads/Naswail-SIEM-Tool-main/.venv/bin/python /home/hamada/Downloads/Naswail-SIEM-Tool-main/Code_Main.py
 
@@ -594,6 +595,9 @@ class PacketSystem:
             rules_file="C:\\Snort\\rules\\custom.rules",
             log_file="C:\\Snort\\log\\alert.ids"
         )
+        self.packetFilter = BasicPacketFilter(
+            protocol_extractor=self.protocolExtractor,
+        )
 
         self.list_of_activity=[]
         
@@ -660,97 +664,6 @@ class PacketSystem:
     def set_sensor_system(self, sensor_obj):
         self.sensor_obj = sensor_obj
 
-    def load_snort_rule_names(self, rule_file):
-        """Loads Snort rule SIDs and their corresponding attack labels."""
-        sid_to_attack = {}
-
-        with open(rule_file, 'r') as f:
-            for line in f:
-                if line.startswith("alert"):
-                    sid = None
-                    attack_name = "Unknown"
-
-                    # Extract SID
-                    sid_match = re.search(r"sid:", line)
-                    if sid_match:
-                        sid = int(line[sid_match.end():sid_match.end()+7])
-                        # match = re.search(r'\b\w+\b', line[sid_match.end():])
-                        # if match:
-                        #     start_pos = line[:match.start()].rfind(' ') + 1
-                        #     end_pos = sid_match.start() + match.end()
-                        #     sid = int(line[start_pos:end_pos])
-
-                    # Extract attack label from msg field
-                    msg_match = re.search(r'msg:"', line)
-                    if msg_match:
-                        match = re.search(r'\b\w+\b', line[msg_match.end():])
-                        if match:
-                            end_pos = line[msg_match.end():].find('"')
-                            attack_name = line[msg_match.end():msg_match.end() + end_pos]
-
-                    if sid is not None:
-                        sid_to_attack[sid] = attack_name  # Map SID to attack label
-
-        return sid_to_attack
-
-    def monitor_snort_logs(self, log_file):
-        """Tails Snort's alert_fast log file and extracts attack labels."""
-        with open(log_file, "r") as f:
-            f.seek(0, 2)  # Move to end of file (process only new alerts)
-            while True:
-                line = f.readline()
-                if not line:
-                    time.sleep(10)  # Avoid CPU overuse
-                    continue
-
-                try:
-                    src_ip = dst_ip = sport = dport = None
-                    attack_label = "Unknown"
-                    # Extract SID from alert log (format: "[**] [SID:REV] Attack Name [**]")
-                    sid_match = re.search(r"\[\*\*\] \[(\d+):", line)
-                    if sid_match:
-                        match = re.search(r'\b\w+\b', line[sid_match.end():])
-                        if match:
-                            end_pos = line[sid_match.end():].find(':')
-                        sid = int(line[sid_match.end():sid_match.end() + end_pos])
-                        if sid in self.snort_rules:
-                            attack_label = self.snort_rules[sid]
-
-                        # Extract source and destination IPs
-                        ip_match = re.search(r"\d+\.\d+\.\d+\.\d+", line)
-                        if ip_match:
-                            end_space = line[ip_match.end()-1:].find(' ')
-                            end_colon = line[ip_match.end()-1:].find(':')
-                            end_pos = min(pos for pos in [end_space, end_colon] if pos != -1)
-                            if end_pos == end_space:
-                                src_ip = line[ip_match.start():ip_match.end() + end_pos - 1]
-                                end_pos = line[ip_match.end() + 4:].find('\n')
-                                dst_ip = line[ip_match.end() + 4:ip_match.end() + 4 + end_pos]
-                            elif end_pos == end_colon:
-                                src_ip = line[ip_match.start():ip_match.end() + end_pos - 1]
-                                end_sport = line[ip_match.end() + end_pos + 1:].find(' ')
-                                sport = line[ip_match.end() + end_pos:ip_match.end() + end_pos + end_sport + 1]
-                                sdst = ip_match.end() + end_pos + end_sport + 5
-                                end_pos = line[sdst:].find(':')
-                                dst_ip = line[sdst:sdst + end_pos]
-                                end_dport = line[sdst:].find('\n')
-                                dport = line[sdst + end_pos + 1 : sdst + end_dport]
-
-                            # Record the alert
-                            self.snort_alerts[(src_ip, dst_ip)].append(attack_label)
-                            
-                            # Flag for whether we've added to tableWidget_4
-                            added_to_table = False
-                            anomaly_signature = (src_ip, dst_ip, attack_label)
-                            
-                            # Find all packets matching this signature and add to anomalies
-                            
-                except Exception as e:
-                    print(f"Error processing log line: {e}")
-                    tb = traceback.format_exc()
-                    print("Traceback details:")
-                    print(tb)
-                    continue
     def block_ip(self,ip):
         system = platform.system()
         
@@ -959,7 +872,7 @@ class PacketSystem:
         except Exception as e:
             print(f"Error updating network summary: {e}")
     
-    def Packet_Statistics(self):
+    def packet_statistics(self):
         try:
             stats_text = self.packetStatistics.analyze(
                 packets=self.packets,
@@ -976,7 +889,7 @@ class PacketSystem:
             self.ui.listView_3.setModel(model)
 
         except Exception as e:
-            print(f"Error in Packet_Statistics function: {e}")
+            print(f"Error in packet_statistics function: {e}")
 
     def change_chart(self,index):#function for changing beteen guage and donut chart
         if index==1:
@@ -1206,14 +1119,14 @@ class PacketSystem:
             print(f"Error saving log to file: {e}")
 
     def is_local_ip(self,ip):
-
         try:
             ip_obj = ipaddress.ip_address(ip)
             return ip_obj.is_private  # returns True for local IPs, False for outside
         except ValueError:
     
             return False  # handle invalid IP addresses
-    def design_and_send_packet(self):
+        
+    def fabricate_packet(self):
         src_ip = self.ui.lineEdit_ip_source.text()
         dst_ip = self.ui.lineEdit_ip_dst.text()
         protocol = self.ui.comboBox_protocol.currentText()
@@ -1240,99 +1153,39 @@ class PacketSystem:
                 "ftp": self.ui.checkBox_8.isChecked(),
                 "Other": self.ui.checkBox_10.isChecked(),
             }
-            
-            # Clear the table before adding filtered packets
-            self.ui.tableWidget.setRowCount(0)
-            
-            # Get filter values
+
             src_filter = self.ui.lineEdit_2.text().strip()
             dst_filter = self.ui.lineEdit_5.text().strip()
             port_filter = self.ui.lineEdit.text().strip()
             stime = self.ui.dateTimeEdit.dateTime().toSecsSinceEpoch()
             etime = self.ui.dateTimeEdit_2.dateTime().toSecsSinceEpoch()
-            combo_selection = self.ui.comboBox.currentText()
+            direction = self.ui.comboBox.currentText()
 
-            # Check if any filters are active
+            # Nothing selected? fallback
             if not any(protocol_filters.values()) and not src_filter and not dst_filter and not port_filter and stime == 946677600 and etime == 946677600:
                 self.helperboi()
                 self.filterapplied = False
                 return
 
             self.filterapplied = True
-            selected_protocols = [protocol for protocol, checked in protocol_filters.items() if checked]
-            
-            # First collect all matching packets
-            self.filtered_packets = []
+            selected_protocols = [proto for proto, checked in protocol_filters.items() if checked]
+
+            # Gather packets
             packet_source = self.sensor_obj.sensor_packet if self.sensor_obj.senFlag == 1 else self.packets
-            
-            # First pass: collect matching packets
-            for packet in packet_source:
-                # Extract packet information once
-                packet_info = {
-                    'src_ip': packet["IP"].src if packet.haslayer("IP") else "N/A",
-                    'dst_ip': packet["IP"].dst if packet.haslayer("IP") else "N/A",
-                    'has_tcp': packet.haslayer("TCP"),
-                    'has_udp': packet.haslayer("UDP"),
-                    'has_icmp': packet.haslayer("ICMP"),
-                    'timestamp': float(packet.time),
-                    'protocol': self.protocolExtractor.extract_protocol(packet),
-                    'layer': (
-                        "udp" if packet.haslayer("UDP") 
-                        else "tcp" if packet.haslayer("TCP") 
-                        else "icmp" if packet.haslayer("ICMP") 
-                        else "N/A"
-                    )
-                }
+            criteria = {
+                "protocols": selected_protocols,
+                "src_ip": src_filter,
+                "dst_ip": dst_filter,
+                "port": port_filter,
+                "start_time": stime,
+                "end_time": etime,
+                "direction": direction
+            }
 
-                # Extract ports if available
-                if packet_info['has_tcp']:
-                    packet_info['sport'] = packet["TCP"].sport
-                    packet_info['dport'] = packet["TCP"].dport
-                elif packet_info['has_udp']:
-                    packet_info['sport'] = packet["UDP"].sport
-                    packet_info['dport'] = packet["UDP"].dport
-                else:
-                    packet_info['sport'] = None
-                    packet_info['dport'] = None
+            self.filtered_packets = self.packetFilter.filter_packets(packet_source, criteria)
 
-                # Apply filters
-                protocol_match = packet_info['protocol'] in selected_protocols if selected_protocols else True
-                if "udp" in selected_protocols and packet_info['layer'] == "udp":
-                    protocol_match = True
-                elif "tcp" in selected_protocols and packet_info['layer'] == "tcp":
-                    protocol_match = True
-                elif "icmp" in selected_protocols and packet_info['layer'] == "icmp":
-                    protocol_match = True
-
-                time_match = (stime == 946677600 or stime <= packet_info['timestamp']) and \
-                           (etime == 946677600 or etime >= packet_info['timestamp'])
-                
-                src_match = src_filter in packet_info['src_ip'] if src_filter else True
-                dst_match = dst_filter in packet_info['dst_ip'] if dst_filter else True
-
-                # Check inside/outside filter
-                src_is_local = self.is_local_ip(packet_info['src_ip'])
-                dst_is_local = self.is_local_ip(packet_info['dst_ip'])
-                if combo_selection == "Inside":
-                    ip_match = src_is_local and dst_is_local
-                elif combo_selection == "Outside":
-                    ip_match = not src_is_local or not dst_is_local
-                else:
-                    ip_match = True
-
-                # Check port filter
-                port_match = True
-                if port_filter:
-                    try:
-                        port_filter = int(port_filter)
-                        port_match = (packet_info['sport'] == port_filter or 
-                                    packet_info['dport'] == port_filter)
-                    except ValueError:
-                        port_match = False
-
-                # If all filters match, add to filtered packets
-                if all([protocol_match, src_match, dst_match, ip_match, port_match, time_match]):
-                    self.filtered_packets.append(packet)
+            # Clear and refill UI
+            self.ui.tableWidget.setRowCount(0)
 
             # Second pass: update UI with filtered packets
             for packet in self.filtered_packets:
@@ -1555,7 +1408,7 @@ class Naswail(QMainWindow, Ui_MainWindow):
         self.tableWidget.cellClicked.connect(self.PacketSystemobj.handle_decode_click)
         self.tabWidget.currentChanged.connect(lambda index: self.PacketSystemobj.change_chart(1) if index == 2 else self.PacketSystemobj.change_chart(0))
         self.tabWidget.currentChanged.connect(lambda index: self.Appsystemobj.get_applications_with_ports() if index == 3 else None)
-        self.tabWidget.currentChanged.connect(lambda index: self.PacketSystemobj.Packet_Statistics() if index == 5 else None)
+        self.tabWidget.currentChanged.connect(lambda index: self.PacketSystemobj.packet_statistics() if index == 5 else None)
         self.tabWidget.currentChanged.connect(lambda index: self.PacketSystemobj.display_log() if index == 7 else None)
         self.tableWidget_2.setColumnCount(2)
         self.tableWidget_2.setHorizontalHeaderLabels(["Name", "IP"])
@@ -1577,7 +1430,7 @@ class Naswail(QMainWindow, Ui_MainWindow):
         self.pushButton_10.clicked.connect(lambda _: self.PacketSystemobj.updateBlacklist(1))
         self.pushButton_11.clicked.connect(lambda _: self.PacketSystemobj.updateBlacklist(2))
         self.pushButton_12.clicked.connect(lambda _:self.PacketSystemobj.save_log_to_file())
-        self.pushButton_apply.clicked.connect(self.PacketSystemobj.design_and_send_packet)
+        self.pushButton_apply.clicked.connect(self.PacketSystemobj.fabricate_packet)
        
         self.checkBox.stateChanged.connect(self.PacketSystemobj.apply_filter)      # UDP
         self.checkBox_2.stateChanged.connect(self.PacketSystemobj.apply_filter)    # TCP
@@ -1887,7 +1740,7 @@ class Naswail(QMainWindow, Ui_MainWindow):
             global packetInput, packetFile, packetIndex
             if self.PacketSystemobj.process_packet_index<len(self.PacketSystemobj.qued_packets)and self.PacketSystemobj.pcap_process_packet_index<len(self.PacketSystemobj.qued_packets):
                 self.PacketSystemobj.process_packet()
-                self.PacketSystemobj.Packet_Statistics()
+                self.PacketSystemobj.packet_statistics()
         except Exception as e:
             print(f"Error in tick function: {e}")
 

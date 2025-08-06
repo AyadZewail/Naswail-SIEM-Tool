@@ -147,3 +147,18 @@ class IAnomalyDetector(ABC):
             A dictionary describing the anomaly if detected, otherwise None.
         """
         pass
+
+class IPacketFilter(ABC):
+    @abstractmethod
+    def filter_packets(self, packets: list, criteria: dict) -> list:
+        """
+        Filters packets based on criteria.
+
+        Args:
+            packets: List of Scapy packets.
+            criteria: Dict including IPs, ports, protocols, time range, etc.
+
+        Returns:
+            A filtered list of packets.
+        """
+        pass    
