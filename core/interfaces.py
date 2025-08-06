@@ -161,4 +161,18 @@ class IPacketFilter(ABC):
         Returns:
             A filtered list of packets.
         """
-        pass    
+        pass
+
+class INetworkActivityAnalyzer(ABC):
+    @abstractmethod
+    def extract_activities(self, packets: list) -> list:
+        """
+        Analyzes packets and returns a list of network activities.
+        
+        Args:
+            packets: List of Scapy packets.
+        
+        Returns:
+            List of NetworkActivity objects or activity strings.
+        """
+        pass        

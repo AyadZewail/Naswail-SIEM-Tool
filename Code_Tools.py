@@ -13,23 +13,28 @@ from matplotlib.figure import Figure
 from datetime import datetime, timedelta
 from UI_Tools import Ui_Naswail_Tool
 import time
+from plugins.home.NetworkActivityAnalyzer import NetworkActivityAnalyzer
 
 class NetworkActivity:
     def __init__(self,ui):
         self.packetsysobj=None
         self.ui=ui
         self.filecontent=""
+        self.netActivityAnalyzer = NetworkActivityAnalyzer()
+    
     def set_packetobj(self, packetsysobj):
         self.packetsysobj=packetsysobj
+    
     def display(self):
         try:
-            self.packetsysobj.Update_Network_Summary()
+            self.packetsysobj.list_of_activity.clear()
+            self.packetsysobj.list_of_activity.extend(self.netActivityAnalyzer.extract_activities(self.packetsysobj.qued_packets))
             self.filecontent=""
             formatted_content=[]
             for list_of_activity  in self.packetsysobj.list_of_activity:
-                    loa=list_of_activity.activity
-                    formatted_content.append(loa) 
-                    self.filecontent+=loa+"\n"
+                loa=list_of_activity.activity
+                formatted_content.append(loa) 
+                self.filecontent+=loa+"\n"
 
             model = QStringListModel()
             model.setStringList(formatted_content)
@@ -37,6 +42,7 @@ class NetworkActivity:
             self.ui.listView_2.setStyleSheet("QListView { font-size: 16px; }")
         except Exception as e:
             print(e) 
+    
     def save_activity(self):
         try:
             with open("data/Activity.txt", "w") as file:

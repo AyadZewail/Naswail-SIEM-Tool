@@ -836,41 +836,6 @@ class PacketSystem:
             self.ui.listView_4.setModel(model)
         except Exception as e:
             print(f"Error updating blacklist: {e}")
-    def Update_Network_Summary(self):
-        try:
-            self.list_of_activity.clear()
-            for packet in self.qued_packets:
-                if packet.haslayer(HTTPRequest):
-                    host = packet[HTTPRequest].Host.decode() if packet[HTTPRequest].Host else "Unknown"
-                    path = packet[HTTPRequest].Path.decode() if packet[HTTPRequest].Path else "Unknown"
-
-                    newnetworkactivity = NetworkActivity()
-                    
-                    
-                    packet_time = datetime.fromtimestamp(float(packet.time)).strftime("%H:%M:%S")
-
-                    newnetworkactivity.activity = f"{packet_time} | HTTP Request: {host}{path}"
-                    newnetworkactivity.mac_of_device = packet["Ethernet"].src if packet.haslayer("Ethernet") else "N/A"
-            
-                    self.list_of_activity.append(newnetworkactivity)
-
-                elif packet.haslayer(DNS) and packet[DNS].qr == 0:  # check for DNS queries
-                    domain = packet[DNS].qd.qname.decode() if packet[DNS].qd.qname else "Unknown"
-
-                    
-                    newnetworkactivity = NetworkActivity()
-                    
-                    packet_time = datetime.fromtimestamp(float(packet.time)).strftime("%H:%M:%S")
-
-                    newnetworkactivity.activity = f"{packet_time} | DNS Query: {domain}"
-                    newnetworkactivity.mac_of_device = packet["Ethernet"].src if packet.haslayer("Ethernet") else "N/A"
-                    
-                    
-                    self.list_of_activity.append(newnetworkactivity)
-                
-
-        except Exception as e:
-            print(f"Error updating network summary: {e}")
     
     def packet_statistics(self):
         try:
