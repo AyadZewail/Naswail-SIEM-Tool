@@ -26,6 +26,7 @@ class BasicPacketFilter(IPacketFilter):
         stime = criteria.get("start_time", 946677600)
         etime = criteria.get("end_time", 946677600)
         direction = criteria.get("direction", "Any")
+        mac_filter = criteria.get("mac_addresses", [])
 
         for packet in packets:
             try:
@@ -38,6 +39,7 @@ class BasicPacketFilter(IPacketFilter):
                 has_icmp = packet.haslayer(ICMP)
                 timestamp = float(packet.time)
                 proto = self.protocol_extractor.extract_protocol(packet)
+                macsrc = packet["Ethernet"].src if packet.haslayer("Ethernet") else "N/A"
                 layer = (
                     "udp" if has_udp else
                     "tcp" if has_tcp else
@@ -66,6 +68,8 @@ class BasicPacketFilter(IPacketFilter):
                 src_match = src_filter in src_ip if src_filter else True
                 dst_match = dst_filter in dst_ip if dst_filter else True
 
+                mac_match = macsrc in mac_filter if mac_filter else True
+
                 # Inside/Outside match
                 src_local = self.is_local_ip(src_ip)
                 dst_local = self.is_local_ip(dst_ip)
@@ -86,7 +90,7 @@ class BasicPacketFilter(IPacketFilter):
                         port_match = False
 
                 # Final decision
-                if all([protocol_match, src_match, dst_match, ip_match, port_match, time_match]):
+                if all([protocol_match, src_match, dst_match, ip_match, port_match, time_match, mac_match]):
                     filtered_packets.append(packet)
 
             except Exception as e:

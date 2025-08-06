@@ -175,4 +175,34 @@ class INetworkActivityAnalyzer(ABC):
         Returns:
             List of NetworkActivity objects or activity strings.
         """
-        pass        
+        pass
+
+class ISensorSystem(ABC):
+    @abstractmethod
+    def add_sensor(self, name: str, mac_address: str) -> None:
+        pass
+
+    @abstractmethod
+    def remove_sensor(self, name: str) -> None:
+        pass
+
+    @abstractmethod
+    def list_sensors(self) -> dict:
+        pass
+
+    @abstractmethod
+    def reset(self) -> None:
+        pass
+
+    @abstractmethod
+    def is_sensor_packet(self, packet: Packet) -> bool:
+        pass
+
+    @abstractmethod
+    def get_sensor_name(self, mac_address: str) -> str:
+        pass
+
+    @abstractmethod
+    def get_sensor_mac(self, name: str) -> str:
+        pass
+
