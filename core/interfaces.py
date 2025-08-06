@@ -206,3 +206,11 @@ class ISensorSystem(ABC):
     def get_sensor_mac(self, name: str) -> str:
         pass
 
+class IApplicationSystem(ABC):
+    @abstractmethod
+    def get_active_applications(self) -> list[dict]:
+        """
+        Returns a list of dictionaries representing applications
+        with their ports, IPs, CPU usage, and memory.
+        """
+        pass

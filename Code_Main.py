@@ -44,6 +44,7 @@ from plugins.home.PacketFabricator import BasicPacketFabricator
 from plugins.home.AnomalyDetector import SnortAnomalyDetector
 from plugins.home.PacketFilter import BasicPacketFilter
 from plugins.home.SensorSystem import BasicSensorSystem
+from plugins.home.ApplicationSystem import BasicApplicationSystem
 
 #sudo /home/hamada/Downloads/Naswail-SIEM-Tool-main/.venv/bin/python /home/hamada/Downloads/Naswail-SIEM-Tool-main/Code_Main.py
 
@@ -170,46 +171,14 @@ class ApplicationsSystem:
         self.ui = ui_main_window
         self.apps = dict()
         self.packet_obj = None  
+        self.applicationSystem = BasicApplicationSystem()
+    
     def set_packet_system(self, packet_obj):
-        #the purpose of this function is to set the packet system object later on due to circular import
         self.packet_obj = packet_obj
+    
     def get_applications_with_ports(self):
         try:
-            apps_with_ports = []
-
-            for proc in psutil.process_iter(attrs=['pid', 'name', 'status', 'cpu_percent', 'memory_percent']):
-                try:
-                    pid = proc.info['pid']
-                    app_name = proc.info['name']
-                    app_status = proc.info['status']
-                    app_cpu = proc.info['cpu_percent']
-                    app_mem = proc.memory_percent()
-                    connections = psutil.Process(pid).net_connections(kind='inet')
-                    connection_details = []
-
-                    for conn in connections:
-                        if conn.laddr:  # Check if there is a valid local address
-                            local_ip, local_port = conn.laddr
-                            connection_details.append({
-                                "IP": local_ip,
-                                "Port": local_port
-                            })
-
-                    entry = {
-                        "Application": app_name,
-                        "IP": local_ip,
-                        "Port": local_port,
-                        "Status": app_status,
-                        "CPU": app_cpu,
-                        "Memory": app_mem,
-                    }
-
-                    if not any(existing_entry["Application"] == entry["Application"] and existing_entry["IP"] == "0.0.0.0" for existing_entry in apps_with_ports):
-                        apps_with_ports.append(entry)
-                except (psutil.AccessDenied, psutil.NoSuchProcess):
-                    continue
-
-            self.apps = apps_with_ports
+            self.apps = self.applicationSystem.get_active_applications()
             self.ui.tableWidget_3.setRowCount(0)
             for app in self.apps:
                 row_position = self.ui.tableWidget_3.rowCount()
@@ -221,6 +190,7 @@ class ApplicationsSystem:
                 self.ui.tableWidget_3.setItem(row_position, 4, QTableWidgetItem(str(app["Memory"])))
         except Exception as e:
             print(f"Error in get_applications_with_ports function: {e}")
+    
     def analyze_app(self, row):
         try:
             #this function filters by the clicked application
