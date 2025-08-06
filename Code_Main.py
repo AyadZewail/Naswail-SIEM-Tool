@@ -40,6 +40,8 @@ from plugins.home.ProtocolExtractor import BasicProtocolExtractor
 from plugins.home.ErrorChecker import BasicErrorChecker
 from plugins.home.PacketStatistics import BasicPacketStatistics
 from plugins.home.PacketsExporter import BasicPacketExporter
+from plugins.home.PacketFabricator import BasicPacketFabricator
+from plugins.home.AnomalyDetector import SnortAnomalyDetector
 
 #sudo /home/hamada/Downloads/Naswail-SIEM-Tool-main/.venv/bin/python /home/hamada/Downloads/Naswail-SIEM-Tool-main/Code_Main.py
 
@@ -588,16 +590,11 @@ class PacketSystem:
             logger = self.networkLog
         )
         self.packetStatistics = BasicPacketStatistics()
+        self.anomalyDetector = SnortAnomalyDetector(
+            rules_file="C:\\Snort\\rules\\custom.rules",
+            log_file="C:\\Snort\\log\\alert.ids"
+        )
 
-
-        if system == "windows":
-            self.snort_rules = self.load_snort_rule_names("C:\\Snort\\rules\\custom.rules")
-            self.log_thread = threading.Thread(target=self.monitor_snort_logs, args=("C:\\Snort\\log\\alert.ids",), daemon=True)
-        elif system == "linux":
-            self.snort_rules = self.load_snort_rule_names("/etc/snort/rules/custom.rules")
-            self.log_thread = threading.Thread(target=self.monitor_snort_logs, args=("/var/log/snort/alert",), daemon=True)
-            self.log_thread = threading.Thread(target=self.monitor_snort_logs, args=("/var/log/snort/alert",), daemon=True)
-        self.log_thread.start()
         self.list_of_activity=[]
         
     def get_row_color(self, packet):
@@ -1106,36 +1103,35 @@ class PacketSystem:
                         # if not self.alert_timer_started:
                         #     self.alert_timer_started = True
                         #     threading.Timer(15.0, lambda: self.snort_alerts[(packet_info['src_ip'], packet_info['dst_ip'])].append("Port Scanning")).start()
-                        if (packet_info['src_ip'], packet_info['dst_ip']) in self.snort_alerts:
+                        attack_label = self.anomalyDetector.check_packet(packet)
+                        if attack_label:
                             self.anomalies.append(packet)
-                            attack_label = self.snort_alerts[(packet_info['src_ip'], packet_info['dst_ip'])][0]
                             anomaly_signature = (packet_info['src_ip'], packet_info['dst_ip'], attack_label)
                             
                             if anomaly_signature not in self.unique_anomalies:
                                 self.unique_anomalies.add(anomaly_signature)
                                 current_time = datetime.now().strftime("%H:%M:%S")
                                 self.networkLog.append(f"{current_time} - An anomaly occurred")
-                                
+
                                 # Add to anomaly table
                                 row_position = self.ui.tableWidget_4.rowCount()
                                 self.ui.tableWidget_4.insertRow(row_position)
-                                
-                                # Create items with background color
+
                                 row_color = self.get_row_color(packet)
                                 qcolor = self.get_qcolor(row_color)
-                                
+
                                 items = [
                                     QTableWidgetItem(datetime.fromtimestamp(packet_info['timestamp']).strftime("%I:%M:%S %p")),
                                     QTableWidgetItem(packet_info['src_ip']),
                                     QTableWidgetItem(packet_info['dst_ip']),
                                     QTableWidgetItem(str(attack_label))
                                 ]
-                                
+
                                 for item in items:
                                     item.setBackground(qcolor)
-                                
                                 for col, item in enumerate(items):
                                     self.ui.tableWidget_4.setItem(row_position, col, item)
+
                         
                         # Add to main table
                         row_position = self.ui.tableWidget.rowCount()
@@ -1218,48 +1214,18 @@ class PacketSystem:
     
             return False  # handle invalid IP addresses
     def design_and_send_packet(self):
-        try:
-            
-            dst_ip = self.ui.lineEdit_ip_dst.text()
-            src_ip = self.ui.lineEdit_ip_source.text()
-            protocol = self.ui.comboBox_protocol.currentText()
+        src_ip = self.ui.lineEdit_ip_source.text()
+        dst_ip = self.ui.lineEdit_ip_dst.text()
+        protocol = self.ui.comboBox_protocol.currentText()
 
-            
-            if not dst_ip or not src_ip:
-                print("Source and destination IPs must be specified.")
-                return
-            
-            
-            ip_layer = IP(src=src_ip, dst=dst_ip)
-            
-           
-            if protocol == "TCP":
-                transport_layer = TCP(dport=80)  # Example: HTTP port
-                packet = ip_layer / transport_layer / "Hello TCP"
-            elif protocol == "UDP":
-                transport_layer = UDP(dport=53)  # Example: DNS port
-                packet = ip_layer / transport_layer / "Hello UDP"
-            elif protocol == "ICMP":
-                packet = ip_layer / ICMP() / "Hello ICMP"
-            elif protocol == "FTP":
-                transport_layer = TCP(dport=21)  # FTP uses port 21
-                packet = ip_layer / transport_layer / "FTP Packet"
-            elif protocol == "HTTP":
-                transport_layer = TCP(dport=80)  # HTTP uses port 80
-                packet = ip_layer / transport_layer / "HTTP Packet"
-            elif protocol == "HTTPS":
-                transport_layer = TCP(dport=443)  # HTTPS uses port 443
-                packet = ip_layer / transport_layer / "HTTPS Packet"
-            
-            elif protocol == "DNS":
-                packet = ip_layer / UDP(dport=53) / DNS(rd=1, qd="example.com")  
-            else:
-                print("Unsupported protocol selected.")
-                return
-            # Send the packet
-            send(packet, verbose=False)
-        except Exception as e:
-            print(f"Error sending packet: {e}")
+        fabricator = BasicPacketFabricator()
+        success = fabricator.fabricate_and_send(src_ip, dst_ip, protocol)
+
+        if success:
+            print("Packet sent successfully.")
+        else:
+            print("Failed to send packet.")
+
     def apply_filter(self):
         try:
             protocol_filters = {
@@ -1462,76 +1428,75 @@ class PacketSystem:
             print(f"[handle_decode_click] Failed to decode packet: {e}")
     
     def helperboi(self):#for rebuilding the packets
-                try:
-                    
-                    x = self.packets
-                    for packet in x:
-                        src_ip = packet["IP"].src if packet.haslayer("IP") else "N/A"
-                        dst_ip = packet["IP"].dst if packet.haslayer("IP") else "N/A"
-                        protocol = self.protocolExtractor.extract_protocol(packet)
-                        
-                        layer = (
-    "udp" if packet.haslayer("UDP") 
-    else "tcp" if packet.haslayer("TCP") 
-    else "icmp" if packet.haslayer("ICMP") 
-    else "N/A"
-)
-                        
-                        packet_time = datetime.fromtimestamp(float(packet.time))
-                        readable_time = packet_time.strftime("%I:%M:%S %p")
-                        macsrc = packet["Ethernet"].src if packet.haslayer("Ethernet") else "N/A"
-                        macdst = packet["Ethernet"].dst if packet.haslayer("Ethernet") else "N/A"
-                        
-                        packet_length = int(len(packet))
+        try: 
+            x = self.packets
+            for packet in x:
+                src_ip = packet["IP"].src if packet.haslayer("IP") else "N/A"
+                dst_ip = packet["IP"].dst if packet.haslayer("IP") else "N/A"
+                protocol = self.protocolExtractor.extract_protocol(packet)
+                
+                layer = (
+                    "udp" if packet.haslayer("UDP") 
+                    else "tcp" if packet.haslayer("TCP") 
+                    else "icmp" if packet.haslayer("ICMP") 
+                    else "N/A"
+                )
+                
+                packet_time = datetime.fromtimestamp(float(packet.time))
+                readable_time = packet_time.strftime("%I:%M:%S %p")
+                macsrc = packet["Ethernet"].src if packet.haslayer("Ethernet") else "N/A"
+                macdst = packet["Ethernet"].dst if packet.haslayer("Ethernet") else "N/A"
+                
+                packet_length = int(len(packet))
 
-                    
-                        ip_version = "IPv6" if packet.haslayer("IPv6") else "IPv4" if packet.haslayer("IP") else "N/A"
-                        layer = "udp" if packet.haslayer("UDP") else "tcp" if packet.haslayer("TCP") else "Other"
-                       
-                        sport = None
-                        dport = None
-                        if packet.haslayer("TCP"):
-                            sport = packet["TCP"].sport
-                            dport = packet["TCP"].dport
-                        elif packet.haslayer("UDP"):
-                            sport = packet["UDP"].sport
-                            dport = packet["UDP"].dport
-                        
-                        row_position = self.ui.tableWidget.rowCount()
-                        self.ui.tableWidget.insertRow(row_position)
-                        
-                        # Get row color
-                        row_color = self.get_row_color(packet)
-                        qcolor = self.get_qcolor(row_color)
-                        
-                        # Create items with color
-                        items = [
-                            QTableWidgetItem(readable_time),
-                            QTableWidgetItem(src_ip),
-                            QTableWidgetItem(dst_ip),
-                            QTableWidgetItem(protocol),
-                            QTableWidgetItem(layer),
-                            QTableWidgetItem(macsrc),
-                            QTableWidgetItem(macdst),
-                            QTableWidgetItem(str(sport) if sport else "N/A"),
-                            QTableWidgetItem(str(dport) if dport else "N/A"),
-                            QTableWidgetItem(str(packet_length)),
-                            QTableWidgetItem(ip_version)
-                        ]
-                        
-                        # Apply color to items
-                        if row_color != "transparent":
-                            for item in items:
-                                item.setBackground(qcolor)
-                                # For dark backgrounds, use white text for better contrast
-                                if "100, 100" in row_color or "100, 170" in row_color:
-                                    item.setForeground(QColor(255, 255, 255))
-                        
-                        # Add items to table
-                        for col, item in enumerate(items):
-                            self.ui.tableWidget.setItem(row_position, col, item)
-                except:
-                    print("fr")
+            
+                ip_version = "IPv6" if packet.haslayer("IPv6") else "IPv4" if packet.haslayer("IP") else "N/A"
+                layer = "udp" if packet.haslayer("UDP") else "tcp" if packet.haslayer("TCP") else "Other"
+                
+                sport = None
+                dport = None
+                if packet.haslayer("TCP"):
+                    sport = packet["TCP"].sport
+                    dport = packet["TCP"].dport
+                elif packet.haslayer("UDP"):
+                    sport = packet["UDP"].sport
+                    dport = packet["UDP"].dport
+                
+                row_position = self.ui.tableWidget.rowCount()
+                self.ui.tableWidget.insertRow(row_position)
+                
+                # Get row color
+                row_color = self.get_row_color(packet)
+                qcolor = self.get_qcolor(row_color)
+                
+                # Create items with color
+                items = [
+                    QTableWidgetItem(readable_time),
+                    QTableWidgetItem(src_ip),
+                    QTableWidgetItem(dst_ip),
+                    QTableWidgetItem(protocol),
+                    QTableWidgetItem(layer),
+                    QTableWidgetItem(macsrc),
+                    QTableWidgetItem(macdst),
+                    QTableWidgetItem(str(sport) if sport else "N/A"),
+                    QTableWidgetItem(str(dport) if dport else "N/A"),
+                    QTableWidgetItem(str(packet_length)),
+                    QTableWidgetItem(ip_version)
+                ]
+                
+                # Apply color to items
+                if row_color != "transparent":
+                    for item in items:
+                        item.setBackground(qcolor)
+                        # For dark backgrounds, use white text for better contrast
+                        if "100, 100" in row_color or "100, 170" in row_color:
+                            item.setForeground(QColor(255, 255, 255))
+                
+                # Add items to table
+                for col, item in enumerate(items):
+                    self.ui.tableWidget.setItem(row_position, col, item)
+        except:
+            print("fr")
     
         
 class Naswail(QMainWindow, Ui_MainWindow):
@@ -1561,8 +1526,6 @@ class Naswail(QMainWindow, Ui_MainWindow):
         # Fix the navigation bar buttons - ensure they're above any other elements
         self.fix_navigation_bar()
 
-        
-        
         #objects
         self.secondary_widget3=None
         self.PacketSystemobj = PacketSystem(self)
@@ -1659,7 +1622,8 @@ class Naswail(QMainWindow, Ui_MainWindow):
         try:
             packets = self.PacketSystemobj.captured_packets
             path = "data/captured_packets.pcap"
-            success = BasicPacketExporter().export(packets, path)
+            packetExporter = BasicPacketExporter()
+            success = packetExporter.export(packets, path)
             if success:
                 print("Packets exported successfully.")
             else:

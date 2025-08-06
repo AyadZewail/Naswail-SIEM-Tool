@@ -119,3 +119,31 @@ class IPacketExporter(ABC):
             True if successful, False otherwise
         """
         pass
+
+class IPacketFabricator(ABC):
+    @abstractmethod
+    def fabricate_and_send(self, src_ip: str, dst_ip: str, protocol: str, payload: Optional[str] = None) -> bool:
+        """
+        Crafts and sends a packet with the specified parameters.
+
+        Args:
+            src_ip (str): Source IP address
+            dst_ip (str): Destination IP address
+            protocol (str): Application-layer protocol (e.g., 'TCP', 'UDP', 'ICMP', etc.)
+            payload (str): Optional payload or message to include
+
+        Returns:
+            bool: True if sent successfully, False otherwise
+        """
+        pass
+
+class IAnomalyDetector(ABC):
+    @abstractmethod
+    def check_packet(self, packet: Any) -> Optional[Dict[str, Any]]:
+        """
+        Determines whether a packet is anomalous based on internal detection logic.
+
+        Returns:
+            A dictionary describing the anomaly if detected, otherwise None.
+        """
+        pass
