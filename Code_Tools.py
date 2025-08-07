@@ -14,6 +14,7 @@ from datetime import datetime, timedelta
 from UI_Tools import Ui_Naswail_Tool
 import time
 from plugins.home.NetworkActivityAnalyzer import NetworkActivityAnalyzer
+from plugins.tools.TrafficPredictor import BasicRegressionPredictor
 
 class NetworkActivity:
     def __init__(self,ui):
@@ -60,57 +61,39 @@ class RegressionPrediction(threading.Thread):
         self.packets = packets
         self.time_series = time_series
         self.model = LinearRegression()
-        self.prediction_running = False  # Flag to prevent concurrent predictions
-        self.last_update_time = 0  # Track last update time
+        self.prediction_running = False
+        self.last_update_time = 0
+        self.trafficPredictor = BasicRegressionPredictor()
+        self.metrics = {}
+        self.intervals = [1, 3, 6, 12, 24] 
         self.start()  
         
     def pred_traffic(self):
-        #Train Regression Model
         try:
-            # Prevent concurrent predictions
             if self.prediction_running:
                 return
-                
-            self.prediction_running = True
-            
-            if(len(self.packets) > 10):
-                # Convert time series to numpy arrays directly
-                X = np.array([timestamp - list(self.time_series.keys())[0] for timestamp in self.time_series.keys()]).reshape(-1, 1)
-                y = np.array(list(self.time_series.values()))
-                
-                # Use smaller test size for better performance with small datasets
-                test_size = min(0.2, 10/len(self.packets))
-                X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size, random_state=42)
-                
-                self.model.fit(X_train, y_train)
 
-                currentTime = datetime.now()
-                # Pre-allocate arrays for better performance
-                Intervals = [0, 1, 3, 6, 12, 24]
-                TimeLater = np.zeros(6)
-                
-                for i in range(6):
-                    if i != 0:
-                        TimeLater[i] = currentTime.second + 3600 * Intervals[i]
-                    else:
-                        TimeLater[i] = (currentTime.second + 3600 * self.noHours) if self.noHours is not None else 0
-                
-                # Reshape once
-                TimeLater = TimeLater.reshape(-1, 1)
-                
-                # Make predictions
-                self.futureTraffic = self.model.predict(TimeLater)
-                self.futureTraffic = np.maximum(0, self.futureTraffic - len(self.packets))
-                
-                # Calculate R² score only if we have test data
-                if len(X_test) > 0:
-                    y_pred = self.model.predict(X_test)
-                    self.r2 = r2_score(y_test, y_pred)
-            
+            self.prediction_running = True
+
+            # Only attempt training/prediction if data is sufficient
+            if len(self.time_series) > 10:
+                # Train the model
+                self.trafficPredictor.train(packets=self.packets, time_series=self.time_series)
+
+                # Predict using the trained model
+                hours = self.noHours if self.noHours is not None else 1
+                current_packet_count = len(self.packets)
+                self.futureTraffic = self.trafficPredictor.predict(hours_ahead=hours, current_packet_count=current_packet_count, intervals=self.intervals)
+
+                # Store all available metrics
+                self.metrics = self.trafficPredictor.get_metrics()
+
             self.prediction_running = False
         except Exception as e:
             self.prediction_running = False
-            print(f"Error in prediction: {e}")
+            print(f"[Prediction Error]: {e}")
+
+
 
     def setHours(self):
         try:
@@ -180,7 +163,7 @@ class RegressionPrediction(threading.Thread):
             ax1.plot(pred_times, pred_values, marker='o', color='#40E0D0', linewidth=2, label='Prediction')
             
             # Add confidence region (simplified for performance)
-            confidence = 0.1 * np.array(pred_values) * (1 + (1-max(0.1, self.r2))*2)
+            confidence = 0.1 * np.array(pred_values) * (1 + (1-max(0.1, self.metrics.get('r2', 0.0)))*2)
             ax1.fill_between(pred_times, pred_values - confidence, pred_values + confidence, 
                            color='#40E0D0', alpha=0.2)
             
@@ -219,7 +202,7 @@ class RegressionPrediction(threading.Thread):
             ax2.axhline(y=0, color='white', linestyle='-', alpha=0.3)
             
             # Add R² score without using figure.text for better performance
-            ax2.annotate(f"R²: {self.r2:.2f}", xy=(0.02, 0.02), xycoords='axes fraction', fontsize=8)
+            ax2.annotate(f"R²: {self.metrics.get('r2', 0.0):.2f}", xy=(0.02, 0.02), xycoords='axes fraction', fontsize=8)
             
             figure.tight_layout()
             canvas.draw()
@@ -258,7 +241,7 @@ class SuspiciousAnalysis:
                 for packet in self.anomalies:
                     src_ip = packet["IP"].src if packet.haslayer("IP") else "N/A"
                     dst_ip = packet["IP"].dst if packet.haslayer("IP") else "N/A"
-                    protocol = self.packetobj.get_protocol(packet)
+                    protocol = self.packetobj.protocolExtractor.extract_protocol(packet)
                     macsrc = packet["Ethernet"].src if packet.haslayer("Ethernet") else "N/A"
                     macdst = packet["Ethernet"].dst if packet.haslayer("Ethernet") else "N/A"
                     # Extract packet length
@@ -389,7 +372,7 @@ class SuspiciousAnalysis:
             for packet in x:
                 src_ip = packet["IP"].src if packet.haslayer("IP") else "N/A"
                 dst_ip = packet["IP"].dst if packet.haslayer("IP") else "N/A"
-                protocol = self.packetobj.get_protocol(packet)
+                protocol = self.packetobj.protocolExtractor.extract_protocol(packet)
 
                 
                 src_is_local = self.packetobj.is_local_ip(src_ip)
@@ -523,7 +506,7 @@ class ErrorPacketSystem:
                                 sport = None
                                 dport = None
                             
-                            protocol = self.packetobj.get_protocol(packet)
+                            protocol = self.packetobj.protocolExtractor.extract_protocol(packet)
                             packet_length = len(packet)
                             ip_version = "IPv6" if packet.haslayer("IPv6") else "IPv4" if has_ip else "N/A"
                             
@@ -608,7 +591,7 @@ class Window_Tools(QWidget, Ui_Naswail_Tool):
         # Set up a second, slower timer for heavy operations
         self.heavy_timer = QTimer(self)
         self.heavy_timer.timeout.connect(self.heavy_update)
-        self.heavy_timer.start(15000)  # Run heavy operations every 15 seconds
+        self.heavy_timer.start(6000)  # Run heavy operations every 15 seconds
         
         # Add cleanup when window is closed
         self.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose, True)
@@ -631,7 +614,7 @@ class Window_Tools(QWidget, Ui_Naswail_Tool):
             # Run prediction if not already running
             if not self.RegPred.prediction_running:
                 self.RegPred.pred_traffic()
-                if self.RegPred.r2 > 0.50:
+                if self.RegPred.metrics.get("r2", 0.0) > 0.50:
                     self.RegPred.display()
                     self.RegPred.display_advanced_graph()
         except Exception as e:

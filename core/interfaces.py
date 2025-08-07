@@ -214,3 +214,30 @@ class IApplicationSystem(ABC):
         with their ports, IPs, CPU usage, and memory.
         """
         pass
+
+
+class ITrafficPredictor(ABC):
+    @abstractmethod
+    def train(self, packets: list, time_series: dict) -> None:
+        """
+        Optional: Train the prediction model on traffic data.
+        `packets`: raw packets list
+        `time_series`: dict of {timestamp: packet_count}
+        """
+        pass
+
+    @abstractmethod
+    def predict(self) -> list:
+        """
+        Return a list of predicted traffic values.
+        Format and meaning of these values depend on the model implementation.
+        """
+        pass
+
+    @abstractmethod
+    def get_metrics(self) -> dict:
+        """
+        Return a dictionary of evaluation metrics. 
+        E.g., {"r2": 0.87, "mae": 10.2}
+        """
+        pass

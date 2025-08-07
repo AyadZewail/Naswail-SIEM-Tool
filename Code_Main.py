@@ -1117,7 +1117,7 @@ class PacketSystem:
 
             # Nothing selected? fallback
             if not any(protocol_filters.values()) and not src_filter and not dst_filter and not port_filter and stime == 946677600 and etime == 946677600:
-                self.helperboi()
+                self.rebuild_packets()
                 self.filterapplied = False
                 return
 
@@ -1234,7 +1234,7 @@ class PacketSystem:
         except Exception as e:
             print(f"[handle_decode_click] Failed to decode packet: {e}")
     
-    def helperboi(self):#for rebuilding the packets
+    def rebuild_packets(self):#for rebuilding the packets
         try: 
             x = self.packets
             for packet in x:
