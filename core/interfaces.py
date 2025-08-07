@@ -256,3 +256,28 @@ class IThreatIntelAggregator(ABC):
             Dict: Final aggregated and preprocessed threat intelligence.
         """
         pass
+
+class INetworkAdministration(ABC):
+    @abstractmethod
+    def block_ip(self, ip: str) -> None: pass
+
+    @abstractmethod
+    def unblock_ip(self, ip: str) -> None: pass
+
+    @abstractmethod
+    def block_port(self, port: str) -> None: pass
+
+    @abstractmethod
+    def unblock_port(self, port: str) -> None: pass
+
+    @abstractmethod
+    def limit_rate(self, ip: str, rate: int) -> None: pass
+
+    @abstractmethod
+    def reset_rate_limit(self, ip: str) -> None: pass
+
+    @abstractmethod
+    def terminate_processes(self, identifier: str) -> None: pass
+
+    @abstractmethod
+    def broadcast_termination(self, pid: str) -> None: pass

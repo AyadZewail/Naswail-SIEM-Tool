@@ -45,6 +45,12 @@ from UI_IncidentResponse import Ui_IncidentResponse
 from plugins.incident_response.ThreatIntelligence import ThreatIntelligence
 from plugins.incident_response.scrapers.BingSearcher import BingSearcher
 from plugins.incident_response.IntelPreprocessor import SimpleIntelPreprocessor
+if platform.system() == "Linux":
+    from plugins.incident_response.network_engines.LinuxNetworkAdmin import LinuxNetworkAdmin as AdminImpl
+elif platform.system() == "Windows":
+    from plugins.incident_response.network_engines.WindowsNetworkAdmin import WindowsNetworkAdmin as AdminImpl
+else:
+    raise NotImplementedError("Unsupported OS")
 
 #!/usr/bin/env python
 # snort -i 5 -c C:\Snort\etc\snort.conf -l C:\Snort\log -A fast
@@ -402,154 +408,114 @@ class LogWindow(QMainWindow):
     def log_details(self, description):
         self.child.appendRow(QStandardItem(description))
 
-class ThreatMitigationEngine():
+class ThreatMitigationEngine:
     def __init__(self, ui, blacklist, blocked_ports, packetsysobj):
         self.ui = ui
         self.blacklist = blacklist
         self.blocked_ports = blocked_ports
         self.packetsysobj = packetsysobj
         self.networkLog = packetsysobj.networkLog
-        #self.terminate_processes("firefox.exe")#add the process id which can be found in the task manager
+        self.admin = AdminImpl()
+
         threading.Thread(target=self.terminate_processes, args=("8592",), daemon=True).start()
-        self.listener_thread = threading.Thread(target=self.listen_for_termination, daemon=True)
-        self.listener_thread.start()
-    
+        threading.Thread(target=self.listen_for_termination, daemon=True).start()
+
+    def block_ip(self, ip):
+        self.admin.block_ip(ip)
+
+    def unblock_ip(self, ip):
+        self.admin.unblock_ip(ip)
+
+    def block_port(self, port):
+        self.admin.block_port(port)
+
+    def unblock_port(self, port):
+        self.admin.unblock_port(port)
 
     def limit_rate(self, ip, rate):
+        self.admin.limit_rate(ip, rate)
+
+    def reset_rate_limit(self, ip):
+        self.admin.reset_rate_limit(ip)
+
+    def updateBlacklist(self, f):
         try:
-            system = platform.system()
-            if system == "Linux":
-                rate_str = f"{rate}/sec"
-                # Use FORWARD chain to control traffic passing through the router
-                subprocess.run([
-                    "sudo", "iptables", "-A", "FORWARD", "-s", ip,
-                    "-m", "hashlimit",
-                    "--hashlimit-name", f"rate_{ip}",
-                    "--hashlimit-above", rate_str,
-                    "--hashlimit-mode", "srcip",
-                    "-j", "DROP"
-                ], check=True)
-                print(f"Rate limit set for {ip} on FORWARD chain.")   
-            elif system == "Windows":
-                print("Setting rate limit for Windows...")
-                rate = int(rate)
-                rate=rate*1000
-                if rate < 8000:
-                    # Minimum rate must be 8Kbps
-                    rate = 8000
-
-                ps_script = f'''
-                    $ErrorActionPreference = "Stop"
-                    Try {{
-                        Remove-NetQosPolicy -Name "Throttle_{ip}" -Confirm:$false -ErrorAction SilentlyContinue
-                        New-NetQosPolicy -Name "Throttle_{ip}" `
-                            -IPSrcPrefixMatchCondition "{ip}/32" `
-                            -ThrottleRateActionBitsPerSecond {rate} `
-                            -NetworkProfile All
-                            
-                        Get-NetQosPolicy -Name "Throttle_{ip}"
-                    }} Catch {{
-                        Write-Error $_.Exception.Message
-                        exit 1
-                    }}
-                    '''
-
-                result = subprocess.run(
-                    ["powershell", "-Command", ps_script],
-                    check=True,
-                    capture_output=True,
-                    text=True
-                )
-                print(result.stdout)
+            ip = self.ui.lineEdit.text().strip()
+            if f == 1:
+                self.blacklist.append(ip)
+                self.block_ip(ip)
+                self.packetsysobj.networkLog += "Blocked IP: " + ip + "\n"
             else:
-                print("Unsupported OS")
-        except subprocess.CalledProcessError as e:
-            print(f"PowerShell Error ({e.returncode}):")
-            print(e.stderr if e.stderr else "No error details")
+                self.blacklist.remove(ip)
+                self.unblock_ip(ip)
+                self.packetsysobj.networkLog += "Unblocked IP: " + ip + "\n"
+            model = QStringListModel()
+            model.setStringList(self.blacklist)
+            self.ui.listView.setModel(model)
         except Exception as e:
-            print(f"General error: {str(e)}")
+            print(f"Error updating blacklist: {e}")
 
-    def reset_rate_limit(self,ip):
+    def updateBlockedPorts(self, f):
         try:
-            system = platform.system()
-            if system == "Linux":
-                # Remove iptables rules added with hashlimit
-                # Example original rule: iptables -A INPUT -s {ip} -m hashlimit ... -j ACCEPT
-                # To delete, match the exact rule (use --hashlimit-name to simplify cleanup)
-                subprocess.run(
-                    ["sudo", "iptables", "-D", "INPUT", "-s", ip, "-m", "hashlimit", 
-                    "--hashlimit-name", "rate_limit", "-j", "ACCEPT"],
-                    check=True
-                )
-                # Drop rule (if added)
-                subprocess.run(
-                    ["sudo", "iptables", "-D", "INPUT", "-s", ip, "-j", "DROP"],
-                    check=False  # Allow failure if the rule doesn't exist
-                )
-            elif system == "Windows":
-                # Remove QoS policy (if it exists)
-                ps_script = f'''
-                $policy = Get-NetQosPolicy -Name "Throttle_{ip}" -ErrorAction SilentlyContinue
-                if ($policy) {{ Remove-NetQosPolicy -Name "Throttle_{ip}" -Confirm:$false }}
-                '''
-                subprocess.run(["powershell", "-Command", ps_script], check=True)
+            port = self.ui.lineEdit_2.text().strip()
+            if f == 1:
+                if port not in self.blocked_ports:
+                    self.blocked_ports.append(port)
+                    self.block_port(port)
+                    self.packetsysobj.networkLog += "Blocked Port: " + port + "\n"
+                    row_position = self.ui.tableWidget_2.rowCount()
+                    self.ui.tableWidget_2.insertRow(row_position)
+                    self.ui.tableWidget_2.setItem(row_position, 0, QTableWidgetItem(str(port)))
+                    self.ui.tableWidget_2.setItem(row_position, 1, QTableWidgetItem("Blocked"))
             else:
-                print("Unsupported OS")
-        except subprocess.CalledProcessError as e:
-            print(f"Failed to reset rules for {ip}. The rule may not exist.")
+                if port in self.blocked_ports:
+                    self.blocked_ports.remove(port)
+                    self.unblock_port(port)
+                    self.packetsysobj.networkLog += "Unblocked Port: " + port + "\n"
+                    self.remove_port_from_table(port)
         except Exception as e:
-            print(f"Unexpected error: {e}")
-            print(traceback.format_exc())
+            print(f"Error updating port blocked: {e}")
 
-    # Example: Limit 192.168.1.100 to 1Mbps
-  
+    def remove_port_from_table(self, port):
+        for row in range(self.ui.tableWidget_2.rowCount()):
+            if self.ui.tableWidget_2.item(row, 0) and self.ui.tableWidget_2.item(row, 0).text() == str(port):
+                self.ui.tableWidget_2.removeRow(row)
+                break
+
     def terminate_processes(self, identifier):
         try:
             system = platform.system()
             target_pid = None
-
-            # Determine if identifier is PID or name
             try:
                 target_pid = int(identifier)
                 identifier_type = "pid"
             except ValueError:
                 identifier_type = "name"
                 if system == "Linux":
-                    identifier = identifier.replace('.exe', '')  # Strip .exe for Linux
-
+                    identifier = identifier.replace('.exe', '')
             for proc in psutil.process_iter(['pid', 'name']):
                 try:
                     match = False
-                    # Cross-platform name comparison
                     proc_name = proc.info['name'].lower()
                     if system == "Linux":
                         proc_name = proc_name.replace('.exe', '')
-                        
-                    if identifier_type == "pid":
-                        if proc.info['pid'] == target_pid:
-                            match = True
-                    else:
-                        if proc_name == identifier.lower():
-                            match = True
-
+                    if identifier_type == "pid" and proc.info['pid'] == target_pid:
+                        match = True
+                    elif identifier_type == "name" and proc_name == identifier.lower():
+                        match = True
                     if match:
                         print(f"Terminating {proc.info['name']} (PID: {proc.info['pid']})...")
                         proc.terminate()
-                        
-                        # Wait and force kill if needed
                         try:
                             proc.wait(timeout=2)
                         except (psutil.TimeoutExpired, psutil.NoSuchProcess):
                             if system == "Linux":
                                 os.kill(proc.info['pid'], 9)
-                            elif system == "Windows":
+                            else:
                                 subprocess.run(f"taskkill /F /PID {proc.info['pid']}", shell=True)
-                        
                         self.broadcast_termination(proc.info['pid'])
-
                 except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
                     continue
-
         except Exception as e:
             print(f"Termination error: {str(e)}")
 
@@ -558,27 +524,21 @@ class ThreatMitigationEngine():
             udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             udp_socket.bind(("0.0.0.0", 5005))
             udp_socket.settimeout(1)
-
             while True:
                 try:
                     data, addr = udp_socket.recvfrom(1024)
                     if b'terminate process' in data:
-                        # Extract either PID or process name
                         payload = data.decode().strip()
                         identifier = payload.split()[-1]
-                        
-                        # Create temporary process killer
                         temp_killer = psutil.Process()
                         try:
                             if identifier.isdigit():
                                 temp_killer = psutil.Process(int(identifier))
                             else:
-                                # Find by name
                                 for p in psutil.process_iter(['name']):
                                     if p.info['name'].lower() == identifier.lower():
                                         temp_killer = p
                                         break
-                            
                             temp_killer.terminate()
                             try:
                                 temp_killer.wait(timeout=2)
@@ -586,157 +546,21 @@ class ThreatMitigationEngine():
                                 temp_killer.kill()
                         except Exception as e:
                             print(f"Remote termination failed: {str(e)}")
-
                 except socket.timeout:
                     continue
-
         except Exception as e:
             print(f"Listener error: {str(e)}")
-        finally:
-            udp_socket.close()
-
-  
-  # Required for Linux signal handling
 
     def broadcast_termination(self, pid):
         try:
-            system = platform.system()
-            if system == "Windows":
-                message = f"terminate process {pid}"
-                udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-                udp_socket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-                udp_socket.sendto(message.encode(), ("255.255.255.255", 5005))
-                udp_socket.close()
-                print(f"Broadcasted: {message}")
-            elif system == "Linux":
-                message = f"terminate process {pid}"
-                udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-                udp_socket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-                # Use generic broadcast address (same as Windows)
-                udp_socket.sendto(message.encode(), ("255.255.255.255", 5005))
-                udp_socket.close()
-                print(f"Broadcasted: {message}")
+            message = f"terminate process {pid}"
+            udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            udp_socket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+            udp_socket.sendto(message.encode(), ("255.255.255.255", 5005))
+            udp_socket.close()
+            print(f"Broadcasted: {message}")
         except Exception as e:
             print(f"Error: {e}")
-
-    def block_ip(self, ip):
-        system = platform.system()
-        if system == "Linux":
-            firewall_command = f"iptables -A INPUT -s {ip} -j DROP"
-            self.firewallConfiguration(ip, firewall_command)
-        elif system == "Windows":
-            firewall_command = f"New-NetFirewallRule -DisplayName 'Block-IP-{ip}' -Direction Inbound -Action Block -RemoteAddress {ip}"
-            self.firewallConfiguration(ip, firewall_command)
-        else:
-            print("Unsupported OS")
-
-    def unblock_ip(self, ip):
-        system = platform.system()
-        if system == "Linux":
-            firewall_command = f"iptables -D INPUT -s {ip} -j DROP"
-            self.firewallConfiguration(ip, firewall_command)
-        elif system == "Windows":
-            firewall_command = f"Remove-NetFirewallRule -DisplayName 'Block-IP-{ip}' -ErrorAction SilentlyContinue"
-            self.firewallConfiguration(ip, firewall_command)
-        else:
-            print("Unsupported OS")
-
-    def block_port(self, port):
-        system = platform.system()
-        if system == "Linux":
-            firewall_command = f"iptables -A INPUT -p tcp --dport {port} -j DROP"
-            self.firewallConfiguration(port, firewall_command)
-        elif system == "Windows":
-            firewall_command = f"New-NetFirewallRule -DisplayName 'Block-Port-{port}' -Direction Inbound -Action Block -Protocol TCP -LocalPort {port}"
-            self.firewallConfiguration(port, firewall_command)
-        else:
-            print("Unsupported OS")
-    
-    def unblock_port(self, port):
-        system = platform.system()
-        if system == "Linux":
-            firewall_command = f"iptables -D INPUT -p tcp --dport {port} -j DROP"
-            self.firewallConfiguration(port, firewall_command)
-        elif system == "Windows":
-            firewall_command = f"Remove-NetFirewallRule -DisplayName 'Block-Port-{port}' -ErrorAction SilentlyContinue"
-            self.firewallConfiguration(port, firewall_command)
-        else:
-            print("Unsupported OS")
-    
-    def firewallConfiguration(self, entity, firewall_command):
-        """Execute firewall commands directly on the host system."""
-        system = platform.system()
-        
-        try:
-            if system == "Linux":
-                # For Linux, use sudo to execute iptables command
-                cmd = ["sudo", "sh", "-c", firewall_command]
-                result = subprocess.run(cmd, check=True, capture_output=True, text=True)
-                print(f"Firewall rule applied for {entity} on host (Linux)")
-            elif system == "Windows":
-                # For Windows, use PowerShell to execute firewall commands
-                ps_cmd = f"powershell -Command \"{firewall_command}\""
-                result = subprocess.run(ps_cmd, check=True, capture_output=True, text=True, shell=True)
-                print(f"Firewall rule applied for {entity} on host (Windows)")
-            else:
-                print("Unsupported OS")
-                return
-                
-            if result.stderr:
-                print(f"Warning: {result.stderr}")
-                
-        except subprocess.CalledProcessError as e:
-            print(f"Error applying firewall rule: {e}")
-            if e.stderr:
-                print(f"Error details: {e.stderr}")
-        except Exception as e:
-            print(f"Unexpected error: {e}")
-            
-    def updateBlacklist(self, f):
-        try:
-            ip = self.ui.lineEdit.text().strip()
-            if(f == 1):
-                self.blacklist.append(ip)
-                self.block_ip(ip)
-                self.packetsysobj.networkLog+="Blocked IP: "+ip+"\n"
-            else:
-                self.blacklist.remove(ip)
-                self.unblock_ip(ip)
-                self.packetsysobj.networkLog+="Unblocked IP: "+ip+"\n"
-               
-            model = QStringListModel()
-            model.setStringList(self.blacklist)
-            self.ui.listView.setModel(model)
-        except Exception as e:
-            print(f"Error updating blacklist: {e}")
-    
-    def updateBlockedPorts(self, f):
-        try:
-            port = self.ui.lineEdit_2.text().strip()
-            if f == 1:  # Block port
-                if port not in self.blocked_ports:  # Avoid duplicate entries
-                    self.blocked_ports.append(port)
-                    self.block_port(port)
-                    self.packetsysobj.networkLog+="Blocked Port: "+port+"\n"
-                    row_position = self.ui.tableWidget_2.rowCount()
-                    self.ui.tableWidget_2.insertRow(row_position)
-                    self.ui.tableWidget_2.setItem(row_position, 0, QTableWidgetItem(str(port)))
-                    self.ui.tableWidget_2.setItem(row_position, 1, QTableWidgetItem("Blocked"))
-            else:  # Unblock port
-                if port in self.blocked_ports:
-                    self.blocked_ports.remove(port)
-                    self.unblock_port(port)
-                    self.packetsysobj.networkLog+="Unblocked Port: "+port+"\n"
-                    self.remove_port_from_table(port)  # Remove from table
-
-        except Exception as e:
-            print(f"Error updating port blocked: {e}")
-
-    def remove_port_from_table(self, port):
-        for row in range(self.ui.tableWidget_2.rowCount()):
-            if self.ui.tableWidget_2.item(row, 0) and self.ui.tableWidget_2.item(row, 0).text() == str(port):
-                self.ui.tableWidget_2.removeRow(row)
-                break  # Stop after removing the first matching row
 
 class WorkerSignals(QObject):
     finished = pyqtSignal(str)  # Emits final result
