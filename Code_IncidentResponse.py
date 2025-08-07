@@ -42,7 +42,10 @@ from scapy.layers.inet import IP
 from scapy.layers.l2 import Ether
 from UI_IncidentResponse import Ui_IncidentResponse
 
-import multiprocessing
+from plugins.incident_response.ThreatIntelligence import ThreatIntelligence
+from plugins.incident_response.scrapers.BingSearcher import BingSearcher
+from plugins.incident_response.IntelPreprocessor import SimpleIntelPreprocessor
+
 #!/usr/bin/env python
 # snort -i 5 -c C:\Snort\etc\snort.conf -l C:\Snort\log -A fast
 # type C:\Snort\log\alert.ids
@@ -505,7 +508,7 @@ class AnomalousPackets():
                     elif packet.haslayer("UDP"):
                         sport = packet["UDP"].sport
                         dport = packet["UDP"].dport
-                    protocol = self.packetobj.get_protocol(packet)
+                    protocol = self.packetobj.protocolExtractor.extract_protocol(packet)
 
                     row_position = self.ui.tableWidget.rowCount()
                     self.ui.tableWidget.insertRow(row_position)
@@ -573,15 +576,16 @@ class AnomalousPackets():
     def extractThreatIntelligence(self, row):
         try:
             attack_name = self.attack_family
+            search_query = {"query": attack_name + " mitigation and response"}
             self.stime = time.time()
-            worker = ScraperWorker(attack_name, self.scraper)
+            worker = ScraperWorker(search_query, self.scraper)
             worker.signals.finished.connect(self.on_result)
             worker.signals.error.connect(self.on_error)
             self.threadpool.start(worker)
             target = self.anomalies[row]
             self.src_ip = target[IP].src if target.haslayer(IP) else "N/A"
             dst_ip = target[IP].dst if target.haslayer(IP) else "N/A"
-            protocol = self.packetobj.get_protocol(target)
+            protocol = self.packetobj.protocolExtractor.extract_protocol(target)
             macsrc = target[Ether].src if target.haslayer(Ether) else "N/A"
             macdst = target[Ether].dst if target.haslayer(Ether) else "N/A"
             packet_length = int(len(target))
@@ -708,20 +712,20 @@ class ThreatMitigationEngine():
                     rate = 8000
 
                 ps_script = f'''
-    $ErrorActionPreference = "Stop"
-    Try {{
-        Remove-NetQosPolicy -Name "Throttle_{ip}" -Confirm:$false -ErrorAction SilentlyContinue
-        New-NetQosPolicy -Name "Throttle_{ip}" `
-            -IPSrcPrefixMatchCondition "{ip}/32" `
-            -ThrottleRateActionBitsPerSecond {rate} `
-            -NetworkProfile All
-            
-        Get-NetQosPolicy -Name "Throttle_{ip}"
-    }} Catch {{
-        Write-Error $_.Exception.Message
-        exit 1
-    }}
-    '''
+                    $ErrorActionPreference = "Stop"
+                    Try {{
+                        Remove-NetQosPolicy -Name "Throttle_{ip}" -Confirm:$false -ErrorAction SilentlyContinue
+                        New-NetQosPolicy -Name "Throttle_{ip}" `
+                            -IPSrcPrefixMatchCondition "{ip}/32" `
+                            -ThrottleRateActionBitsPerSecond {rate} `
+                            -NetworkProfile All
+                            
+                        Get-NetQosPolicy -Name "Throttle_{ip}"
+                    }} Catch {{
+                        Write-Error $_.Exception.Message
+                        exit 1
+                    }}
+                    '''
 
                 result = subprocess.run(
                     ["powershell", "-Command", ps_script],
@@ -1012,9 +1016,9 @@ class WorkerSignals(QObject):
     error = pyqtSignal(str)     # Emits error messages
 
 class ScraperWorker(QRunnable):
-    def __init__(self, attack_name, scraper):
+    def __init__(self, query, scraper):
         super().__init__()
-        self.attack_name = attack_name
+        self.query = query
         self.scraper = scraper
         self.signals = WorkerSignals()
         self.start_time = None
@@ -1023,13 +1027,13 @@ class ScraperWorker(QRunnable):
     def run(self):
         try:
             self.start_time = time.time()
-            print(f"[WORKER] Starting scraper for {self.attack_name} at {self.start_time}")
+            print(f"[WORKER] Starting scraper for {self.query} at {self.start_time}")
             # Run the scraper in a thread (blocking call)
-            mitigation_sentence, score = self.scraper.run(f"{self.attack_name} mitigation and response")
+            processed = asyncio.run(self.scraper.gather(self.query))
             print(f"[WORKER] Scraper completed in {time.time() - self.start_time:.3f}s")
-            output = mitigation_sentence if mitigation_sentence else ""
+            output = processed["mitigation"]
             if not output:
-                output = f"No mitigation found. Score: {score}"
+                output = f"No mitigation found."
             print(f"[WORKER] Extracted output length: {len(output)} characters")
             self.signals.finished.emit(output)
         except Exception as e:
@@ -1063,9 +1067,12 @@ class IncidentResponse(QWidget, Ui_IncidentResponse):
         
         self.logAutopilot = LogWindow(self.model)
         self.threatMitEngine = ThreatMitigationEngine(self.ui, self.main_window.PacketSystemobj.blacklist, self.main_window.PacketSystemobj.blocked_ports, self.main_window.PacketSystemobj)
-        self.scraper = ScraperComponent()  # Initialize ONCE
+        # self.scraper = ScraperComponent()  # Initialize ONCE
+        self.sources = [BingSearcher()]
+        self.preprocessor = SimpleIntelPreprocessor()
+        self.threatIntel = ThreatIntelligence(searchers=self.sources, preprocessor=self.preprocessor)
         self.autopilotobj=Autopilot(self.threatMitEngine, self.logAutopilot)
-        self.anomalousPacketsObj = AnomalousPackets(self.ui, self.main_window.PacketSystemobj.anomalies, self.main_window.PacketSystemobj, self.autopilotobj, self.logAutopilot, self.scraper)
+        self.anomalousPacketsObj = AnomalousPackets(self.ui, self.main_window.PacketSystemobj.anomalies, self.main_window.PacketSystemobj, self.autopilotobj, self.logAutopilot, self.threatIntel)
         self.ui.tableWidget.setColumnCount(7)
         self.ui.tableWidget.setHorizontalHeaderLabels(
             ["Timestamp", "Source IP", "Destination IP", "Src Port", "Dst Port", "Protocol", "Attack"]

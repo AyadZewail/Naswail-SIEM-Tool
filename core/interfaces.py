@@ -241,3 +241,18 @@ class ITrafficPredictor(ABC):
         E.g., {"r2": 0.87, "mae": 10.2}
         """
         pass
+
+class IThreatIntelAggregator(ABC):
+    @abstractmethod
+    def gather(self, query: Dict) -> Dict:
+        """
+        Receives input in dict format, dispatches it to multiple searchers,
+        processes the results, and returns a final intel dict.
+
+        Args:
+            query (Dict): Input information to search with.
+
+        Returns:
+            Dict: Final aggregated and preprocessed threat intelligence.
+        """
+        pass

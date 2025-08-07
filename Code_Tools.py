@@ -13,7 +13,7 @@ from matplotlib.figure import Figure
 from datetime import datetime, timedelta
 from UI_Tools import Ui_Naswail_Tool
 import time
-from plugins.home.NetworkActivityAnalyzer import NetworkActivityAnalyzer
+from plugins.tools.NetworkActivityAnalyzer import NetworkActivityAnalyzer
 from plugins.tools.TrafficPredictor import BasicRegressionPredictor
 
 class NetworkActivity:
