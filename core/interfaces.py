@@ -281,3 +281,15 @@ class INetworkAdministration(ABC):
 
     @abstractmethod
     def broadcast_termination(self, pid: str) -> None: pass
+
+class IAutopilotEngine(ABC):
+    @abstractmethod
+    def decide(self, prompt: str, ip: str, port: str) -> dict:
+        """
+        Should return a dict like:
+        {
+            "action": "block_ip",
+            "params": ["1.2.3.4"]
+        }
+        """
+        pass

@@ -45,6 +45,7 @@ from UI_IncidentResponse import Ui_IncidentResponse
 from plugins.incident_response.ThreatIntelligence import ThreatIntelligence
 from plugins.incident_response.scrapers.BingSearcher import BingSearcher
 from plugins.incident_response.IntelPreprocessor import SimpleIntelPreprocessor
+from plugins.incident_response.AutopilotEngine import KaggleLLMEngine
 if platform.system() == "Linux":
     from plugins.incident_response.network_engines.LinuxNetworkAdmin import LinuxNetworkAdmin as AdminImpl
 elif platform.system() == "Windows":
@@ -78,110 +79,56 @@ function_cache = {}
 # # Optimized function for scraping instructions
 # @cache_result
 
-class KaggleLLMClient:
-    def __init__(self, ngrok_url, LogAP):
-        self.api_url = f"{ngrok_url}/generate"
-        self.logModel = LogAP
-        
-    def send_prompt(self, prompt):
-        try:
-            response = requests.post(
-                self.api_url,
-                json={"prompt": prompt},
-                timeout=300
-            )
-            return response.json()['response']
-        except Exception as e:
-            self.logModel.log_step(f"Failed to Prompt LLM; Analyst Intervention Required")
-            return f"Error: {str(e)}"
 class Autopilot:
-    def __init__(self, MitEng, LogAP):
-        self.MitEng = MitEng
-        self.logModel = LogAP
+    def __init__(self, mitigation_engine, log_model):
+        self.MitEng = mitigation_engine
+        self.logModel = log_model
+        self.autopilotEngine = KaggleLLMEngine("https://7f7f-34-80-211-129.ngrok-free.app", log_model)
         self.TTR = 0
-        self.mitigation_success = False
-        
+
     def setup(self, prompt, ip, port, scrapetime):
         start_time = time.time()
-        NGROK_URL = "https://382d-34-53-70-81.ngrok-free.app"
-        client = KaggleLLMClient(NGROK_URL, self.logModel)
-        
-        prompt_text = prompt
-        
-        self.logModel.log_step("Prompting LLM...")
-        response = client.send_prompt(prompt_text)
-        print("Model Response:", response)
-        
-        # Check for valid response
-        if not response or "Error:" in response:
-            self.logModel.log_step("Failed to get valid response from LLM")
-            end_time = time.time()
-            self.TTR = scrapetime + end_time - start_time
-            print(f"\nTotal execution time: {self.TTR:.2f} seconds")
+
+        self.logModel.log_step("Gathering decision from autopilot engine...")
+        action = self.autopilotEngine.decide(prompt)
+
+        end_time = time.time()
+        self.TTR = scrapetime + (end_time - start_time)
+
+        if not action:
             self.logModel.log_step(f"Mitigation failed. Execution in {self.TTR:.2f} seconds")
             return
-            
-        # Try to extract and execute the function
-        success = self.extract_function_and_params(response, ip, port)
-        
-        # Calculate and display total time
-        end_time = time.time()
-        self.TTR = scrapetime + end_time - start_time
-        print(f"\nTotal execution time: {self.TTR:.2f} seconds")
-        
-        # Only log success if both prompt and execution succeeded
+
+        if action == "block_ip":
+            args = [ip]
+        elif action == "limit_rate":
+            args = [ip, "8"]
+        elif action == "block_port":
+            args = [port]
+        else:
+            self.logModel.log_step(f"Unknown action received: {action}")
+            return
+
+        success = self.execute_function(action, *args)
+
         if success:
             self.logModel.log_step(f"Threat mitigated successfully in {self.TTR:.2f} seconds")
         else:
-            self.logModel.log_step(f"Execution completed in {self.TTR:.2f} seconds, but mitigation failed")
+            self.logModel.log_step(f"Mitigation failed. Execution in {self.TTR:.2f} seconds")
 
-    def extract_function_and_params(self, model_output, ip, port):
-        try:
-            match = re.search(r'\{.*\}', model_output, re.DOTALL)
-            if not match:
-                self.logModel.log_step("Failed to extract function from LLM response")
-                return False
-            
-            json_text = match.group(0)
-            data = json.loads(json_text)
-
-            values = list(data.values()) if isinstance(data, dict) else None
-            if not values:
-                self.logModel.log_step("Invalid function format in LLM response")
-                return False
-                
-            if values[0] == "block_ip":
-                values.append(ip)
-            elif values[0] == "limit_rate":
-                values.append(ip)
-                values.append("8")
-            elif values[0] == "block_port":
-                values.append(port)
-            self.logModel.log_step(f"Executing {values[0]} for {values[1:]}")
-            
-            # Execute the function and capture its result
-            result = self.execute_function(self.MitEng, values[0], *values[1:])
-            return result
-        except json.JSONDecodeError:
-            self.logModel.log_step(f"Failed to Read LLM Instruction; Analyst Intervention Required")
-            return False
-        except Exception as e:
-            self.logModel.log_step(f"Error during function extraction: {str(e)}")
-            return False
-
-    def execute_function(self, obj, function_name, *args, **kwargs):
-        func = getattr(obj, function_name, None)
+    def execute_function(self, function_name, *args):
+        func = getattr(self.MitEng, function_name, None)
         if callable(func):
             try:
-                func(*args, **kwargs)
+                func(*args)
                 return True
             except Exception as e:
-                self.logModel.log_step(f"Function execution failed: {str(e)}")
-                return False
+                self.logModel.log_step(f"Execution failed: {str(e)}")
         else:
-            self.logModel.log_step(f"Failed to Mitigate Threat; Analyst Intervention Required")
-            print(f"Function '{function_name}' not found.")
-            return False
+            self.logModel.log_step(f"Function {function_name} not found")
+        return False
+
+
 
 class AnomalousPackets():
     def __init__(self, ui, anomalies, packet, AI, log, scraper):
