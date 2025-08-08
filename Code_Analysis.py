@@ -24,6 +24,7 @@ from UI_Analysis import Ui_Naswail_Anlaysis
 from Code_Tools import Window_Tools
 from Code_IncidentResponse import IncidentResponse
 import math
+from models.node import Node
 from plugins.analysis.GeoMapper import MaxMindGeoMapper
 
 class GeoMap(threading.Thread, QObject):
@@ -64,27 +65,6 @@ class GeoMap(threading.Thread, QObject):
         # Move to daemon thread for automatic cleanup
         self.daemon = True
         self.start()  
-
-    def fetch_real_location(self):
-        """Fetch real location once and store in class variables"""
-        try:
-            import requests
-            print("Detecting real location...")
-            # Using ip-api.com free service (no API key needed)
-            response = requests.get('http://ip-api.com/json/', timeout=3).json()
-            if response.get('status') == 'success':
-                GeoMap.real_lat = response.get('lat')
-                GeoMap.real_lon = response.get('lon')
-                city = response.get('city', 'Unknown')
-                country = response.get('country', 'Unknown')
-                GeoMap.real_location_name = f"{city}, {country}"
-                print(f"Detected real location: {GeoMap.real_location_name} ({GeoMap.real_lat}, {GeoMap.real_lon})")
-                GeoMap.real_location_fetched = True
-            else:
-                print(f"IP geolocation failed, using default coordinates")
-        except Exception as e:
-            print(f"Error getting real location: {e}")
-            print("Using default coordinates (Cairo)")
 
     def get_location(self, ip):
         try:
@@ -457,13 +437,6 @@ class GeoMap(threading.Thread, QObject):
         print("GeoMap Thread is running...")
         self.create_map()
         print("GeoMap Thread finished")
-
-
-class Node:
-    def __init__(self):
-        self.mac_address = ""
-        self.edges = set()  # set of connected devices
-
 
 class NetworkTopologyVisualizer(threading.Thread):
     def __init__(self, packetobj, ui):
