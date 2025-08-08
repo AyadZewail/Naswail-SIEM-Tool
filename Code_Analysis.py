@@ -24,6 +24,7 @@ from UI_Analysis import Ui_Naswail_Anlaysis
 from Code_Tools import Window_Tools
 from Code_IncidentResponse import IncidentResponse
 import math
+from plugins.analysis.GeoMapper import MaxMindGeoMapper
 
 class GeoMap(threading.Thread, QObject):
     # Define signal to send pixmap to the main thread
@@ -46,13 +47,19 @@ class GeoMap(threading.Thread, QObject):
         self.src_lats, self.src_lons = [], []
         self.dst_lats, self.dst_lons = [], []
         self.lines = []
+        self.geoMapper = MaxMindGeoMapper(self.geoip_db_path)
         
         # Connect signal to label update function
         self.pixmapReady.connect(self.update_ui_label)
         
-        # Fetch real location once if not already fetched
-        if not GeoMap.real_location_fetched:
-            self.fetch_real_location()
+        try:
+            lat, lon, name = self.geoMapper.get_real_location()
+            GeoMap.real_lat = lat
+            GeoMap.real_lon = lon
+            GeoMap.real_location_name = name
+            GeoMap.real_location_fetched = True
+        except Exception:
+            pass
         
         # Move to daemon thread for automatic cleanup
         self.daemon = True
@@ -81,11 +88,8 @@ class GeoMap(threading.Thread, QObject):
 
     def get_location(self, ip):
         try:
-            with geoip2.database.Reader(self.geoip_db_path) as reader:
-                response = reader.city(ip)
-                lat = response.location.latitude
-                lon = response.location.longitude
-                return lat, lon
+            lat, lon = self.geoMapper.get_location(ip)
+            return lat, lon
         except geoip2.errors.AddressNotFoundError:
             # Use the pre-fetched real location
             return GeoMap.real_lat, GeoMap.real_lon

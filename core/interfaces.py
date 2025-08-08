@@ -4,7 +4,7 @@ These interfaces define the contracts that concrete implementations must follow.
 """
 
 from abc import ABC, abstractmethod
-from typing import Dict, List, Any, Optional
+from typing import Dict, List, Any, Optional, Tuple
 from datetime import datetime
 from scapy.packet import Packet  # for type hints 
 
@@ -291,5 +291,26 @@ class IAutopilotEngine(ABC):
             "action": "block_ip",
             "params": ["1.2.3.4"]
         }
+        """
+        pass
+
+class IGeoMapper(ABC):
+    """
+    Interface for any geolocation mapping engine.
+    Responsible for translating an IP address into (lat, lon) coordinates.
+    """
+
+    @abstractmethod
+    def get_location(self, ip: str) -> Tuple[float, float]:
+        """
+        Given an IP address, return its latitude and longitude.
+        Returns (lat, lon). If not found, should return a fallback location.
+        """
+        pass
+
+    @abstractmethod
+    def get_real_location(self) -> Tuple[float, float, str]:
+        """
+        Returns the current host's real-world latitude, longitude, and location name.
         """
         pass
