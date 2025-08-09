@@ -4,7 +4,7 @@ These interfaces define the contracts that concrete implementations must follow.
 """
 
 from abc import ABC, abstractmethod
-from typing import Dict, List, Any, Optional, Tuple
+from typing import Dict, List, Any, Optional, Tuple, Protocol
 from datetime import datetime
 from scapy.packet import Packet  # for type hints 
 
@@ -31,6 +31,14 @@ class IPacketSniffer(ABC):
 
     @abstractmethod
     def set_source(self, source_type: str, source_value: str) -> None:
+        pass
+
+class IPacketSystem(Protocol):
+    packets = []
+    anomalies = []
+
+    @abstractmethod
+    def process_packet(self) -> None:
         pass
 
 class IPacketDecoder(ABC):

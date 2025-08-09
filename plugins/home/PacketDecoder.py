@@ -3,12 +3,14 @@ from PyQt6.QtCore import QStringListModel
 from typing import Any, List
 
 class BasicPacketDecoder(IPacketDecoder):
-    def __init__(self, list_view):
+    def __init__(self):
         """
         Temporary coupling to the UI component, to be removed later.
         """
-        self.list_view = list_view
 
+    def set_ui(self, list_view):
+        self.list_view = list_view
+    
     def decode(self, packet: Any) -> List[str]:
         try:
             raw_content = bytes(packet)

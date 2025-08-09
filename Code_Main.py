@@ -33,6 +33,7 @@ import re
 import traceback
 import threading
 import ctypes
+from core import di
 from plugins.home.PacketSniffer import PacketSnifferThread
 from plugins.home.PacketDecoder import BasicPacketDecoder
 from plugins.home.PacketDetails import BasicPacketDetails
@@ -167,11 +168,14 @@ class SplashScreen(QSplashScreen):
         pass
 
 class ApplicationsSystem:
-    def __init__(self, ui_main_window):
-        self.ui = ui_main_window
+    def __init__(self, application_system):
+        self.ui = None
         self.apps = dict()
         self.packet_obj = None  
-        self.applicationSystem = BasicApplicationSystem()
+        self.applicationSystem = application_system
+    
+    def set_ui(self, ui):
+        self.ui = ui
     
     def set_packet_system(self, packet_obj):
         self.packet_obj = packet_obj
@@ -269,8 +273,8 @@ class ApplicationsSystem:
             print("Error in analyze_app function")
 
 class SensorSystem:
-    def __init__(self, ui_main_window):
-        self.ui = ui_main_window
+    def __init__(self, sensor_system, protocol_extractor, packet_filter):
+        self.ui = None
         self.sen_info = []#list of tuble containing the name of the sensor and its mac
         self.sensor_packet = []
         self.sensors_name = []
@@ -280,10 +284,13 @@ class SensorSystem:
         self.packet_obj = None  # Delay initialization
         self.ct_sensor_packet=[]#used in analyis to know the number packets in realtion to each sensor    
         self.sensors = {}
-        self.sensorSystem = BasicSensorSystem()
-        self.protocolExtractor = BasicProtocolExtractor()
-        self.packetFilter = BasicPacketFilter(self.protocolExtractor)
+        self.sensorSystem = sensor_system
+        self.protocolExtractor = protocol_extractor
+        self.packetFilter = packet_filter
         
+    def set_ui(self, ui):
+        self.ui = ui
+    
     def set_packet_system(self, packet_obj):       
         self.packet_obj = packet_obj
 
@@ -527,8 +534,10 @@ class SensorSystem:
 
  
 class PacketSystem:
-    def __init__(self, ui_main_window):
-        self.ui = ui_main_window
+    def __init__(self, packet_decoder, packet_details, protocol_extractor,
+             error_checker, packet_statistics, anomaly_detector, packet_filter,
+             corrupted_packet_list, network_log,):
+        self.ui = None
         self.packets = []
         self.process_packet_index=0
         self.bandwidth_data = []
@@ -538,7 +547,7 @@ class PacketSystem:
         self.pcap_packets = []
         self.que_flag=False
         self.pcap_process_packet_index = 0
-        self.corrupted_packet = []
+        self.corrupted_packet = corrupted_packet_list
         self.filtered_packets = []
         self.packet_features = []
         self.new_packet_features = []
@@ -547,7 +556,7 @@ class PacketSystem:
         self.inside_packets = 0
         self.outside_packets = 0
         self.inside_percentage = 0
-        self.networkLog = []
+        self.networkLog = network_log
         self.filterapplied = False
         self.application_filter_flag=False
         self.packet_stats = {"total": 0, "tcp": 0, "udp": 0, "icmp": 0, "other": 0,"http":0,"https":0,"dns":0,"dhcp":0,"ftp":0,"telnet":0}
@@ -572,24 +581,19 @@ class PacketSystem:
         system = platform.system()
         system = platform.system().lower()
         ##############################################
-        self.packetDecoder = BasicPacketDecoder(self.ui.listView_2)
-        self.packetDetails = BasicPacketDetails(self.ui.listView)
-        self.protocolExtractor = BasicProtocolExtractor()
-        self.error_checker = BasicErrorChecker(
-            corrupted_packet_list = self.corrupted_packet,
-            logger = self.networkLog
-        )
-        self.packetStatistics = BasicPacketStatistics()
-        self.anomalyDetector = SnortAnomalyDetector(
-            rules_file="C:\\Snort\\rules\\custom.rules",
-            log_file="C:\\Snort\\log\\alert.ids"
-        )
-        self.packetFilter = BasicPacketFilter(
-            protocol_extractor=self.protocolExtractor,
-        )
+        self.packetDecoder = packet_decoder
+        self.packetDetails = packet_details
+        self.protocolExtractor = protocol_extractor
+        self.error_checker = error_checker
+        self.packetStatistics = packet_statistics
+        self.anomalyDetector = anomaly_detector
+        self.packetFilter = packet_filter
 
         self.list_of_activity=[]
         
+    def set_ui(self, ui):
+        self.ui = ui
+
     def get_row_color(self, packet):
         """Determine background color based on packet characteristics"""
         try:
@@ -1041,7 +1045,7 @@ class PacketSystem:
                     self.pcap_process_packet_index += 1
 
                 # Update time series
-                window.time_series[packet_info['timestamp']] = len(self.packets)
+                self.ui.time_series[packet_info['timestamp']] = len(self.packets)
 
                 # Update bandwidth data
                 readable_time = datetime.fromtimestamp(packet_info['timestamp']).strftime("%I:%M:%S %p")
@@ -1334,10 +1338,24 @@ class Naswail(QMainWindow, Ui_MainWindow):
         self.fix_navigation_bar()
 
         #objects
+        self.protocol_extractor=BasicProtocolExtractor()
+        self.corrupted_packet_list = []
+        self.network_log = []
+
         self.secondary_widget3=None
-        self.PacketSystemobj = PacketSystem(self)
-        self.SensorSystemobj = SensorSystem(self)
-        self.Appsystemobj = ApplicationsSystem(self)
+        di.container.register_singleton("PacketSystem", self.create_packet_system())
+        self.PacketSystemobj = di.container.resolve("PacketSystem")
+        self.PacketSystemobj.set_ui(self)
+        self.PacketSystemobj.packetDecoder.set_ui(self.listView_2)
+        self.PacketSystemobj.packetDetails.set_ui(self.listView)
+
+        di.container.register_singleton("SensorSystem", self.create_sensor_system())
+        self.SensorSystemobj = di.container.resolve("SensorSystem")
+        self.SensorSystemobj.set_ui(self)
+        
+        di.container.register_singleton("ApplicationSystem", self.create_applications_system())
+        self.Appsystemobj = di.container.resolve("ApplicationSystem")
+        self.Appsystemobj.set_ui(self)
     
         self.SensorSystemobj.set_packet_system(self.PacketSystemobj)
         self.PacketSystemobj.set_sensor_system(self.SensorSystemobj)
@@ -1423,6 +1441,41 @@ class Naswail(QMainWindow, Ui_MainWindow):
         title="Ayad be goofing"
         full_details=""" come on man its too ez btruh i just like the way i fight children i hate kids ama kidnap them"""
         self.add_notification(title,details,full_details)
+    
+    def create_packet_system(self):
+        return PacketSystem(
+            packet_decoder=BasicPacketDecoder(),
+            packet_details=BasicPacketDetails(),
+            protocol_extractor=self.protocol_extractor,
+            error_checker=BasicErrorChecker(
+                corrupted_packet_list=self.corrupted_packet_list,
+                logger=self.network_log
+            ),
+            packet_statistics=BasicPacketStatistics(),
+            anomaly_detector=SnortAnomalyDetector(
+                rules_file="C:\\Snort\\rules\\custom.rules",
+                log_file="C:\\Snort\\log\\alert.ids"
+            ),
+            packet_filter=BasicPacketFilter(
+                protocol_extractor=self.protocol_extractor
+            ),
+            corrupted_packet_list=self.corrupted_packet_list,
+            network_log=self.network_log
+        )
+
+    def create_sensor_system(self):
+        sensor_impl = BasicSensorSystem()
+        pkt_filter = BasicPacketFilter(self.protocol_extractor)
+
+        return SensorSystem(
+            sensor_system=sensor_impl,
+            protocol_extractor=self.protocol_extractor,
+            packet_filter=pkt_filter
+        )
+
+    def create_applications_system(self):
+        app_impl = BasicApplicationSystem()
+        return ApplicationsSystem(application_system=app_impl)
     
     def handle_sensor_button(self, button):
         role = self.buttonBox_2.buttonRole(button)

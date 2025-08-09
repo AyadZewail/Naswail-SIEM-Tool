@@ -3,7 +3,10 @@ from core.interfaces import IPacketDetails
 from typing import Any, List
 
 class BasicPacketDetails(IPacketDetails):
-    def __init__(self, list_view):
+    def __init__(self):
+        """pass"""
+    
+    def set_ui(self, list_view):
         self.list_view = list_view
 
     def extract_details(self, packet: Any) -> List[str]:
