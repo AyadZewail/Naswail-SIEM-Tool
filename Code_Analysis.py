@@ -25,6 +25,7 @@ from Code_Tools import Window_Tools
 from Code_IncidentResponse import IncidentResponse
 import math
 from models.node import Node
+from core import di
 from plugins.analysis.GeoMapper import MaxMindGeoMapper
 
 class GeoMap(threading.Thread, QObject):
@@ -37,10 +38,10 @@ class GeoMap(threading.Thread, QObject):
     real_lon = 31.2357
     real_location_name = "Cairo (Default)"
     
-    def __init__(self, ui, packets, anomalies):
+    def __init__(self, geo_mapper, packets, anomalies):
         threading.Thread.__init__(self)
         QObject.__init__(self)
-        self.ui = ui
+        self.ui = None
         self.packets = packets
         self.anomalies = anomalies
         self.geoip_db_path = "resources/GeoLite2-City.mmdb"
@@ -63,9 +64,12 @@ class GeoMap(threading.Thread, QObject):
             pass
         
         # Move to daemon thread for automatic cleanup
-        self.daemon = True
-        self.start()  
+        self.daemon = True 
 
+    def set_ui(self, ui):
+        self.ui = ui
+        self.start() 
+    
     def get_location(self, ip):
         try:
             lat, lon = self.geoMapper.get_location(ip)
@@ -81,7 +85,7 @@ class GeoMap(threading.Thread, QObject):
     def update_ui_label(self, pixmap):
         """This method runs in the main thread to update the UI safely"""
         try:
-            if not pixmap.isNull() and self.ui and hasattr(self.ui, 'label') and self.ui.label is not None:
+            if not pixmap.isNull():# and self.ui and hasattr(self.ui, 'label') and self.ui.label is not None:
                 print("Updating UI label with pixmap from main thread")
                 self.ui.label.setPixmap(pixmap)
                 self.ui.label.setScaledContents(True)
@@ -1325,8 +1329,9 @@ class Window_Analysis(QWidget, Ui_Naswail_Anlaysis):
             # Make sure packets and anomalies exist and are accessible
             if hasattr(self.main_window.PacketSystemobj, 'packets') and self.main_window.PacketSystemobj.packets:
                 print(f"Found {len(self.main_window.PacketSystemobj.packets)} packets")
-                self.GeoMapObj = GeoMap(self.ui, self.main_window.PacketSystemobj.packets, 
-                                      self.main_window.PacketSystemobj.anomalies)
+                di.container.register_singleton("GeoMap", self.create_geo_map())
+                self.GeoMapObj = di.container.resolve("GeoMap")
+                self.GeoMapObj.set_ui(self.ui)
                 # Update location label after GeoMap is created
                 self.update_location_label()
             else:
@@ -1336,6 +1341,14 @@ class Window_Analysis(QWidget, Ui_Naswail_Anlaysis):
             print(f"Error initializing GeoMap: {e}")
             print(traceback.format_exc())
 
+    def create_geo_map(self):
+        packet_system = di.container.resolve("PacketSystem")
+        return GeoMap(
+            geo_mapper=MaxMindGeoMapper("resources/GeoLite2-City.mmdb"),
+            packets=packet_system.packets,
+            anomalies=packet_system.anomalies
+        )
+    
     def update_location_label(self):
         """Update the location label with the real location information"""
         if hasattr(GeoMap, 'real_location_name') and GeoMap.real_location_name:
@@ -1353,8 +1366,9 @@ class Window_Analysis(QWidget, Ui_Naswail_Anlaysis):
                 self.GeoMapObj = None
                 
             # Create new GeoMap
-            self.GeoMapObj = GeoMap(self.ui, self.main_window.PacketSystemobj.packets, 
-                                  self.main_window.PacketSystemobj.anomalies)
+            di.container.register_singleton("GeoMap", self.create_geo_map())
+            self.GeoMapObj = di.container.resolve("GeoMap")
+            self.GeoMapObj.set_ui(self.ui)
             print("GeoMap refresh initiated")
             
             # Update the location label
