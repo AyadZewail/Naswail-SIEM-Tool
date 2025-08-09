@@ -13,26 +13,31 @@ from matplotlib.figure import Figure
 from datetime import datetime, timedelta
 from UI_Tools import Ui_Naswail_Tool
 import time
+from core import di
 from plugins.tools.NetworkActivityAnalyzer import NetworkActivityAnalyzer
 from plugins.tools.TrafficPredictor import BasicRegressionPredictor
 
 class NetworkActivity:
-    def __init__(self,ui):
-        self.packetsysobj=None
-        self.ui=ui
+    def __init__(self, activity_list, packets, netact):
+        self.activityList = activity_list
+        self.packets = packets
+        self.ui = None
         self.filecontent=""
-        self.netActivityAnalyzer = NetworkActivityAnalyzer()
+        self.netActivityAnalyzer = netact
+    
+    def set_ui(self, ui):
+        self.ui = ui
     
     def set_packetobj(self, packetsysobj):
         self.packetsysobj=packetsysobj
     
     def display(self):
         try:
-            self.packetsysobj.list_of_activity.clear()
-            self.packetsysobj.list_of_activity.extend(self.netActivityAnalyzer.extract_activities(self.packetsysobj.qued_packets))
+            self.activityList.clear()
+            self.activityList.extend(self.netActivityAnalyzer.extract_activities(self.packets))
             self.filecontent=""
             formatted_content=[]
-            for list_of_activity  in self.packetsysobj.list_of_activity:
+            for list_of_activity  in self.activityList:
                 loa=list_of_activity.activity
                 formatted_content.append(loa) 
                 self.filecontent+=loa+"\n"
@@ -52,22 +57,24 @@ class NetworkActivity:
             print(e)
 
 class RegressionPrediction(threading.Thread):
-    def __init__(self,ui, packets, time_series):
+    def __init__(self, packets, time_series, predictor):
         super().__init__()
-        self.ui=ui
+        self.ui = None
         self.futureTraffic = []
         self.r2 = 0
         self.noHours = None
         self.packets = packets
         self.time_series = time_series
-        self.model = LinearRegression()
         self.prediction_running = False
         self.last_update_time = 0
-        self.trafficPredictor = BasicRegressionPredictor()
+        self.trafficPredictor = predictor
         self.metrics = {}
         self.intervals = [1, 3, 6, 12, 24] 
         self.start()  
         
+    def set_ui(self, ui):
+        self.ui = ui
+    
     def pred_traffic(self):
         try:
             if self.prediction_running:
@@ -446,11 +453,14 @@ class SuspiciousAnalysis:
             print(f"Error processing packet: {e}")
 
 class ErrorPacketSystem:
-        def __init__(self,ui):
+        def __init__(self, packetobj):
             self.error_packets = []
-            self.packetobj=None
-            self.ui=ui
+            self.packetobj = packetobj
+            self.ui = None
             self._last_packet_count = 0  # Track packet count for optimized updates
+        
+        def set_ui(self, ui):
+            self.ui = ui
         
         def add_error_packet(self, packet):
                 self.packetobj=packet
@@ -540,14 +550,21 @@ class Window_Tools(QWidget, Ui_Naswail_Tool):
         self.ui = Ui_Naswail_Tool()  
         self.ui.setupUi(self)  
         self.init_ui()
-        self.ErrorPacketSystemobj = ErrorPacketSystem(self.ui)
-        self.RegPred = RegressionPrediction(self.ui, self.main_window.PacketSystemobj.packets, self.main_window.time_series)
+
+        di.container.register_singleton("ErrorPacketSystem", self.create_error_packet_system())
+        self.ErrorPacketSystemobj = di.container.resolve("ErrorPacketSystem")
+        self.ErrorPacketSystemobj.set_ui(self.ui)
+
+        di.container.register_singleton("RegressionPrediction", self.create_regression_prediction())
+        self.RegPred = di.container.resolve("RegressionPrediction")
+        self.RegPred.set_ui(self.ui)
         # self.SuAn = SuspiciousAnalysis(self.ui, self.main_window.PacketSystemobj.anomalies, self.main_window.PacketSystemobj)
-        self.networkactobj=NetworkActivity(self.ui)
-        self.networkactobj.set_packetobj(self.main_window.PacketSystemobj)
+        di.container.register_singleton("NetworkActivity", self.create_network_activity())
+        self.networkactobj = di.container.resolve("NetworkActivity")
+        self.networkactobj.set_ui(self.ui)
         self.networkactobj.display()
 
-        self.ErrorPacketSystemobj.add_error_packet(self.main_window.PacketSystemobj)
+        # self.ErrorPacketSystemobj.add_error_packet(self.main_window.PacketSystemobj)
         self.ErrorPacketSystemobj.display()
         self.setWindowTitle("Naswail - Tools")
         self.ui.tableWidget_6.setColumnCount(11)
@@ -596,6 +613,25 @@ class Window_Tools(QWidget, Ui_Naswail_Tool):
         # Add cleanup when window is closed
         self.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose, True)
         
+    def create_network_activity(self):
+        packet_system = di.container.resolve("PacketSystem")
+        net_activity_analyzer = NetworkActivityAnalyzer()
+        return NetworkActivity(packet_system.list_of_activity, packet_system.qued_packets, net_activity_analyzer)
+    
+    def create_error_packet_system(self):
+        packet_system = di.container.resolve("PacketSystem")
+        return ErrorPacketSystem(packet_system)
+    
+    def create_regression_prediction(self):
+        # Resolve PacketSystem so we can grab its packets and time series
+        packet_system = di.container.resolve("PacketSystem")
+
+        return RegressionPrediction(
+            packets=packet_system.packets,
+            time_series=packet_system.ui.time_series,
+            predictor=BasicRegressionPredictor()
+        )
+    
     def init_ui(self):
         self.showMaximized()
         self.ui.pushButton_4.clicked.connect(self.show_main_window)
