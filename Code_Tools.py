@@ -11,7 +11,7 @@ from sklearn.metrics import r2_score
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 from datetime import datetime, timedelta
-from UI_Tools import Ui_Naswail_Tool
+from views.UI_Tools import Ui_Naswail_Tool
 import time
 from core import di
 from plugins.tools.NetworkActivityAnalyzer import NetworkActivityAnalyzer
@@ -578,24 +578,6 @@ class Window_Tools(QWidget, Ui_Naswail_Tool):
         self.ui.tableWidget_3.setVerticalHeaderLabels(["Current", "Desired Time", "+ 1 Hour", "+ 3 Hour", "+ 6 Hour", "+ 12 Hour", "+ 24 Hour"])
         self.ui.pushButton.clicked.connect(self.RegPred.setHours)
         self.ui.pushButton_6.clicked.connect(self.resetfilter)
-
-        # self.ui.tableWidget.setColumnCount(10)
-        # self.ui.tableWidget.setHorizontalHeaderLabels(
-        #     ["Timestamp", "Source IP", "Destination IP", "MAC Src", "MAC Dst", "Src Port", "Dst Port", "Protocol", "Length", "Payload"]
-        # )
-        # self.ui.tableWidget.cellClicked.connect(self.SuAn.display_packet_details)
-        # self.ui.tableWidget.cellClicked.connect(self.SuAn.decode_packet)   # UDP
-        # self.ui.checkBox_21.stateChanged.connect(self.SuAn.apply_filter)    # TCP
-        # self.ui.checkBox_22.stateChanged.connect(self.SuAn.apply_filter)    # ICMP
-        # self.ui.checkBox_23.stateChanged.connect(self.SuAn.apply_filter)    # DNS
-        # self.ui.checkBox_24.stateChanged.connect(self.SuAn.apply_filter)    # DHCP
-        # self.ui.checkBox_28.stateChanged.connect(self.SuAn.apply_filter)    # HTTP
-        # self.ui.checkBox_25.stateChanged.connect(self.SuAn.apply_filter)    # HTTPS
-        # self.ui.checkBox_26.stateChanged.connect(self.SuAn.apply_filter)    # TELNET
-        # self.ui.checkBox_30.stateChanged.connect(self.SuAn.apply_filter)    # FTP
-        # self.ui.checkBox_27.stateChanged.connect(self.SuAn.apply_filter)
-        # self.ui.checkBox_29.stateChanged.connect(self.SuAn.apply_filter)      # Other
-        # self.ui.pushButton_11.clicked.connect(self.SuAn.apply_filter)
         self.ui.pushButton_7.clicked.connect(self.networkactobj.display)
         self.ui.pushButton_5.clicked.connect(self.networkactobj.save_activity)
         

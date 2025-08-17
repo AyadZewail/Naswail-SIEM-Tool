@@ -7,9 +7,6 @@ class BasicPacketDecoder(IPacketDecoder):
         """
         Temporary coupling to the UI component, to be removed later.
         """
-
-    def set_ui(self, list_view):
-        self.list_view = list_view
     
     def decode(self, packet: Any) -> List[str]:
         try:
@@ -22,11 +19,6 @@ class BasicPacketDecoder(IPacketDecoder):
                     chr(byte) if 32 <= byte <= 126 else "." for byte in chunk
                 )
                 formatted_content.append(f"{hex_part:<48}  {ascii_part}")
-
-            # TEMP: push result to UI
-            model = QStringListModel()
-            model.setStringList(formatted_content)
-            self.list_view.setModel(model)
 
             return formatted_content
 

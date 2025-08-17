@@ -40,19 +40,9 @@ from PyQt6.QtGui import *
 from scapy.all import *
 from scapy.layers.inet import IP
 from scapy.layers.l2 import Ether
-from UI_IncidentResponse import Ui_IncidentResponse
+from views.UI_IncidentResponse import Ui_IncidentResponse
 
 from core import di
-from plugins.incident_response.ThreatIntelligence import ThreatIntelligence
-from plugins.incident_response.scrapers.BingSearcher import BingSearcher
-from plugins.incident_response.IntelPreprocessor import SimpleIntelPreprocessor
-from plugins.incident_response.AutopilotEngine import KaggleLLMEngine
-if platform.system() == "Linux":
-    from plugins.incident_response.network_engines.LinuxNetworkAdmin import LinuxNetworkAdmin as AdminImpl
-elif platform.system() == "Windows":
-    from plugins.incident_response.network_engines.WindowsNetworkAdmin import WindowsNetworkAdmin as AdminImpl
-else:
-    raise NotImplementedError("Unsupported OS")
 
 #!/usr/bin/env python
 # snort -i 5 -c C:\Snort\etc\snort.conf -l C:\Snort\log -A fast
@@ -80,21 +70,158 @@ function_cache = {}
 # # Optimized function for scraping instructions
 # @cache_result
 
-class Autopilot:
-    def __init__(self, mitigation_engine):
-        self.MitEng = mitigation_engine
-        self.logModel = None
-        self.TTR = 0
+class LogWindow(QMainWindow):
+    def __init__(self, model):
+        self.logModel = model
+        self.attack_entry = None
+        self.child = None
 
-    def set_log(self, log):
-        self.logModel = log
-        self.autopilotEngine = KaggleLLMEngine("https://7f7f-34-80-211-129.ngrok-free.app", log)
-    
-    def setup(self, prompt, ip, port, scrapetime):
+    def log_attack(self, entry):
+        self.attack_entry = QStandardItem(entry)
+        self.logModel.appendRow(self.attack_entry)
+
+    def log_step(self, description):
+        self.child = QStandardItem(description)
+        self.attack_entry.appendRow(self.child)
+
+    def log_details(self, description):
+        self.child.appendRow(QStandardItem(description))  
+
+class WorkerSignals(QObject):
+    finished = pyqtSignal(str)  # Emits final result
+    error = pyqtSignal(str)     # Emits error messages
+
+class ScraperWorker(QRunnable):
+    def __init__(self, query, threatIntel):
+        super().__init__()
+        self.query = query
+        self.threatIntel = threatIntel
+        self.signals = WorkerSignals()
+        self.start_time = None
+
+    @pyqtSlot()
+    def run(self):
+        try:
+            self.start_time = time.time()
+            print(f"[WORKER] Starting scraper for {self.query} at {self.start_time}")
+            # Run the scraper in a thread (blocking call)
+            processed = asyncio.run(self.threatIntel.gather(self.query))
+            print(f"[WORKER] Scraper completed in {time.time() - self.start_time:.3f}s")
+            output = processed["mitigation"]
+            if not output:
+                output = f"No mitigation found."
+            print(f"[WORKER] Extracted output length: {len(output)} characters")
+            self.signals.finished.emit(output)
+        except Exception as e:
+            error_msg = f"Worker error after {time.time() - self.start_time:.3f}s: {str(e)}"
+            print(f"[WORKER] {error_msg}")
+            self.signals.error.emit(error_msg)
+
+class IncidentResponseController():
+    def __init__(
+        self,
+        ui,
+        anomalies,
+        protocol_extractor,
+        autopilot_engine,
+        threat_intel,
+        blacklist,
+        blocked_ports,
+        network_log,
+        mitigation_engine,
+        autopilot_log,
+        main_window
+    ):
+        #======================================================================================
+        #======================================================================================
+        #                               Variable Instantiation
+        #======================================================================================
+        #======================================================================================
+        # self.packet
+        self.pid=""#terminatd processes
+        self.ips_limited=[]
+        self.anomalies = anomalies
+        self.protocolExtractor = protocol_extractor
+        self.autopilotEngine = autopilot_engine
+        self.threatIntel = threat_intel
+        self.blacklist = blacklist
+        self.blocked_ports = blocked_ports
+        self.networkLog = network_log
+        self.MitEng = mitigation_engine
+        self.logModel = autopilot_log
+        self.main_window = main_window
+        self.TTR = 0
+        self.filterapplied = False
+        self.threadpool = QThreadPool()
+        self.geoip_db_path = "resources/GeoLite2-City.mmdb"
+        self.unique_anomalies = set()
+        
+        threading.Thread(target=self.terminate_processes, args=("8592",), daemon=True).start()
+        threading.Thread(target=self.listen_for_termination, daemon=True).start()
+
+        #======================================================================================
+        #======================================================================================
+        #                                 UI Mapping
+        #======================================================================================
+        #======================================================================================
+        self.ui = ui
+        self.ui.pushButton_8.clicked.connect(self.show_main_window)
+        self.ui.pushButton_7.clicked.connect(self.show_analysis_window)
+        self.ui.pushButton_6.clicked.connect(self.show_tools_window)
+        self.ui.pushButton.clicked.connect(lambda: self.updateBlacklist(1))
+        self.ui.pushButton_9.clicked.connect(lambda: self.updateBlacklist(0))
+        self.ui.pushButton_10.clicked.connect(lambda: self.updateBlockedPorts(1))
+        self.ui.pushButton_11.clicked.connect(lambda: self.updateBlockedPorts(0))
+        self.ui.terminateButton.clicked.connect(self.action_terminate)
+        self.ui.applyLimitButton.clicked.connect(self.action_apply_limit)
+        self.ui.resetbutton.clicked.connect(self.action_reset_limit)
+
+          # Call every 1000 milliseconds (1 second)
+        self.sec = 0
+        self.ui.tableWidget.setColumnCount(7)
+        self.ui.tableWidget.setHorizontalHeaderLabels(["Timestamp", "Source IP", "Destination IP", "Src Port", "Dst Port", "Protocol", "Attack"])
+        self.ui.tableWidget.cellClicked.connect(self.extractThreatIntelligence)
+        self.ui.tableWidget_2.setColumnCount(2)
+        self.ui.tableWidget_2.setHorizontalHeaderLabels(["Port Number", "Status"])
+        self.ui.tableWidget_3.setWordWrap(True)
+        self.ui.tableWidget_3.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        self.ui.tableWidget_3.verticalHeader().setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
+        self.ui.tableWidget_3.horizontalHeader().setVisible(False)
+        self.ui.tableWidget_3.verticalHeader().setVisible(False)
+        self.ui.tableWidget_3.setRowCount(10)
+        self.ui.tableWidget_3.setColumnCount(2)
+        self.ui.tableWidget_3.setColumnWidth(0, 120)
+        self.ui.tableWidget_3.setColumnWidth(1, 351)
+        
+        # Apply text elide mode to ensure wrapping
+        for i in range(10):
+            for j in range(2):
+                item = QTableWidgetItem()
+                item.setTextAlignment(Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignLeft)
+                self.ui.tableWidget_3.setItem(i, j, item)
+        
+        self.ui.tableWidget_3.setStyleSheet("""
+            QTableWidget {
+                gridline-color: #31363b;
+                background-color: #232629;
+            }
+            QTableWidget::item {
+                padding: 4px;
+                border: none;
+            }
+        """)
+
+    #======================================================================================
+    #======================================================================================
+    #                                 Autopilot Handling
+    #======================================================================================
+    #======================================================================================
+    def mitigate(self, prompt, ip, port, scrapetime):
         start_time = time.time()
 
         self.logModel.log_step("Gathering decision from autopilot engine...")
-        action = self.autopilotEngine.decide(prompt)
+        action, log = self.autopilotEngine.decide(prompt)
+        self.logModel.log_step(log)
 
         end_time = time.time()
         self.TTR = scrapetime + (end_time - start_time)
@@ -131,31 +258,13 @@ class Autopilot:
         else:
             self.logModel.log_step(f"Function {function_name} not found")
         return False
-
-
-
-class AnomalousPackets():
-    def __init__(self, anomalies, protocol_extractor, AI, scraper):
-        self.ui = None
-        self.AIobj = AI
-        self.anomalies = anomalies
-        self.protocolExtractor = protocol_extractor
-        self.filterapplied = False
-        self.filtered_packets = []
-        self.threadpool = QThreadPool()
-        self.geoip_db_path = "resources/GeoLite2-City.mmdb"
-        self.logModel = None
-        self.unique_anomalies = set()  # Track unique (src_ip, dst_ip, attack_name) tuples
-        self.scraper = scraper
-        #self.preprocess_threat_for_AI("A Distributed Denial-of-Service (DDoS) attack overwhelms a network, service, or server with excessive traffic, disrupting legitimate user access. To effectively mitigate such attacks, consider the following strategies:Develop a DDoS Response Plan:Establish a comprehensive incident response plan that outlines roles, responsibilities, and procedures to follow during a DDoS attack. This proactive preparation ensures swift and coordinated action.esecurityplanet.comImplement Network Redundancies:Distribute resources across multiple data centers and networks to prevent single points of failure. This approach enhances resilience against DDoS attacks by ensuring that if one location is targeted, others can maintain operations. ")
     
-    def set_log(self, log):
-        self.logModel = log
-    
-    def set_ui(self, ui):
-        self.ui = ui
-
-    def display(self, main_window):
+    #======================================================================================
+    #======================================================================================
+    #                            Anomalous Packets Handling
+    #======================================================================================
+    #======================================================================================
+    def display_anomalies(self, main_window):
         try:
             if self.filterapplied == False:
                 self.ui.tableWidget.setRowCount(0)
@@ -266,7 +375,7 @@ class AnomalousPackets():
             attack_name = self.attack_family
             search_query = {"query": attack_name + " mitigation and response"}
             self.stime = time.time()
-            worker = ScraperWorker(search_query, self.scraper)
+            worker = ScraperWorker(search_query, self.threatIntel)
             worker.signals.finished.connect(self.on_result)
             worker.signals.error.connect(self.on_error)
             self.threadpool.start(worker)
@@ -335,62 +444,36 @@ class AnomalousPackets():
         item.setTextAlignment(Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignLeft)
         self.ui.tableWidget_3.setItem(5, 1, item)
         self.ui.tableWidget_3.resizeRowsToContents()
-        self.AIobj.setup(output, self.src_ip, self.dport, tTime)
+        self.mitigate(output, self.src_ip, self.dport, tTime)
 
         
     def on_error(self, error_msg):
         print("❌ Error:", error_msg)
         self.logModel.log_step(f"Failed to Procure Intelligence; Analyst Intervention Required")
         self.ui.tableWidget_3.setItem(5, 1, QTableWidgetItem(error_msg))
-
-class LogWindow(QMainWindow):
-    def __init__(self, model):
-        self.logModel = model
-        self.attack_entry = None
-        self.child = None
-
-    def log_attack(self, entry):
-        self.attack_entry = QStandardItem(entry)
-        self.logModel.appendRow(self.attack_entry)
-
-    def log_step(self, description):
-        self.child = QStandardItem(description)
-        self.attack_entry.appendRow(self.child)
-
-    def log_details(self, description):
-        self.child.appendRow(QStandardItem(description))
-
-class ThreatMitigationEngine:
-    def __init__(self, net_admin, blacklist, blocked_ports, network_log):
-        self.ui = None
-        self.blacklist = blacklist
-        self.blocked_ports = blocked_ports
-        self.networkLog = network_log
-        self.admin = net_admin
-
-        threading.Thread(target=self.terminate_processes, args=("8592",), daemon=True).start()
-        threading.Thread(target=self.listen_for_termination, daemon=True).start()
-
-    def set_ui(self, ui):
-        self.ui = ui
     
+    #======================================================================================
+    #======================================================================================
+    #                        Threat Mitigation Engine Handling
+    #======================================================================================
+    #======================================================================================
     def block_ip(self, ip):
-        self.admin.block_ip(ip)
+        self.MitEng.block_ip(ip)
 
     def unblock_ip(self, ip):
-        self.admin.unblock_ip(ip)
+        self.MitEng.unblock_ip(ip)
 
     def block_port(self, port):
-        self.admin.block_port(port)
+        self.MitEng.block_port(port)
 
     def unblock_port(self, port):
-        self.admin.unblock_port(port)
+        self.MitEng.unblock_port(port)
 
     def limit_rate(self, ip, rate):
-        self.admin.limit_rate(ip, rate)
+        self.MitEng.limit_rate(ip, rate)
 
     def reset_rate_limit(self, ip):
-        self.admin.reset_rate_limit(ip)
+        self.MitEng.reset_rate_limit(ip)
 
     def updateBlacklist(self, f):
         try:
@@ -515,146 +598,11 @@ class ThreatMitigationEngine:
             print(f"Broadcasted: {message}")
         except Exception as e:
             print(f"Error: {e}")
-
-class WorkerSignals(QObject):
-    finished = pyqtSignal(str)  # Emits final result
-    error = pyqtSignal(str)     # Emits error messages
-
-class ScraperWorker(QRunnable):
-    def __init__(self, query, scraper):
-        super().__init__()
-        self.query = query
-        self.scraper = scraper
-        self.signals = WorkerSignals()
-        self.start_time = None
-
-    @pyqtSlot()
-    def run(self):
-        try:
-            self.start_time = time.time()
-            print(f"[WORKER] Starting scraper for {self.query} at {self.start_time}")
-            # Run the scraper in a thread (blocking call)
-            processed = asyncio.run(self.scraper.gather(self.query))
-            print(f"[WORKER] Scraper completed in {time.time() - self.start_time:.3f}s")
-            output = processed["mitigation"]
-            if not output:
-                output = f"No mitigation found."
-            print(f"[WORKER] Extracted output length: {len(output)} characters")
-            self.signals.finished.emit(output)
-        except Exception as e:
-            error_msg = f"Worker error after {time.time() - self.start_time:.3f}s: {str(e)}"
-            print(f"[WORKER] {error_msg}")
-            self.signals.error.emit(error_msg)
-
-class IncidentResponse(QWidget, Ui_IncidentResponse):
-    def __init__(self, main_window):
-        super().__init__()
-        self.main_window = main_window
-        self.ui = Ui_IncidentResponse()
-        self.ui.setupUi(self)
-        
-        self.showMaximized()
-        self.ui.pushButton_8.clicked.connect(self.show_main_window)
-        self.ui.pushButton_7.clicked.connect(self.show_analysis_window)
-        self.ui.pushButton_6.clicked.connect(self.show_tools_window)
-
-        self.timer = QTimer(self)
-        self.timer.timeout.connect(self.ttTime)
-        self.timer.start(1000)  # Call every 1000 milliseconds (1 second)
-        self.sec = 0
-
-        self.model = QStandardItemModel()
-        self.model.setHeaderData(0, Qt.Orientation.Horizontal, "Attack Log")
-        self.ui.treeView.setModel(self.model)
-        self.ui.treeView.setWordWrap(True)
-        self.ui.treeView.setUniformRowHeights(False)
-        self.ui.treeView.expandAll()
-        
-        di.container.register_singleton("ThreatMitigationEngine", self.create_threat_mitigation_engine())
-        self.threatMitEngine = di.container.resolve("ThreatMitigationEngine")
-        self.threatMitEngine.set_ui(self.ui)
-
-        self.logAutopilot = LogWindow(self.model)
-        di.container.register_singleton("AnomalousPackets", self.create_anomalous_packets())
-        self.anomalousPacketsObj = di.container.resolve("AnomalousPackets")
-        self.anomalousPacketsObj.set_ui(self.ui)
-        self.anomalousPacketsObj.set_log(self.logAutopilot)
-        self.anomalousPacketsObj.AIobj.set_log(self.logAutopilot)
-        self.ui.tableWidget.setColumnCount(7)
-        self.ui.tableWidget.setHorizontalHeaderLabels(
-            ["Timestamp", "Source IP", "Destination IP", "Src Port", "Dst Port", "Protocol", "Attack"]
-        )
-        self.ui.tableWidget.cellClicked.connect(self.anomalousPacketsObj.extractThreatIntelligence)
-
-        self.ui.tableWidget_2.setColumnCount(2)
-        self.ui.tableWidget_2.setHorizontalHeaderLabels(["Port Number", "Status"])
-        
-        # Set up Attack Intelligence table with improved word wrap and text display
-        self.ui.tableWidget_3.setWordWrap(True)
-        self.ui.tableWidget_3.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
-        self.ui.tableWidget_3.verticalHeader().setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
-        self.ui.tableWidget_3.horizontalHeader().setVisible(False)
-        self.ui.tableWidget_3.verticalHeader().setVisible(False)
-        self.ui.tableWidget_3.setRowCount(10)
-        self.ui.tableWidget_3.setColumnCount(2)
-        self.ui.tableWidget_3.setColumnWidth(0, 120)
-        self.ui.tableWidget_3.setColumnWidth(1, 351)
-        
-        # Apply text elide mode to ensure wrapping
-        for i in range(10):
-            for j in range(2):
-                item = QTableWidgetItem()
-                item.setTextAlignment(Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignLeft)
-                self.ui.tableWidget_3.setItem(i, j, item)
-        
-        self.ui.tableWidget_3.setStyleSheet("""
-            QTableWidget {
-                gridline-color: #31363b;
-                background-color: #232629;
-            }
-            QTableWidget::item {
-                padding: 4px;
-                border: none;
-            }
-        """)
-
-        self.ui.pushButton.clicked.connect(lambda: self.threatMitEngine.updateBlacklist(1))
-        self.ui.pushButton_9.clicked.connect(lambda: self.threatMitEngine.updateBlacklist(0))
-
-        self.ui.pushButton_10.clicked.connect(lambda: self.threatMitEngine.updateBlockedPorts(1))
-        self.ui.pushButton_11.clicked.connect(lambda: self.threatMitEngine.updateBlockedPorts(0))
-        self.ui.terminateButton.clicked.connect(self.action_terminate)
-        self.ui.applyLimitButton.clicked.connect(self.action_apply_limit)
-        self.ui.resetbutton.clicked.connect(self.action_reset_limit)
-        self.pid=""#terminatd processes
-        self.ips_limited=[]
-    
-    def create_anomalous_packets(self):
-        searcher = BingSearcher()
-        preprocessor = SimpleIntelPreprocessor()
-        threat_intel = ThreatIntelligence(
-            searchers=[searcher],
-            preprocessor=preprocessor
-        )
-
-        autopilot = Autopilot(
-            di.container.resolve("ThreatMitigationEngine")
-        )
-
-        packet_system = di.container.resolve("PacketSystem")
-
-        return AnomalousPackets(
-            anomalies=packet_system.anomalies,
-            protocol_extractor=packet_system.protocolExtractor,
-            AI=autopilot,
-            scraper=threat_intel
-        )
-    
-    def create_threat_mitigation_engine(self):
-        packet_system = di.container.resolve("PacketSystem")
-        netadmin_impl = AdminImpl()
-        return ThreatMitigationEngine(net_admin=netadmin_impl, blacklist=packet_system.blacklist, blocked_ports=packet_system.blocked_ports, network_log=packet_system.networkLog)
-
+    #======================================================================================
+    #======================================================================================
+    #                                 Misc Handling
+    #======================================================================================
+    #======================================================================================
     def action_reset_limit(self):
         try:
             ip=self.ui.ipLineEdit.text()
@@ -687,7 +635,7 @@ class IncidentResponse(QWidget, Ui_IncidentResponse):
             tb=traceback.format_exc()
             print(tb)
     def ttTime(self):
-        self.anomalousPacketsObj.display(self.main_window)
+        self.display_anomalies(self.main_window)
     
     def show_analysis_window(self):
         try:
@@ -710,6 +658,43 @@ class IncidentResponse(QWidget, Ui_IncidentResponse):
         except Exception as e:
             print(e)
 
+
+        
+
+class IncidentResponse(QWidget, Ui_IncidentResponse):
+    def __init__(self, main_window):
+        super().__init__()
+        self.main_window = main_window
+        self.ui = Ui_IncidentResponse()
+        self.ui.setupUi(self)
+        self.showMaximized()
+
+        self.model = QStandardItemModel()
+        self.model.setHeaderData(0, Qt.Orientation.Horizontal, "Attack Log")
+        self.ui.treeView.setModel(self.model)
+        self.ui.treeView.setWordWrap(True)
+        self.ui.treeView.setUniformRowHeights(False)
+        self.ui.treeView.expandAll()
+        self.logAutopilot = LogWindow(self.model)
+
+        self.controller = IncidentResponseController(
+            ui = self.ui,
+            anomalies = di.container.resolve("anomalies"),
+            protocol_extractor = di.container.resolve("protocol_extractor"),
+            autopilot_engine = di.container.resolve("autopilot"),
+            threat_intel = di.container.resolve("threat_intelligence"),
+            blacklist = di.container.resolve("blacklist"),
+            blocked_ports = di.container.resolve("blocked_ports"),
+            network_log = di.container.resolve("network_log"),
+            mitigation_engine = di.container.resolve("ThreatMitigationEngine"),
+            autopilot_log = self.logAutopilot,
+            main_window = self.main_window
+        )
+
+        self.timer = QTimer(self)
+        self.timer.timeout.connect(self.controller.ttTime)
+        self.timer.start(1000)
+        
 if __name__ == "__main__":
     app = QApplication(sys.argv)
     window = IncidentResponse()

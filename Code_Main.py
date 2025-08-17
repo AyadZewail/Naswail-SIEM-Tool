@@ -23,7 +23,7 @@ from matplotlib.figure import Figure
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
 from math import pi
 from datetime import datetime
-from UI_Main import Ui_MainWindow
+from views.UI_Main import Ui_MainWindow
 from Code_Analysis import Window_Analysis
 from Code_Tools import Window_Tools
 from Code_IncidentResponse import IncidentResponse
@@ -48,11 +48,6 @@ from plugins.home.SensorSystem import BasicSensorSystem
 from plugins.home.ApplicationSystem import BasicApplicationSystem
 
 #sudo /home/hamada/Downloads/Naswail-SIEM-Tool-main/.venv/bin/python /home/hamada/Downloads/Naswail-SIEM-Tool-main/Code_Main.py
-
-packetInput = 0
-packetFile = None
-clearRead = 0 
-packetIndex = 0
 
 class SplashScreen(QSplashScreen):
     def __init__(self):
@@ -170,9 +165,7 @@ class SplashScreen(QSplashScreen):
 class ApplicationsSystem:
     def __init__(self, application_system):
         self.ui = None
-        self.apps = dict()
         self.packet_obj = None  
-        self.applicationSystem = application_system
     
     def set_ui(self, ui):
         self.ui = ui
@@ -180,113 +173,12 @@ class ApplicationsSystem:
     def set_packet_system(self, packet_obj):
         self.packet_obj = packet_obj
     
-    def get_applications_with_ports(self):
-        try:
-            self.apps = self.applicationSystem.get_active_applications()
-            self.ui.tableWidget_3.setRowCount(0)
-            for app in self.apps:
-                row_position = self.ui.tableWidget_3.rowCount()
-                self.ui.tableWidget_3.insertRow(row_position)
-                self.ui.tableWidget_3.setItem(row_position, 0, QTableWidgetItem(str(app["Port"])))
-                self.ui.tableWidget_3.setItem(row_position, 1, QTableWidgetItem(str(app["Application"])))
-                self.ui.tableWidget_3.setItem(row_position, 2, QTableWidgetItem(str(app["IP"])))
-                self.ui.tableWidget_3.setItem(row_position, 3, QTableWidgetItem(str(app["CPU"])))
-                self.ui.tableWidget_3.setItem(row_position, 4, QTableWidgetItem(str(app["Memory"])))
-        except Exception as e:
-            print(f"Error in get_applications_with_ports function: {e}")
     
-    def analyze_app(self, row):
-        try:
-            #this function filters by the clicked application
-            self.packet_obj.application_filter_flag = True
-            target_app = self.apps[row]
-            self.ui.tableWidget.setRowCount(0) 
-
-            self.filtered_packets = []
-            for packet in self.packet_obj.packets:
-                macsrc = packet["Ethernet"].src if packet.haslayer("Ethernet") else "N/A"
-                macdst = packet["Ethernet"].dst if packet.haslayer("Ethernet") else "N/A"
-                # Extract packet length
-                packet_length = int(len(packet))
-
-                # Extract IP version
-                ip_version = "IPv6" if packet.haslayer("IPv6") else "IPv4" if packet.haslayer("IP") else "N/A"
-                # Extract port information for TCP/UDP
-                sport = None
-                dport = None
-                if packet.haslayer("TCP"):
-                    sport = packet["TCP"].sport
-                    dport = packet["TCP"].dport
-                elif packet.haslayer("UDP"):
-                    sport = packet["UDP"].sport
-                    dport = packet["UDP"].dport
-
-                packet_length = int(len(packet))
-                src_ip = packet["IP"].src if packet.haslayer("IP") else "N/A"
-                dst_ip = packet["IP"].dst if packet.haslayer("IP") else "N/A"
-                protocol = self.packet_obj.protocolExtractor.extract_protocol(packet)
-                port = packet["TCP"].sport if packet.haslayer("TCP") else "N/A"
-                layer = (
-                    "udp" if packet.haslayer("UDP") 
-                    else "tcp" if packet.haslayer("TCP") 
-                    else "icmp" if packet.haslayer("ICMP") 
-                    else "N/A"
-                )
-                if target_app["IP"] in src_ip.lower() or target_app["IP"] in dst_ip.lower() or str(target_app["Port"]) in str(port):
-                    self.packet_obj.filtered_packets.append(packet)
-
-                    row_position = self.ui.tableWidget.rowCount()
-                    self.ui.tableWidget.insertRow(row_position)
-                    
-                    # Get color for the packet row
-                    row_color = self.packet_obj.get_row_color(packet)
-                    qcolor = self.packet_obj.get_qcolor(row_color)
-                    
-                    # Create items with background color
-                    readable_time = datetime.fromtimestamp(packet.time).strftime("%I:%M:%S %p")
-                    items = [
-                        QTableWidgetItem(readable_time),
-                        QTableWidgetItem(src_ip),
-                        QTableWidgetItem(dst_ip),
-                        QTableWidgetItem(protocol),
-                        QTableWidgetItem(layer),
-                        QTableWidgetItem(macsrc),
-                        QTableWidgetItem(macdst),
-                        QTableWidgetItem(str(sport) if sport else "N/A"),
-                        QTableWidgetItem(str(dport) if dport else "N/A"),
-                        QTableWidgetItem(str(packet_length)),
-                        QTableWidgetItem(ip_version)
-                    ]
-                    
-                    # Apply color to items
-                    if row_color != "transparent":
-                        for item in items:
-                            item.setBackground(qcolor)
-                            # For dark backgrounds, use white text
-                            if "100, 100" in row_color or "100, 170" in row_color:
-                                item.setForeground(QColor(255, 255, 255))
-                    
-                    # Add items to table
-                    for col, item in enumerate(items):
-                        self.ui.tableWidget.setItem(row_position, col, item)
-        except:
-            print("Error in analyze_app function")
 
 class SensorSystem:
     def __init__(self, sensor_system, protocol_extractor, packet_filter):
         self.ui = None
-        self.sen_info = []#list of tuble containing the name of the sensor and its mac
-        self.sensor_packet = []
-        self.sensors_name = []
-        self.senFlag = -1#indicate filtering by sensors
-        self.singleSenFlag = -1#indicate filtering by single sensor
-        self.sen_ct = 0
-        self.packet_obj = None  # Delay initialization
-        self.ct_sensor_packet=[]#used in analyis to know the number packets in realtion to each sensor    
-        self.sensors = {}
-        self.sensorSystem = sensor_system
-        self.protocolExtractor = protocol_extractor
-        self.packetFilter = packet_filter
+        
         
     def set_ui(self, ui):
         self.ui = ui
@@ -294,243 +186,7 @@ class SensorSystem:
     def set_packet_system(self, packet_obj):       
         self.packet_obj = packet_obj
 
-    def filter_sensors(self, row, col):
-        try:
-            self.singleSenFlag *= -1
-            self.senFlag = -1
-
-            if self.singleSenFlag == 1:
-                # 1. Extract selected sensor MAC
-                sensor_mac = self.ui.tableWidget_2.item(row, col).text()
-                self.ui.tableWidget.setRowCount(0)
-
-                # 2. Prepare criteria for the filter plugin
-                criteria = {"mac_addresses": [sensor_mac]}
-                filtered = self.packetFilter.filter_packets(self.packet_obj.packets, criteria)
-
-                self.sensor_packet.clear()
-
-                # 3. Display all packets that match
-                for packet in filtered:
-                    try:
-                        src_mac = packet["Ether"].src if packet.haslayer("Ether") else "N/A"
-                        dst_mac = packet["Ether"].dst if packet.haslayer("Ether") else "N/A"
-                        protocol = self.packet_obj.protocolExtractor.extract_protocol(packet)
-                        port = packet["TCP"].sport if packet.haslayer("TCP") else "N/A"
-                        ip_src = packet["IP"].src if packet.haslayer("IP") else "N/A"
-                        ip_dst = packet["IP"].dst if packet.haslayer("IP") else "N/A"
-                        packet_length = int(len(packet))
-                        sport = packet["TCP"].sport if packet.haslayer("TCP") else "N/A"
-                        dport = packet["TCP"].dport if packet.haslayer("TCP") else "N/A"
-                        ip_version = "IPv6" if packet.haslayer("IPv6") else "IPv4" if packet.haslayer("IP") else "N/A"
-                        layer = (
-                            "udp" if packet.haslayer("UDP")
-                            else "tcp" if packet.haslayer("TCP")
-                            else "icmp" if packet.haslayer("ICMP")
-                            else "N/A"
-                        )
-
-                        self.sensor_packet.append(packet)
-
-                        row_position = self.ui.tableWidget.rowCount()
-                        self.ui.tableWidget.insertRow(row_position)
-
-                        row_color = self.packet_obj.get_row_color(packet)
-                        qcolor = self.packet_obj.get_qcolor(row_color)
-
-                        readable_time = datetime.fromtimestamp(packet.time).strftime("%I:%M:%S %p")
-                        items = [
-                            QTableWidgetItem(readable_time),
-                            QTableWidgetItem(ip_src),
-                            QTableWidgetItem(ip_dst),
-                            QTableWidgetItem(protocol),
-                            QTableWidgetItem(layer),
-                            QTableWidgetItem(src_mac),
-                            QTableWidgetItem(dst_mac),
-                            QTableWidgetItem(str(sport) if sport else "N/A"),
-                            QTableWidgetItem(str(dport) if dport else "N/A"),
-                            QTableWidgetItem(str(packet_length)),
-                            QTableWidgetItem(ip_version)
-                        ]
-
-                        # Apply color to items
-                        if row_color != "transparent":
-                            for item in items:
-                                item.setBackground(qcolor)
-                                if "100, 100" in row_color or "100, 170" in row_color:
-                                    item.setForeground(QColor(255, 255, 255))
-
-                        for col, item in enumerate(items):
-                            self.ui.tableWidget.setItem(row_position, col, item)
-
-                    except Exception as inner_e:
-                        print(f"[filter_sensors] Error handling packet: {inner_e}")
-
-        except Exception as e:
-            print(f"[filter_sensors] Failed to filter: {e}")
-
-    def updateSensor(self, a):
-        try:
-            senName = self.ui.lineEdit_3.text().strip()
-            senMAC = self.ui.lineEdit_4.text().strip()
-
-            if a == 1:
-                self.sen_info.append(senName)
-                self.sen_info.append(0)
-                self.sensorSystem.add_sensor(senName, senMAC)
-            else:
-                print(f"[UI] Attempting to remove sensor: {senName}")
-                self.sensorSystem.remove_sensor(senName)
-
-            plt.close()
-            self.show_donut_chart()
-            self.displaySensorTable()
-        except Exception as e:
-            print(f"Error in updateSensor function: {e}")
     
-    def displaySensorTable(self):
-        try:
-            self.show_donut_chart()
-            self.ui.tableWidget_2.setRowCount(0)
-
-            for name, mac in self.sensorSystem.list_sensors().items():
-                row_position = self.ui.tableWidget_2.rowCount()
-                self.ui.tableWidget_2.insertRow(row_position)
-                self.ui.tableWidget_2.setItem(row_position, 0, QTableWidgetItem(str(name)))
-                self.ui.tableWidget_2.setItem(row_position, 1, QTableWidgetItem(str(mac)))
-
-        except Exception as e:
-            print(f"Error in displaySensorTable function: {e}")
-        
-    def show_donut_chart(self):
-        try:
-            if self.packet_obj.typeOFchartToPlot == 0:
-                self.ui.graphicsView_2.setScene(None)
-                return
-
-            sizes = [1]
-            labels = ['']
-            sensors_dict = self.sensorSystem.list_sensors()
-
-            s = 0
-            for s in range(len(sensors_dict)):
-                sizes.append(s)
-                labels.append('')
-
-            colors = [
-                '#E0F7F5', '#B3ECE6', '#8FE0D8',
-                '#40E0D0', '#36C9B0', '#2DB39E',
-                '#249C8A', '#1B8676', '#126F62',
-                '#0A594E', '#03433A', '#002D26',
-                '#001612', '#008080', '#00CED1'
-            ]
-
-            fig, ax = plt.subplots(figsize=(6, 6))
-
-            wedges, texts = ax.pie(
-                sizes,
-                labels=labels,
-                startangle=90,
-                colors=colors,
-                wedgeprops=dict(width=0.3)
-            )
-
-            ax.axis('equal')
-            ax.set_title('Sensors', color='#40E0D0', fontsize=12, fontweight='bold')
-
-            sensor_count = f"{len(sensors_dict)} registered sensors"
-            fig.text(0.5, 0.82, sensor_count, fontsize=11, fontweight='bold', color='white',
-                    horizontalalignment='center', verticalalignment='center')
-
-            fig.patch.set_visible(False)
-            ax.patch.set_alpha(0)
-
-            canvas = FigureCanvas(fig)
-            canvas.setStyleSheet("background: transparent;")
-            canvas.setGeometry(0, 0, self.ui.graphicsView_2.width(), self.ui.graphicsView_2.height())
-
-            scene = QGraphicsScene()
-            scene.setBackgroundBrush(Qt.GlobalColor.transparent)
-            scene.addWidget(canvas)
-            self.ui.graphicsView_2.setScene(scene)
-            plt.close(fig)
-        except Exception as e:
-            print(f"error in show donut chart function:{e}")
-
-    
-    def toggleSenFlag(self):
-        try:
-            # Flip the global sensor filtering flag
-            self.senFlag *= -1
-            self.singleSenFlag = -1
-
-            # If turned ON, perform filtering
-            if self.senFlag == 1:
-                self.ui.tableWidget.setRowCount(0)
-
-                # 1. Prepare criteria for filtering via plugin
-                all_sensor_macs = list(self.sensorSystem.list_sensors().values())
-                criteria = {"mac_addresses": all_sensor_macs}
-                filtered = self.packetFilter.filter_packets(self.packet_obj.packets, criteria)
-
-                # 2. Clear sensor packet list and update sensor stats
-                self.sensor_packet.clear()
-
-                for packet in filtered:
-                    try:
-                        src_mac = packet["Ether"].src if packet.haslayer("Ether") else "N/A"
-                        dst_mac = packet["Ether"].dst if packet.haslayer("Ether") else "N/A"
-                        protocol = self.packet_obj.protocolExtractor.extract_protocol(packet)
-                        port = packet["TCP"].sport if packet.haslayer("TCP") else "N/A"
-                        ip_src = packet["IP"].src if packet.haslayer("IP") else "N/A"
-                        ip_dst = packet["IP"].dst if packet.haslayer("IP") else "N/A"
-                        packet_length = int(len(packet))
-                        ip_version = "IPv6" if packet.haslayer("IPv6") else "IPv4" if packet.haslayer("IP") else "N/A"
-
-                        sport = dport = None
-                        timestamp = float(packet.time)
-                        readable_time = datetime.fromtimestamp(timestamp).strftime("%I:%M:%S %p")
-
-                        if packet.haslayer("TCP"):
-                            sport = packet["TCP"].sport
-                            dport = packet["TCP"].dport
-                        elif packet.haslayer("UDP"):
-                            sport = packet["UDP"].sport
-                            dport = packet["UDP"].dport
-
-                        # 3. Match to which sensor(s) this packet belongs
-                        for sensor_name, sensor_mac in self.sensorSystem.list_sensors().items():
-                            if sensor_mac.lower() in src_mac.lower() or sensor_mac.lower() in dst_mac.lower():
-                                self.sensor_packet.append(packet)
-
-                                # Update sen_info count
-                                for s in range(0, len(self.sen_info) - 1, 2):
-                                    if self.sen_info[s] == sensor_name:
-                                        self.sen_info[s + 1] += 1
-
-                                # Add to table
-                                row_position = self.ui.tableWidget.rowCount()
-                                self.ui.tableWidget.insertRow(row_position)
-                                self.ui.tableWidget.setItem(row_position, 0, QTableWidgetItem(readable_time))
-                                self.ui.tableWidget.setItem(row_position, 1, QTableWidgetItem(ip_src))
-                                self.ui.tableWidget.setItem(row_position, 2, QTableWidgetItem(ip_dst))
-                                self.ui.tableWidget.setItem(row_position, 3, QTableWidgetItem(protocol))
-                                self.ui.tableWidget.setItem(row_position, 4, QTableWidgetItem(src_mac))
-                                self.ui.tableWidget.setItem(row_position, 5, QTableWidgetItem(dst_mac))
-                                self.ui.tableWidget.setItem(row_position, 6, QTableWidgetItem(str(port)))
-                                self.ui.tableWidget.setItem(row_position, 7, QTableWidgetItem(str(ip_version)))
-                                self.ui.tableWidget.setItem(row_position, 8, QTableWidgetItem(str(packet_length)))
-                                self.ui.tableWidget.setItem(row_position, 9, QTableWidgetItem(str(sport)))
-                                self.ui.tableWidget.setItem(row_position, 10, QTableWidgetItem(str(dport)))
-
-                    except Exception as inner_e:
-                        print(f"[toggleSenFlag] Error on a filtered packet: {inner_e}")
-
-                # 4. Push count
-                self.ct_sensor_packet.append(self.sen_ct)
-
-        except Exception as e:
-            print(f"[toggleSenFlag] Failed to toggle sensor flag: {e}")
 
  
 class PacketSystem:
@@ -538,16 +194,82 @@ class PacketSystem:
              error_checker, packet_statistics, anomaly_detector, packet_filter,
              corrupted_packet_list, network_log,):
         self.ui = None
+        
+        
+    def set_ui(self, ui):
+        self.ui = ui
+    
+        
+class HomeController:
+    def __init__(
+        self,
+        ui,
+        packet_decoder,
+        packet_details,
+        protocol_extractor,
+        error_checker,
+        packet_statistics,
+        anomaly_detector,
+        packet_filter,
+        corrupted_packet_list,
+        network_log,
+        anomalies,
+        blacklist,
+        blocked_ports,
+        list_of_activity,
+        qued_packets,
+        packets,
+        time_series,
+        sen_info,
+        sensor_system,
+        application_system,
+        packet_exporter,
+        scene
+    ):
+        #======================================================================================
+        #======================================================================================
+        #                                   Variables Handling
+        #======================================================================================
+        #======================================================================================
+        self.ui = ui
+        self.scene = scene
+        
+        # Packet Variables
+        self.packetInput = 0
+        self.filterapplied=False
+        self.typeOFchartToPlot=0 # 0:gauge chart, 1: donut chart
         self.packets = []
+        self.times = []
+        self.counts = []
+        self.capture = -1
+        self.start_time = QTime.currentTime()
+        self.elapsedTime = 0
+        self.total_inside_packets=0
+        self.total_outside_packets=0
+        self.packetDecoder = packet_decoder
+        self.packetDetails = packet_details
+        self.protocolExtractor = protocol_extractor
+        self.error_checker = error_checker
+        self.packetStatistics = packet_statistics
+        self.anomalyDetector = anomaly_detector
+        self.packetFilter = packet_filter
+        self.corrupted_packet = corrupted_packet_list
+        self.networkLog = network_log
+        self.anomalies = anomalies
+        self.blacklist = blacklist
+        self.blocked_ports = blocked_ports
+        self.list_of_activity = list_of_activity
+        self.qued_packets = qued_packets
+        self.packets = packets
+        self.time_series = time_series
+        self.packetExporter = packet_exporter
         self.process_packet_index=0
         self.bandwidth_data = []
         self.captured_packets = []
         self.putpacketinqueue()
-        self.qued_packets = []
         self.pcap_packets = []
         self.que_flag=False
         self.pcap_process_packet_index = 0
-        self.corrupted_packet = corrupted_packet_list
         self.filtered_packets = []
         self.packet_features = []
         self.new_packet_features = []
@@ -556,16 +278,11 @@ class PacketSystem:
         self.inside_packets = 0
         self.outside_packets = 0
         self.inside_percentage = 0
-        self.networkLog = network_log
         self.filterapplied = False
         self.application_filter_flag=False
         self.packet_stats = {"total": 0, "tcp": 0, "udp": 0, "icmp": 0, "other": 0,"http":0,"https":0,"dns":0,"dhcp":0,"ftp":0,"telnet":0}
-        self.anomalies = []
         self.unique_anomalies = set()  # Track unique (src_ip, dst_ip, attack_name) tuples
-        self.sensor_obj = None
         self.capture = -1
-        self.blacklist = []
-        self.blocked_ports = []
         self.tot_tcp_packets = 0
         self.tot_udp_packets = 0
         self.tot_icmp_packets = 0
@@ -578,22 +295,98 @@ class PacketSystem:
         self.processpacket()
         self.alert_timer_started = False
         self.snort_alerts = defaultdict(list)
-        system = platform.system()
-        system = platform.system().lower()
-        ##############################################
-        self.packetDecoder = packet_decoder
-        self.packetDetails = packet_details
-        self.protocolExtractor = protocol_extractor
-        self.error_checker = error_checker
-        self.packetStatistics = packet_statistics
-        self.anomalyDetector = anomaly_detector
-        self.packetFilter = packet_filter
-
-        self.list_of_activity=[]
         
-    def set_ui(self, ui):
-        self.ui = ui
+        # Sensor Variables
+        self.sen_info = sen_info
+        self.sensorSystem = sensor_system
+        self.sensor_packet = []
+        self.sensors_name = []
+        self.senFlag = -1 # indicate filtering by sensors
+        self.singleSenFlag = -1 # indicate filtering by single sensor
+        self.sen_ct = 0
+        self.ct_sensor_packet=[] # used in analyis to know the number packets in realtion to each sensor    
+        self.sensors = {}
 
+        # Apps Variables
+        self.apps = dict()
+        self.applicationSystem = application_system
+
+        #======================================================================================
+        #======================================================================================
+        #                                   UI Handling
+        #======================================================================================
+        #======================================================================================
+        pixmap = QPixmap("resources/logo.png")
+        self.pixmap_item = QGraphicsPixmapItem(pixmap)
+        self.scene.addItem(self.pixmap_item)
+        self.ui.graphicsView.setScene(self.scene)
+        self.ui.graphicsView.setFixedSize(71, 61)
+        self.ui.graphicsView.fitInView(self.scene.sceneRect(), Qt.AspectRatioMode.KeepAspectRatio)
+        
+        self.ui.tableWidget.setColumnCount(10)
+        self.ui.tableWidget.setHorizontalHeaderLabels(["Timestamp", "Source", "Destination", "Protocol","layer","macsrc","macdst","srcport","dstport","length","IP version"])
+        self.ui.tableWidget.cellClicked.connect(self.handle_details_click)
+        self.ui.tableWidget.cellClicked.connect(self.handle_decode_click)
+        self.ui.tabWidget.currentChanged.connect(lambda index: self.change_chart(1) if index == 2 else self.change_chart(0))
+        self.ui.tabWidget.currentChanged.connect(lambda index: self.get_applications_with_ports() if index == 3 else None)
+        self.ui.tabWidget.currentChanged.connect(lambda index: self.packet_statistics() if index == 5 else None)
+        self.ui.tabWidget.currentChanged.connect(lambda index: self.display_log() if index == 7 else None)
+        self.ui.tableWidget_2.setColumnCount(2)
+        self.ui.tableWidget_2.setHorizontalHeaderLabels(["Name", "IP"])
+        self.ui.tableWidget_2.cellClicked.connect(self.filter_sensors)
+        self.ui.tableWidget_3.setColumnCount(5)
+        self.ui.tableWidget_3.setHorizontalHeaderLabels(["Port", "Application", "IP","CPU","Memory-percent"])
+        self.ui.tableWidget_3.cellClicked.connect(self.analyze_app)
+        self.ui.tableWidget_4.setColumnCount(4)
+        self.ui.tableWidget_4.setHorizontalHeaderLabels(["Timestamp", "Source", "Destination", "Attack Type"])
+        #self.ui.tableWidget_4.cellClicked.connect(self.analyze_app)
+        self.ui.pushButton_5.clicked.connect(self.toggleCapture)
+        self.ui.pushButton_6.clicked.connect(self.toggleCapture)
+        self.ui.pushButton_7.clicked.connect(self.toggleSenFlag)
+        self.ui.actionImport_Packets.triggered.connect(self.import_file)
+        self.ui.actionExport_Packets.triggered.connect(self.handle_export_packets)
+        self.ui.actionLive_Capture.triggered.connect(self.resetInput)
+        self.ui.buttonBox_2.clicked.connect(self.handle_sensor_button)
+        self.ui.pushButton_10.clicked.connect(lambda _: self.updateBlacklist(1))
+        self.ui.pushButton_11.clicked.connect(lambda _: self.updateBlacklist(2))
+        self.ui.pushButton_12.clicked.connect(lambda _:self.save_log_to_file())
+        self.ui.pushButton_apply.clicked.connect(self.fabricate_packet)
+        self.ui.pushButton.clicked.connect(self.resetfilter)
+       
+        self.ui.checkBox.stateChanged.connect(self.apply_filter)      # UDP
+        self.ui.checkBox_2.stateChanged.connect(self.apply_filter)    # TCP
+        self.ui.checkBox_3.stateChanged.connect(self.apply_filter)    # ICMP
+        self.ui.checkBox_4.stateChanged.connect(self.apply_filter)    # DNS
+        self.ui.checkBox_5.stateChanged.connect(self.apply_filter)    # DHCP
+        self.ui.checkBox_6.stateChanged.connect(self.apply_filter)    # HTTP
+        self.ui.checkBox_7.stateChanged.connect(self.apply_filter)    # HTTPS
+        self.ui.checkBox_8.stateChanged.connect(self.apply_filter)    # TELNET
+        self.ui.checkBox_9.stateChanged.connect(self.apply_filter)    # FTP
+        self.ui.checkBox_10.stateChanged.connect(self.apply_filter)   # Other
+        self.ui.pushButton_9.clicked.connect(self.apply_filter)
+        self.ui.dateTimeEdit.setDisplayFormat("dd-MMM-yyyy hh:mm AP")  
+        self.ui.dateTimeEdit_2.setDisplayFormat("dd-MMM-yyyy hh:mm AP")  
+        self.sniffer_thread = PacketSnifferThread()
+        self.sniffer_thread.packet_captured.connect(self.put_packet_in_queue)
+        self.sniffer_thread.set_source('live', '_')
+        self.sniffer_thread.start()
+        self.stats_timer = QTimer()
+        self.stats_timer.timeout.connect(self.tick)
+
+        self.num=100
+      
+        self.stats_timer.start(10)
+        self.packet_per_seconds_timer = QTimer()
+        self.packet_per_seconds_timer.timeout.connect(self.ppsttick)
+        self.packet_per_seconds_timer.start(1000)
+        self.ct = 0
+        #notifications
+
+    #======================================================================================
+    #======================================================================================
+    #                              Packet System Handling
+    #======================================================================================
+    #======================================================================================
     def get_row_color(self, packet):
         """Determine background color based on packet characteristics"""
         try:
@@ -654,9 +447,6 @@ class PacketSystem:
             print(f"Error creating QColor from {rgba_str}: {e}")
             return QColor(0, 0, 0, 0)  # Default transparent on error
 
-    def set_sensor_system(self, sensor_obj):
-        self.sensor_obj = sensor_obj
-
     def block_ip(self,ip):
         system = platform.system()
         
@@ -688,12 +478,12 @@ class PacketSystem:
             print("Unsupported OS")
     def draw_gauge(self):
         try:
-            if self.sensor_obj.senFlag == 1 or self.sensor_obj.singleSenFlag == 1:
+            if self.senFlag == 1 or self.singleSenFlag == 1:
                 self.typeOFchartToPlot=1
                 
             if self.typeOFchartToPlot == 1:
                 self.ui.graphicsView_2.setScene(None)
-                self.sensor_obj.show_donut_chart()
+                self.show_donut_chart()
                 return
             #clear first
             view_width = self.ui.graphicsView_2.width()
@@ -798,13 +588,11 @@ class PacketSystem:
             print(f"Error in put_packet_in_queue_thread function: {e}")
     def put_packet_in_queue(self, packet):
         try:
-           
-            global packetInput
-            if packetInput == 0:
+            if self.packetInput == 0:
                 self.qued_packets.append(packet)
                 self.recently_qued_packets+=1
                 
-            if packetInput == 1:
+            if self.packetInput == 1:
                 self.recently_qued_packets+=1
                 self.qued_packets.append(packet)   
                 self.que_flag=False         
@@ -852,7 +640,7 @@ class PacketSystem:
     def change_chart(self,index):#function for changing beteen guage and donut chart
         if index==1:
             self.typeOFchartToPlot=1
-            self.sensor_obj.show_donut_chart()
+            self.show_donut_chart()
         else:
             self.typeOFchartToPlot=0
     def processpacket(self):
@@ -866,10 +654,9 @@ class PacketSystem:
             
             if self.flag_process_packet==False:
                 self.flag_process_packet=True
-                global packetInput
-                if packetInput == 0:
+                if self.packetInput == 0:
                     packet = self.qued_packets[self.process_packet_index] 
-                if packetInput == 1:
+                if self.packetInput == 1:
                     packet = self.qued_packets[self.pcap_process_packet_index]
                     
                 # Extract packet information once
@@ -925,8 +712,8 @@ class PacketSystem:
                         del self.qued_packets[0:5000]
                         del self.packets[0:5000]
                         self.process_packet_index -= 5000
-                        for key in list(window.time_series.keys())[:2000]:
-                            del window.time_series[key]
+                        for key in list(self.time_series.keys())[:2000]:
+                            del self.time_series[key]
                         wrpcap("data/packet_file" + str(self.packetfile) + ".pcap", removed_elements)
                         removed_elements.clear()
                         self.packetfile += 1
@@ -958,8 +745,8 @@ class PacketSystem:
 
                     # Only update UI if not filtering
                     if not (self.filterapplied or 
-                        self.sensor_obj.senFlag == 1 or 
-                        self.sensor_obj.singleSenFlag == 1 or 
+                        self.senFlag == 1 or 
+                        self.singleSenFlag == 1 or 
                         self.application_filter_flag):
                         
                         if self.capture == 1:
@@ -1039,13 +826,13 @@ class PacketSystem:
                             self.ui.tableWidget.setItem(row_position, col, item)
 
                 # Update indices
-                if packetInput == 0 and self.process_packet_index < len(self.qued_packets):
+                if self.packetInput == 0 and self.process_packet_index < len(self.qued_packets):
                     self.process_packet_index += 1
-                elif packetInput == 1 and self.pcap_process_packet_index < len(self.qued_packets):
+                elif self.packetInput == 1 and self.pcap_process_packet_index < len(self.qued_packets):
                     self.pcap_process_packet_index += 1
 
                 # Update time series
-                self.ui.time_series[packet_info['timestamp']] = len(self.packets)
+                self.time_series[packet_info['timestamp']] = len(self.packets)
 
                 # Update bandwidth data
                 readable_time = datetime.fromtimestamp(packet_info['timestamp']).strftime("%I:%M:%S %p")
@@ -1129,7 +916,7 @@ class PacketSystem:
             selected_protocols = [proto for proto, checked in protocol_filters.items() if checked]
 
             # Gather packets
-            packet_source = self.sensor_obj.sensor_packet if self.sensor_obj.senFlag == 1 else self.packets
+            packet_source = self.sensor_packet if self.senFlag == 1 else self.packets
             criteria = {
                 "protocols": selected_protocols,
                 "src_ip": src_filter,
@@ -1224,7 +1011,10 @@ class PacketSystem:
             else:
                 packet = self.packets[row]
 
-            self.packetDetails.extract_details(packet)
+            details_list = self.packetDetails.extract_details(packet)
+            model = QStringListModel()
+            model.setStringList(details_list)
+            self.ui.listView.setModel(model)
 
         except Exception as e:
             print(f"Error displaying packet details: {e}")
@@ -1234,7 +1024,10 @@ class PacketSystem:
         try:
             if not self.filterapplied:
                 packet = self.packets[row]
-                self.packetDecoder.decode(packet)
+                content = self.packetDecoder.decode(packet)
+                model = QStringListModel()
+                model.setStringList(content)
+                self.ui.listView_2.setModel(model)
         except Exception as e:
             print(f"[handle_decode_click] Failed to decode packet: {e}")
     
@@ -1308,8 +1101,563 @@ class PacketSystem:
                     self.ui.tableWidget.setItem(row_position, col, item)
         except:
             print("fr")
+
+    #======================================================================================
+    #======================================================================================
+    #                             Sensor System Handling
+    #======================================================================================
+    #======================================================================================
+    def filter_sensors(self, row, col):
+        try:
+            self.singleSenFlag *= -1
+            self.senFlag = -1
+
+            if self.singleSenFlag == 1:
+                # 1. Extract selected sensor MAC
+                sensor_mac = self.ui.tableWidget_2.item(row, col).text()
+                self.ui.tableWidget.setRowCount(0)
+
+                # 2. Prepare criteria for the filter plugin
+                criteria = {"mac_addresses": [sensor_mac]}
+                filtered = self.packetFilter.filter_packets(self.packets, criteria)
+
+                self.sensor_packet.clear()
+
+                # 3. Display all packets that match
+                for packet in filtered:
+                    try:
+                        src_mac = packet["Ether"].src if packet.haslayer("Ether") else "N/A"
+                        dst_mac = packet["Ether"].dst if packet.haslayer("Ether") else "N/A"
+                        protocol = self.protocolExtractor.extract_protocol(packet)
+                        port = packet["TCP"].sport if packet.haslayer("TCP") else "N/A"
+                        ip_src = packet["IP"].src if packet.haslayer("IP") else "N/A"
+                        ip_dst = packet["IP"].dst if packet.haslayer("IP") else "N/A"
+                        packet_length = int(len(packet))
+                        sport = packet["TCP"].sport if packet.haslayer("TCP") else "N/A"
+                        dport = packet["TCP"].dport if packet.haslayer("TCP") else "N/A"
+                        ip_version = "IPv6" if packet.haslayer("IPv6") else "IPv4" if packet.haslayer("IP") else "N/A"
+                        layer = (
+                            "udp" if packet.haslayer("UDP")
+                            else "tcp" if packet.haslayer("TCP")
+                            else "icmp" if packet.haslayer("ICMP")
+                            else "N/A"
+                        )
+
+                        self.sensor_packet.append(packet)
+
+                        row_position = self.ui.tableWidget.rowCount()
+                        self.ui.tableWidget.insertRow(row_position)
+
+                        row_color = self.get_row_color(packet)
+                        qcolor = self.get_qcolor(row_color)
+
+                        readable_time = datetime.fromtimestamp(packet.time).strftime("%I:%M:%S %p")
+                        items = [
+                            QTableWidgetItem(readable_time),
+                            QTableWidgetItem(ip_src),
+                            QTableWidgetItem(ip_dst),
+                            QTableWidgetItem(protocol),
+                            QTableWidgetItem(layer),
+                            QTableWidgetItem(src_mac),
+                            QTableWidgetItem(dst_mac),
+                            QTableWidgetItem(str(sport) if sport else "N/A"),
+                            QTableWidgetItem(str(dport) if dport else "N/A"),
+                            QTableWidgetItem(str(packet_length)),
+                            QTableWidgetItem(ip_version)
+                        ]
+
+                        # Apply color to items
+                        if row_color != "transparent":
+                            for item in items:
+                                item.setBackground(qcolor)
+                                if "100, 100" in row_color or "100, 170" in row_color:
+                                    item.setForeground(QColor(255, 255, 255))
+
+                        for col, item in enumerate(items):
+                            self.ui.tableWidget.setItem(row_position, col, item)
+
+                    except Exception as inner_e:
+                        print(f"[filter_sensors] Error handling packet: {inner_e}")
+
+        except Exception as e:
+            print(f"[filter_sensors] Failed to filter: {e}")
+
+    def updateSensor(self, a):
+        try:
+            senName = self.ui.lineEdit_3.text().strip()
+            senMAC = self.ui.lineEdit_4.text().strip()
+
+            if a == 1:
+                self.sen_info.append(senName)
+                self.sen_info.append(0)
+                self.sensorSystem.add_sensor(senName, senMAC)
+            else:
+                print(f"[UI] Attempting to remove sensor: {senName}")
+                self.sensorSystem.remove_sensor(senName)
+
+            plt.close()
+            self.show_donut_chart()
+            self.displaySensorTable()
+        except Exception as e:
+            print(f"Error in updateSensor function: {e}")
     
+    def displaySensorTable(self):
+        try:
+            self.show_donut_chart()
+            self.ui.tableWidget_2.setRowCount(0)
+
+            for name, mac in self.sensorSystem.list_sensors().items():
+                row_position = self.ui.tableWidget_2.rowCount()
+                self.ui.tableWidget_2.insertRow(row_position)
+                self.ui.tableWidget_2.setItem(row_position, 0, QTableWidgetItem(str(name)))
+                self.ui.tableWidget_2.setItem(row_position, 1, QTableWidgetItem(str(mac)))
+
+        except Exception as e:
+            print(f"Error in displaySensorTable function: {e}")
         
+    def show_donut_chart(self):
+        try:
+            if self.typeOFchartToPlot == 0:
+                self.ui.graphicsView_2.setScene(None)
+                return
+
+            sizes = [1]
+            labels = ['']
+            sensors_dict = self.sensorSystem.list_sensors()
+
+            s = 0
+            for s in range(len(sensors_dict)):
+                sizes.append(s)
+                labels.append('')
+
+            colors = [
+                '#E0F7F5', '#B3ECE6', '#8FE0D8',
+                '#40E0D0', '#36C9B0', '#2DB39E',
+                '#249C8A', '#1B8676', '#126F62',
+                '#0A594E', '#03433A', '#002D26',
+                '#001612', '#008080', '#00CED1'
+            ]
+
+            fig, ax = plt.subplots(figsize=(6, 6))
+
+            wedges, texts = ax.pie(
+                sizes,
+                labels=labels,
+                startangle=90,
+                colors=colors,
+                wedgeprops=dict(width=0.3)
+            )
+
+            ax.axis('equal')
+            ax.set_title('Sensors', color='#40E0D0', fontsize=12, fontweight='bold')
+
+            sensor_count = f"{len(sensors_dict)} registered sensors"
+            fig.text(0.5, 0.82, sensor_count, fontsize=11, fontweight='bold', color='white',
+                    horizontalalignment='center', verticalalignment='center')
+
+            fig.patch.set_visible(False)
+            ax.patch.set_alpha(0)
+
+            canvas = FigureCanvas(fig)
+            canvas.setStyleSheet("background: transparent;")
+            canvas.setGeometry(0, 0, self.ui.graphicsView_2.width(), self.ui.graphicsView_2.height())
+
+            scene = QGraphicsScene()
+            scene.setBackgroundBrush(Qt.GlobalColor.transparent)
+            scene.addWidget(canvas)
+            self.ui.graphicsView_2.setScene(scene)
+            plt.close(fig)
+        except Exception as e:
+            print(f"error in show donut chart function:{e}")
+
+    
+    def toggleSenFlag(self):
+        try:
+            # Flip the global sensor filtering flag
+            self.senFlag *= -1
+            self.singleSenFlag = -1
+
+            # If turned ON, perform filtering
+            if self.senFlag == 1:
+                self.ui.tableWidget.setRowCount(0)
+
+                # 1. Prepare criteria for filtering via plugin
+                all_sensor_macs = list(self.sensorSystem.list_sensors().values())
+                criteria = {"mac_addresses": all_sensor_macs}
+                filtered = self.packetFilter.filter_packets(self.packets, criteria)
+
+                # 2. Clear sensor packet list and update sensor stats
+                self.sensor_packet.clear()
+
+                for packet in filtered:
+                    try:
+                        src_mac = packet["Ether"].src if packet.haslayer("Ether") else "N/A"
+                        dst_mac = packet["Ether"].dst if packet.haslayer("Ether") else "N/A"
+                        protocol = self.protocolExtractor.extract_protocol(packet)
+                        port = packet["TCP"].sport if packet.haslayer("TCP") else "N/A"
+                        ip_src = packet["IP"].src if packet.haslayer("IP") else "N/A"
+                        ip_dst = packet["IP"].dst if packet.haslayer("IP") else "N/A"
+                        packet_length = int(len(packet))
+                        ip_version = "IPv6" if packet.haslayer("IPv6") else "IPv4" if packet.haslayer("IP") else "N/A"
+
+                        sport = dport = None
+                        timestamp = float(packet.time)
+                        readable_time = datetime.fromtimestamp(timestamp).strftime("%I:%M:%S %p")
+
+                        if packet.haslayer("TCP"):
+                            sport = packet["TCP"].sport
+                            dport = packet["TCP"].dport
+                        elif packet.haslayer("UDP"):
+                            sport = packet["UDP"].sport
+                            dport = packet["UDP"].dport
+
+                        # 3. Match to which sensor(s) this packet belongs
+                        for sensor_name, sensor_mac in self.sensorSystem.list_sensors().items():
+                            if sensor_mac.lower() in src_mac.lower() or sensor_mac.lower() in dst_mac.lower():
+                                self.sensor_packet.append(packet)
+
+                                # Update sen_info count
+                                for s in range(0, len(self.sen_info) - 1, 2):
+                                    if self.sen_info[s] == sensor_name:
+                                        self.sen_info[s + 1] += 1
+
+                                # Add to table
+                                row_position = self.ui.tableWidget.rowCount()
+                                self.ui.tableWidget.insertRow(row_position)
+                                self.ui.tableWidget.setItem(row_position, 0, QTableWidgetItem(readable_time))
+                                self.ui.tableWidget.setItem(row_position, 1, QTableWidgetItem(ip_src))
+                                self.ui.tableWidget.setItem(row_position, 2, QTableWidgetItem(ip_dst))
+                                self.ui.tableWidget.setItem(row_position, 3, QTableWidgetItem(protocol))
+                                self.ui.tableWidget.setItem(row_position, 4, QTableWidgetItem(src_mac))
+                                self.ui.tableWidget.setItem(row_position, 5, QTableWidgetItem(dst_mac))
+                                self.ui.tableWidget.setItem(row_position, 6, QTableWidgetItem(str(port)))
+                                self.ui.tableWidget.setItem(row_position, 7, QTableWidgetItem(str(ip_version)))
+                                self.ui.tableWidget.setItem(row_position, 8, QTableWidgetItem(str(packet_length)))
+                                self.ui.tableWidget.setItem(row_position, 9, QTableWidgetItem(str(sport)))
+                                self.ui.tableWidget.setItem(row_position, 10, QTableWidgetItem(str(dport)))
+
+                    except Exception as inner_e:
+                        print(f"[toggleSenFlag] Error on a filtered packet: {inner_e}")
+
+                # 4. Push count
+                self.ct_sensor_packet.append(self.sen_ct)
+
+        except Exception as e:
+            print(f"[toggleSenFlag] Failed to toggle sensor flag: {e}")
+
+    #======================================================================================
+    #======================================================================================
+    #                                   UI Handling
+    #======================================================================================
+    #======================================================================================
+    def get_applications_with_ports(self):
+        try:
+            self.apps = self.applicationSystem.get_active_applications()
+            self.ui.tableWidget_3.setRowCount(0)
+            for app in self.apps:
+                row_position = self.ui.tableWidget_3.rowCount()
+                self.ui.tableWidget_3.insertRow(row_position)
+                self.ui.tableWidget_3.setItem(row_position, 0, QTableWidgetItem(str(app["Port"])))
+                self.ui.tableWidget_3.setItem(row_position, 1, QTableWidgetItem(str(app["Application"])))
+                self.ui.tableWidget_3.setItem(row_position, 2, QTableWidgetItem(str(app["IP"])))
+                self.ui.tableWidget_3.setItem(row_position, 3, QTableWidgetItem(str(app["CPU"])))
+                self.ui.tableWidget_3.setItem(row_position, 4, QTableWidgetItem(str(app["Memory"])))
+        except Exception as e:
+            print(f"Error in get_applications_with_ports function: {e}")
+    
+    def analyze_app(self, row):
+        try:
+            #this function filters by the clicked application
+            self.application_filter_flag = True
+            target_app = self.apps[row]
+            self.ui.tableWidget.setRowCount(0) 
+
+            self.filtered_packets = []
+            for packet in self.packets:
+                macsrc = packet["Ethernet"].src if packet.haslayer("Ethernet") else "N/A"
+                macdst = packet["Ethernet"].dst if packet.haslayer("Ethernet") else "N/A"
+                # Extract packet length
+                packet_length = int(len(packet))
+
+                # Extract IP version
+                ip_version = "IPv6" if packet.haslayer("IPv6") else "IPv4" if packet.haslayer("IP") else "N/A"
+                # Extract port information for TCP/UDP
+                sport = None
+                dport = None
+                if packet.haslayer("TCP"):
+                    sport = packet["TCP"].sport
+                    dport = packet["TCP"].dport
+                elif packet.haslayer("UDP"):
+                    sport = packet["UDP"].sport
+                    dport = packet["UDP"].dport
+
+                packet_length = int(len(packet))
+                src_ip = packet["IP"].src if packet.haslayer("IP") else "N/A"
+                dst_ip = packet["IP"].dst if packet.haslayer("IP") else "N/A"
+                protocol = self.protocolExtractor.extract_protocol(packet)
+                port = packet["TCP"].sport if packet.haslayer("TCP") else "N/A"
+                layer = (
+                    "udp" if packet.haslayer("UDP") 
+                    else "tcp" if packet.haslayer("TCP") 
+                    else "icmp" if packet.haslayer("ICMP") 
+                    else "N/A"
+                )
+                if target_app["IP"] in src_ip.lower() or target_app["IP"] in dst_ip.lower() or str(target_app["Port"]) in str(port):
+                    self.filtered_packets.append(packet)
+
+                    row_position = self.ui.tableWidget.rowCount()
+                    self.ui.tableWidget.insertRow(row_position)
+                    
+                    # Get color for the packet row
+                    row_color = self.get_row_color(packet)
+                    qcolor = self.get_qcolor(row_color)
+                    
+                    # Create items with background color
+                    readable_time = datetime.fromtimestamp(packet.time).strftime("%I:%M:%S %p")
+                    items = [
+                        QTableWidgetItem(readable_time),
+                        QTableWidgetItem(src_ip),
+                        QTableWidgetItem(dst_ip),
+                        QTableWidgetItem(protocol),
+                        QTableWidgetItem(layer),
+                        QTableWidgetItem(macsrc),
+                        QTableWidgetItem(macdst),
+                        QTableWidgetItem(str(sport) if sport else "N/A"),
+                        QTableWidgetItem(str(dport) if dport else "N/A"),
+                        QTableWidgetItem(str(packet_length)),
+                        QTableWidgetItem(ip_version)
+                    ]
+                    
+                    # Apply color to items
+                    if row_color != "transparent":
+                        for item in items:
+                            item.setBackground(qcolor)
+                            # For dark backgrounds, use white text
+                            if "100, 100" in row_color or "100, 170" in row_color:
+                                item.setForeground(QColor(255, 255, 255))
+                    
+                    # Add items to table
+                    for col, item in enumerate(items):
+                        self.ui.tableWidget.setItem(row_position, col, item)
+        except:
+            print("Error in analyze_app function")
+
+    #======================================================================================
+    #======================================================================================
+    #                                   Misc Handling
+    #======================================================================================
+    #======================================================================================
+    def handle_sensor_button(self, button):
+        role = self.ui.buttonBox_2.buttonRole(button)
+
+        if role == QDialogButtonBox.ButtonRole.ApplyRole:
+            self.updateSensor(1)
+        elif role == QDialogButtonBox.ButtonRole.DestructiveRole:
+            self.updateSensor(2)
+    
+    def handle_export_packets(self):
+        try:
+            packets = self.captured_packets
+            path = "data/captured_packets.pcap"
+            success = self.packetExporter.export(packets, path)
+            if success:
+                print("Packets exported successfully.")
+            else:
+                print("Packet export failed.")
+        except Exception as e:
+            print(f"Export failed with error: {e}")
+    
+    def toggleCapture(self):
+        self.capture *= -1
+        self.capture*=-1
+
+    def import_file(self):
+        try:
+            self.packetFile, _ = QFileDialog.getOpenFileName(self, "Open File", "", "All Files ();;PCAP Files (.pcap);;CSV Files (*.csv)")
+            if self.packetFile:
+                self.process_packet_index=0
+                self.pcap_process_packet_index=0
+                self.packet_stats={"total": 0, "tcp": 0, "udp": 0, "icmp": 0, "other": 0,"http":0,"https":0,"dns":0,"dhcp":0,"ftp":0,"telnet":0}
+                self.tot_icmp_packets=0
+                self.tot_tcp_packets=0
+                self.tot_udp_packets=0
+                self.packets.clear()
+                self.qued_packets.clear()
+                self.anomalies.clear()
+                self.ui.tableWidget_4.setRowCount(0)
+                print(f"Selected file: {self.packetFile}")
+                ext = os.path.splitext(self.packetFile)[1].lower()
+                if ext == '.pcap':
+                    self.sniffer_thread.stop()
+                    self.sniffer_thread = PacketSnifferThread()
+                    self.sniffer_thread.packet_captured.connect(self.put_packet_in_queue)
+                    self.sniffer_thread.set_source('pcap', self.packetFile)
+                    self.sniffer_thread.start() 
+                elif ext == '.csv':
+                    self.sniffer_thread.stop()
+                    self.sniffer_thread = PacketSnifferThread()
+                    self.sniffer_thread.packet_captured.connect(self.put_packet_in_queue)
+                    self.sniffer_thread.set_source('csv', self.packetFile)
+                    self.sniffer_thread.start()
+                else:
+                    print("Unsupported file type.")
+                self.packets.clear()
+                self.ui.tableWidget.setRowCount(0)
+            else:
+                print("No file selected")
+        except Exception as e:
+            print(f"Error in import_file function: {e}")
+
+    def resetInput(self):
+        try:
+            self.process_packet_index=0
+            self.pcap_process_packet_index=0
+            self.packet_stats={"total": 0, "tcp": 0, "udp": 0, "icmp": 0, "other": 0,"http":0,"https":0,"dns":0,"dhcp":0,"ftp":0,"telnet":0}
+            self.tot_icmp_packets=0
+            self.tot_tcp_packets=0
+            self.tot_udp_packets=0
+            self.packets.clear()
+            self.qued_packets.clear()
+            self.anomalies.clear()
+            self.ui.tableWidget_4.setRowCount(0)
+            self.sniffer_thread.stop()
+            self.sniffer_thread = PacketSnifferThread()
+            self.sniffer_thread.packet_captured.connect(self.put_packet_in_queue)
+            self.sniffer_thread.set_source('live', 'Wi-Fi')  # Change 'Wi-Fi' to your interface if needed
+            self.sniffer_thread.start()
+        except Exception as e:
+            print(f"Error in resetInput function: {e}")
+
+    def resetfilter(self):
+        try:
+            self.draw_gauge()
+            checkboxes = [
+                self.ui.checkBox,
+                self.ui.checkBox_2,
+                self.ui.checkBox_3,
+                self.ui.checkBox_4,
+                self.ui.checkBox_5,
+                self.ui.checkBox_6,
+                self.ui.checkBox_7,
+                self.ui.checkBox_8,
+                self.ui.checkBox_9,
+                self.ui.checkBox_10
+            ]
+            for checkbox in checkboxes:
+                checkbox.setCheckState(Qt.CheckState.Unchecked)
+            self.ui.tableWidget.setRowCount(0)
+            
+            # Clear the filter text fields
+            self.ui.lineEdit.setText("")
+            self.ui.lineEdit_2.setText("")
+            self.ui.lineEdit_5.setText("")
+            
+            # Reset to display all packets with proper colors
+            for packet in self.packets:
+                src_ip = packet["IP"].src if packet.haslayer("IP") else "N/A"
+                dst_ip = packet["IP"].dst if packet.haslayer("IP") else "N/A"
+                protocol = self.protocolExtractor.extract_protocol(packet)
+                
+                layer = (
+                    "udp" if packet.haslayer("UDP") 
+                    else "tcp" if packet.haslayer("TCP") 
+                    else "icmp" if packet.haslayer("ICMP") 
+                    else "N/A"
+                )
+                
+                packet_time = datetime.fromtimestamp(float(packet.time))
+                macsrc = packet["Ethernet"].src if packet.haslayer("Ethernet") else "N/A"
+                macdst = packet["Ethernet"].dst if packet.haslayer("Ethernet") else "N/A"
+                
+                packet_length = int(len(packet))
+                ip_version = "IPv6" if packet.haslayer("IPv6") else "IPv4" if packet.haslayer("IP") else "N/A"
+                
+                sport = None
+                dport = None
+                if packet.haslayer("TCP"):
+                    sport = packet["TCP"].sport
+                    dport = packet["TCP"].dport
+                elif packet.haslayer("UDP"):
+                    sport = packet["UDP"].sport
+                    dport = packet["UDP"].dport
+                
+                row_position = self.ui.tableWidget.rowCount()
+                self.ui.tableWidget.insertRow(row_position)
+                
+                # Get row color based on packet characteristics
+                row_color = self.get_row_color(packet)
+                qcolor = self.get_qcolor(row_color)
+                
+                # Create items with background color
+                readable_time = datetime.fromtimestamp(float(packet.time)).strftime("%I:%M:%S %p")
+                items = [
+                    QTableWidgetItem(readable_time),
+                    QTableWidgetItem(src_ip),
+                    QTableWidgetItem(dst_ip),
+                    QTableWidgetItem(protocol),
+                    QTableWidgetItem(layer),
+                    QTableWidgetItem(macsrc),
+                    QTableWidgetItem(macdst),
+                    QTableWidgetItem(str(sport) if sport else "N/A"),
+                    QTableWidgetItem(str(dport) if dport else "N/A"),
+                    QTableWidgetItem(str(packet_length)),
+                    QTableWidgetItem(ip_version)
+                ]
+                
+                # Apply background color to each item
+                if row_color != "transparent":
+                    for item in items:
+                        item.setBackground(qcolor)
+                        # For dark backgrounds, use white text for better contrast
+                        if "100, 100" in row_color or "100, 170" in row_color:
+                            item.setForeground(QColor(255, 255, 255))
+                
+                # Set items in the table
+                for col, item in enumerate(items):
+                    self.ui.tableWidget.setItem(row_position, col, item)
+            
+            self.filterapplied=False
+            self.typeOFchartToPlot=0
+            self.application_filter_flag=False
+            self.senFlag = -1 
+            self.singleSenFlag = -1
+        except Exception as e:
+            print(f"Error in resetfilter function: {e}")
+            tb = traceback.format_exc()
+            print(tb)
+    def ppsttick(self):
+        try:
+            self.rate_of_packets=self.recently_qued_packets/1
+            if self.rate_of_packets>=100 and  self.rate_of_packets<=300:
+                current_time = datetime.now().strftime("%H:%M:%S")
+                self.networkLog.append(current_time + " - " + "Moderately high increase in packets")
+            if self.rate_of_packets>=300 and  self.rate_of_packets<=700:
+                current_time = datetime.now().strftime("%H:%M:%S")
+                self.networkLog.append(current_time + " - " + "High increase in packets")
+            if self.rate_of_packets>=700:
+                current_time = datetime.now().strftime("%H:%M:%S")
+                self.networkLog.append(current_time + " - " + "Extremely high increase in packets")
+            self.recently_qued_packets=0
+            self.draw_gauge()
+        except Exception as e:
+            print(f"Error in ppsttick function: {e}")
+    def tick(self):
+        try:
+            current_time = QTime.currentTime()
+            elapsed_seconds = self.start_time.secsTo(current_time)
+            hours = elapsed_seconds // 3600
+            minutes = (elapsed_seconds % 3600) // 60
+            seconds = elapsed_seconds % 60
+            self.elapsedTime = f"{hours:02}:{minutes:02}:{seconds:02}"
+            self.ui.label_6.setText(str(self.elapsedTime))
+            if self.process_packet_index<len(self.qued_packets)and self.pcap_process_packet_index<len(self.qued_packets):
+                self.process_packet()
+                self.packet_statistics()
+        except Exception as e:
+            print(f"Error in tick function: {e}")
+
+
+
 class Naswail(QMainWindow, Ui_MainWindow):
     def __init__(self):
         super().__init__()
@@ -1317,186 +1665,50 @@ class Naswail(QMainWindow, Ui_MainWindow):
         self.showMaximized()
         self.setWindowTitle("Naswail - Main")
 
-        global packetInput, clearRead
-        
-        self.filterapplied=False
-        #
-        self.typeOFchartToPlot=0#0 represents the guage charrt while 1 represents the donut chart
-        self.pushButton.clicked.connect(self.resetfilter)
-        self.packets = []
-        self.times = []
-        self.counts = []
-        self.capture = -1
-        self.start_time = QTime.currentTime()
-        self.elapsedTime = 0
-        self.scene = QGraphicsScene(self)
-        self.total_inside_packets=0
-        self.total_outside_packets=0
-        self.time_series = {}
-        
-        # Fix the navigation bar buttons - ensure they're above any other elements
         self.fix_navigation_bar()
-
-        #objects
-        self.protocol_extractor=BasicProtocolExtractor()
-        self.corrupted_packet_list = []
-        self.network_log = []
-
-        self.secondary_widget3=None
-        di.container.register_singleton("PacketSystem", self.create_packet_system())
-        self.PacketSystemobj = di.container.resolve("PacketSystem")
-        self.PacketSystemobj.set_ui(self)
-        self.PacketSystemobj.packetDecoder.set_ui(self.listView_2)
-        self.PacketSystemobj.packetDetails.set_ui(self.listView)
-
-        di.container.register_singleton("SensorSystem", self.create_sensor_system())
-        self.SensorSystemobj = di.container.resolve("SensorSystem")
-        self.SensorSystemobj.set_ui(self)
-        
-        di.container.register_singleton("ApplicationSystem", self.create_applications_system())
-        self.Appsystemobj = di.container.resolve("ApplicationSystem")
-        self.Appsystemobj.set_ui(self)
-    
-        self.SensorSystemobj.set_packet_system(self.PacketSystemobj)
-        self.PacketSystemobj.set_sensor_system(self.SensorSystemobj)
-        self.Appsystemobj.set_packet_system(self.PacketSystemobj)
-        #
-        self.PacketSystemobj.draw_gauge()
-
-        # Create color legend
         self.create_color_legend()
-        
-        #Logo Image
-        pixmap = QPixmap("resources/logo.png")
-        self.pixmap_item = QGraphicsPixmapItem(pixmap)
-        self.scene.addItem(self.pixmap_item)
-        self.graphicsView.setScene(self.scene)
-        self.graphicsView.setFixedSize(71, 61)
-        self.graphicsView.fitInView(self.scene.sceneRect(), Qt.AspectRatioMode.KeepAspectRatio)
-        
-        self.tableWidget.setColumnCount(10)
-        self.tableWidget.setHorizontalHeaderLabels(["Timestamp", "Source", "Destination", "Protocol","layer","macsrc","macdst","srcport","dstport","length","IP version"])
-        self.tableWidget.cellClicked.connect(self.PacketSystemobj.handle_details_click)
-        self.tableWidget.cellClicked.connect(self.PacketSystemobj.handle_decode_click)
-        self.tabWidget.currentChanged.connect(lambda index: self.PacketSystemobj.change_chart(1) if index == 2 else self.PacketSystemobj.change_chart(0))
-        self.tabWidget.currentChanged.connect(lambda index: self.Appsystemobj.get_applications_with_ports() if index == 3 else None)
-        self.tabWidget.currentChanged.connect(lambda index: self.PacketSystemobj.packet_statistics() if index == 5 else None)
-        self.tabWidget.currentChanged.connect(lambda index: self.PacketSystemobj.display_log() if index == 7 else None)
-        self.tableWidget_2.setColumnCount(2)
-        self.tableWidget_2.setHorizontalHeaderLabels(["Name", "IP"])
-        self.tableWidget_2.cellClicked.connect(self.SensorSystemobj.filter_sensors)
-        self.tableWidget_3.setColumnCount(5)
-        self.tableWidget_3.setHorizontalHeaderLabels(["Port", "Application", "IP","CPU","Memory-percent"])
-        self.tableWidget_3.cellClicked.connect(self.Appsystemobj.analyze_app)
-        self.tableWidget_4.setColumnCount(4)
-        self.tableWidget_4.setHorizontalHeaderLabels(["Timestamp", "Source", "Destination", "Attack Type"])
-        #self.tableWidget_4.cellClicked.connect(self.Appsystemobj.analyze_app)
-        self.pushButton_5.clicked.connect(self.toggleCapture)
-        self.pushButton_6.clicked.connect(self.toggleCapture)
-        self.pushButton_7.clicked.connect(self.SensorSystemobj.toggleSenFlag)
-        self.actionImport_Packets.triggered.connect(self.import_file)
-        self.actionExport_Packets.triggered.connect(self.handle_export_packets)
-        self.actionLive_Capture.triggered.connect(self.resetInput)
-        self.buttonBox_2.clicked.connect(self.handle_sensor_button)
-        self.pushButton_10.clicked.connect(lambda _: self.PacketSystemobj.updateBlacklist(1))
-        self.pushButton_11.clicked.connect(lambda _: self.PacketSystemobj.updateBlacklist(2))
-        self.pushButton_12.clicked.connect(lambda _:self.PacketSystemobj.save_log_to_file())
-        self.pushButton_apply.clicked.connect(self.PacketSystemobj.fabricate_packet)
-       
-        self.checkBox.stateChanged.connect(self.PacketSystemobj.apply_filter)      # UDP
-        self.checkBox_2.stateChanged.connect(self.PacketSystemobj.apply_filter)    # TCP
-        self.checkBox_3.stateChanged.connect(self.PacketSystemobj.apply_filter)    # ICMP
-        self.checkBox_4.stateChanged.connect(self.PacketSystemobj.apply_filter)    # DNS
-        self.checkBox_5.stateChanged.connect(self.PacketSystemobj.apply_filter)    # DHCP
-        self.checkBox_6.stateChanged.connect(self.PacketSystemobj.apply_filter)    # HTTP
-        self.checkBox_7.stateChanged.connect(self.PacketSystemobj.apply_filter)    # HTTPS
-        self.checkBox_8.stateChanged.connect(self.PacketSystemobj.apply_filter)    # TELNET
-        self.checkBox_9.stateChanged.connect(self.PacketSystemobj.apply_filter)    # FTP
-        self.checkBox_10.stateChanged.connect(self.PacketSystemobj.apply_filter)   # Other
-        self.pushButton_9.clicked.connect(self.PacketSystemobj.apply_filter)
-        self.dateTimeEdit.setDisplayFormat("dd-MMM-yyyy hh:mm AP")  
-        self.dateTimeEdit_2.setDisplayFormat("dd-MMM-yyyy hh:mm AP")  
-        self.sniffer_thread = PacketSnifferThread()
-        self.sniffer_thread.packet_captured.connect(self.PacketSystemobj.put_packet_in_queue)
-        self.sniffer_thread.set_source('live', '_')
-        self.sniffer_thread.start()
-        self.stats_timer = QTimer()
-        self.stats_timer.timeout.connect(self.tick)
+        self.scene = QGraphicsScene(self)
+        self.controller = HomeController(
+            ui = self,
+            packet_decoder = di.container.resolve("packet_decoder"),
+            packet_details = di.container.resolve("packet_details"),
+            protocol_extractor = di.container.resolve("protocol_extractor"),
+            error_checker = di.container.resolve("error_checker"),
+            packet_statistics = di.container.resolve("packet_statistics"),
+            anomaly_detector = di.container.resolve("anomaly_detector"),
+            packet_filter = di.container.resolve("packet_filter"),
+            corrupted_packet_list = di.container.resolve("corrupted_packet_list"),
+            network_log = di.container.resolve("network_log"),
+            anomalies = di.container.resolve("anomalies"),
+            blacklist = di.container.resolve("blacklist"),
+            blocked_ports = di.container.resolve("blocked_ports"),
+            list_of_activity = di.container.resolve("list_of_activity"),
+            qued_packets = di.container.resolve("qued_packets"),
+            packets = di.container.resolve("packets"),
+            time_series = di.container.resolve("time_series"),
+            sen_info = di.container.resolve("sen_info"),
+            sensor_system = di.container.resolve("sensor_system"),
+            application_system = di.container.resolve("application_system"),
+            packet_exporter = di.container.resolve("packet_exporter"),
+            scene = self.scene
+        )
 
-        self.num=100
-      
-        self.stats_timer.start(10)
-        self.packet_per_seconds_timer = QTimer()
-        self.packet_per_seconds_timer.timeout.connect(self.ppsttick)
-        self.packet_per_seconds_timer.start(1000)
-        self.ct = 0
+        # Fix the navigation bar buttons - ensure they're above any other elements
         self.pushButton_2.clicked.connect(self.open_analysis)
         self.pushButton_3.clicked.connect(self.open_tool)
         self.pushButton_13.clicked.connect(self.open_incidentresponse)
-        #notifications
-       
+        
+
+        self.secondary_widget3=None
+
+        self.controller.draw_gauge()
+
         self.notificationButton.clicked.connect(self.show_notifications)
         self.notificationList.itemClicked.connect(self.show_notification_details)
         details="ayad has a tendency to goof quite hard these days, so he is a bit busy"
         title="Ayad be goofing"
         full_details=""" come on man its too ez btruh i just like the way i fight children i hate kids ama kidnap them"""
         self.add_notification(title,details,full_details)
-    
-    def create_packet_system(self):
-        return PacketSystem(
-            packet_decoder=BasicPacketDecoder(),
-            packet_details=BasicPacketDetails(),
-            protocol_extractor=self.protocol_extractor,
-            error_checker=BasicErrorChecker(
-                corrupted_packet_list=self.corrupted_packet_list,
-                logger=self.network_log
-            ),
-            packet_statistics=BasicPacketStatistics(),
-            anomaly_detector=SnortAnomalyDetector(
-                rules_file="C:\\Snort\\rules\\custom.rules",
-                log_file="C:\\Snort\\log\\alert.ids"
-            ),
-            packet_filter=BasicPacketFilter(
-                protocol_extractor=self.protocol_extractor
-            ),
-            corrupted_packet_list=self.corrupted_packet_list,
-            network_log=self.network_log
-        )
-
-    def create_sensor_system(self):
-        sensor_impl = BasicSensorSystem()
-        pkt_filter = BasicPacketFilter(self.protocol_extractor)
-
-        return SensorSystem(
-            sensor_system=sensor_impl,
-            protocol_extractor=self.protocol_extractor,
-            packet_filter=pkt_filter
-        )
-
-    def create_applications_system(self):
-        app_impl = BasicApplicationSystem()
-        return ApplicationsSystem(application_system=app_impl)
-    
-    def handle_sensor_button(self, button):
-        role = self.buttonBox_2.buttonRole(button)
-
-        if role == QDialogButtonBox.ButtonRole.ApplyRole:
-            self.SensorSystemobj.updateSensor(1)
-        elif role == QDialogButtonBox.ButtonRole.DestructiveRole:
-            self.SensorSystemobj.updateSensor(2)
-    
-    def handle_export_packets(self):
-        try:
-            packets = self.PacketSystemobj.captured_packets
-            path = "data/captured_packets.pcap"
-            packetExporter = BasicPacketExporter()
-            success = packetExporter.export(packets, path)
-            if success:
-                print("Packets exported successfully.")
-            else:
-                print("Packet export failed.")
-        except Exception as e:
-            print(f"Export failed with error: {e}")
     
     def fix_navigation_bar(self):
         """Fix the navigation bar elements to ensure they're properly visible"""
@@ -1610,7 +1822,6 @@ class Naswail(QMainWindow, Ui_MainWindow):
             print(f"Error in open_tool function: {e}")
     def open_analysis(self):
             try:
-
                 self.secondary_widget = Window_Analysis(self)  
                 self.hide()
                 self.secondary_widget.show()
@@ -1629,197 +1840,8 @@ class Naswail(QMainWindow, Ui_MainWindow):
                 print(f"Error in open_incidentresponse function: {e}")
                 tb=traceback.format_exc()
                 print(tb)
-    def resetfilter(self):
-        try:
-            self.PacketSystemobj.draw_gauge()
-            checkboxes = [
-                self.checkBox,
-                self.checkBox_2,
-                self.checkBox_3,
-                self.checkBox_4,
-                self.checkBox_5,
-                self.checkBox_6,
-                self.checkBox_7,
-                self.checkBox_8,
-                self.checkBox_9,
-                self.checkBox_10
-            ]
-            for checkbox in checkboxes:
-                checkbox.setCheckState(Qt.CheckState.Unchecked)
-            self.tableWidget.setRowCount(0)
-            
-            # Clear the filter text fields
-            self.lineEdit.setText("")
-            self.lineEdit_2.setText("")
-            self.lineEdit_5.setText("")
-            
-            # Reset to display all packets with proper colors
-            for packet in self.PacketSystemobj.packets:
-                src_ip = packet["IP"].src if packet.haslayer("IP") else "N/A"
-                dst_ip = packet["IP"].dst if packet.haslayer("IP") else "N/A"
-                protocol = self.PacketSystemobj.protocolExtractor.extract_protocol(packet)
-                
-                layer = (
-                    "udp" if packet.haslayer("UDP") 
-                    else "tcp" if packet.haslayer("TCP") 
-                    else "icmp" if packet.haslayer("ICMP") 
-                    else "N/A"
-                )
-                
-                packet_time = datetime.fromtimestamp(float(packet.time))
-                macsrc = packet["Ethernet"].src if packet.haslayer("Ethernet") else "N/A"
-                macdst = packet["Ethernet"].dst if packet.haslayer("Ethernet") else "N/A"
-                
-                packet_length = int(len(packet))
-                ip_version = "IPv6" if packet.haslayer("IPv6") else "IPv4" if packet.haslayer("IP") else "N/A"
-                
-                sport = None
-                dport = None
-                if packet.haslayer("TCP"):
-                    sport = packet["TCP"].sport
-                    dport = packet["TCP"].dport
-                elif packet.haslayer("UDP"):
-                    sport = packet["UDP"].sport
-                    dport = packet["UDP"].dport
-                
-                row_position = self.tableWidget.rowCount()
-                self.tableWidget.insertRow(row_position)
-                
-                # Get row color based on packet characteristics
-                row_color = self.PacketSystemobj.get_row_color(packet)
-                qcolor = self.PacketSystemobj.get_qcolor(row_color)
-                
-                # Create items with background color
-                readable_time = datetime.fromtimestamp(float(packet.time)).strftime("%I:%M:%S %p")
-                items = [
-                    QTableWidgetItem(readable_time),
-                    QTableWidgetItem(src_ip),
-                    QTableWidgetItem(dst_ip),
-                    QTableWidgetItem(protocol),
-                    QTableWidgetItem(layer),
-                    QTableWidgetItem(macsrc),
-                    QTableWidgetItem(macdst),
-                    QTableWidgetItem(str(sport) if sport else "N/A"),
-                    QTableWidgetItem(str(dport) if dport else "N/A"),
-                    QTableWidgetItem(str(packet_length)),
-                    QTableWidgetItem(ip_version)
-                ]
-                
-                # Apply background color to each item
-                if row_color != "transparent":
-                    for item in items:
-                        item.setBackground(qcolor)
-                        # For dark backgrounds, use white text for better contrast
-                        if "100, 100" in row_color or "100, 170" in row_color:
-                            item.setForeground(QColor(255, 255, 255))
-                
-                # Set items in the table
-                for col, item in enumerate(items):
-                    self.tableWidget.setItem(row_position, col, item)
-            
-            self.PacketSystemobj.filterapplied=False
-            self.PacketSystemobj.typeOFchartToPlot=0
-            self.PacketSystemobj.application_filter_flag=False
-            self.SensorSystemobj.senFlag = -1 
-            self.SensorSystemobj.singleSenFlag = -1
-        except Exception as e:
-            print(f"Error in resetfilter function: {e}")
-            tb = traceback.format_exc()
-            print(tb)
-    def ppsttick(self):
-        try:
-            self.PacketSystemobj.rate_of_packets=self.PacketSystemobj.recently_qued_packets/1
-            if self.PacketSystemobj.rate_of_packets>=100 and  self.PacketSystemobj.rate_of_packets<=300:
-                current_time = datetime.now().strftime("%H:%M:%S")
-                self.PacketSystemobj.networkLog.append(current_time + " - " + "Moderately high increase in packets")
-            if self.PacketSystemobj.rate_of_packets>=300 and  self.PacketSystemobj.rate_of_packets<=700:
-                current_time = datetime.now().strftime("%H:%M:%S")
-                self.PacketSystemobj.networkLog.append(current_time + " - " + "High increase in packets")
-            if self.PacketSystemobj.rate_of_packets>=700:
-                current_time = datetime.now().strftime("%H:%M:%S")
-                self.PacketSystemobj.networkLog.append(current_time + " - " + "Extremely high increase in packets")
-            self.PacketSystemobj.recently_qued_packets=0
-            self.PacketSystemobj.draw_gauge()
-        except Exception as e:
-            print(f"Error in ppsttick function: {e}")
-    def tick(self):
-        try:
-            current_time = QTime.currentTime()
-            elapsed_seconds = self.start_time.secsTo(current_time)
-            hours = elapsed_seconds // 3600
-            minutes = (elapsed_seconds % 3600) // 60
-            seconds = elapsed_seconds % 60
-            self.elapsedTime = f"{hours:02}:{minutes:02}:{seconds:02}"
-            self.label_6.setText(str(self.elapsedTime))
-            global packetInput, packetFile, packetIndex
-            if self.PacketSystemobj.process_packet_index<len(self.PacketSystemobj.qued_packets)and self.PacketSystemobj.pcap_process_packet_index<len(self.PacketSystemobj.qued_packets):
-                self.PacketSystemobj.process_packet()
-                self.PacketSystemobj.packet_statistics()
-        except Exception as e:
-            print(f"Error in tick function: {e}")
 
-        
-    def toggleCapture(self):
-        self.capture *= -1
-        self.PacketSystemobj.capture*=-1
 
-    def import_file(self):
-        try:
-            global packetFile, packetInput
-            packetFile, _ = QFileDialog.getOpenFileName(self, "Open File", "", "All Files ();;PCAP Files (.pcap);;CSV Files (*.csv)")
-            if packetFile:
-                self.PacketSystemobj.process_packet_index=0
-                self.PacketSystemobj.pcap_process_packet_index=0
-                self.PacketSystemobj.packet_stats={"total": 0, "tcp": 0, "udp": 0, "icmp": 0, "other": 0,"http":0,"https":0,"dns":0,"dhcp":0,"ftp":0,"telnet":0}
-                self.PacketSystemobj.tot_icmp_packets=0
-                self.PacketSystemobj.tot_tcp_packets=0
-                self.PacketSystemobj.tot_udp_packets=0
-                self.PacketSystemobj.packets.clear()
-                self.PacketSystemobj.qued_packets.clear()
-                self.PacketSystemobj.anomalies.clear()
-                self.tableWidget_4.setRowCount(0)
-                print(f"Selected file: {packetFile}")
-                ext = os.path.splitext(packetFile)[1].lower()
-                if ext == '.pcap':
-                    self.sniffer_thread.stop()
-                    self.sniffer_thread = PacketSnifferThread()
-                    self.sniffer_thread.packet_captured.connect(self.PacketSystemobj.put_packet_in_queue)
-                    self.sniffer_thread.set_source('pcap', packetFile)
-                    self.sniffer_thread.start() 
-                elif ext == '.csv':
-                    self.sniffer_thread.stop()
-                    self.sniffer_thread = PacketSnifferThread()
-                    self.sniffer_thread.packet_captured.connect(self.PacketSystemobj.put_packet_in_queue)
-                    self.sniffer_thread.set_source('csv', packetFile)
-                    self.sniffer_thread.start()
-                else:
-                    print("Unsupported file type.")
-                self.packets.clear()
-                self.tableWidget.setRowCount(0)
-            else:
-                print("No file selected")
-        except Exception as e:
-            print(f"Error in import_file function: {e}")
-
-    def resetInput(self):
-        try:
-            self.PacketSystemobj.process_packet_index=0
-            self.PacketSystemobj.pcap_process_packet_index=0
-            self.PacketSystemobj.packet_stats={"total": 0, "tcp": 0, "udp": 0, "icmp": 0, "other": 0,"http":0,"https":0,"dns":0,"dhcp":0,"ftp":0,"telnet":0}
-            self.PacketSystemobj.tot_icmp_packets=0
-            self.PacketSystemobj.tot_tcp_packets=0
-            self.PacketSystemobj.tot_udp_packets=0
-            self.PacketSystemobj.packets.clear()
-            self.PacketSystemobj.qued_packets.clear()
-            self.PacketSystemobj.anomalies.clear()
-            self.tableWidget_4.setRowCount(0)
-            self.sniffer_thread.stop()
-            self.sniffer_thread = PacketSnifferThread()
-            self.sniffer_thread.packet_captured.connect(self.PacketSystemobj.put_packet_in_queue)
-            self.sniffer_thread.set_source('live', 'Wi-Fi')  # Change 'Wi-Fi' to your interface if needed
-            self.sniffer_thread.start()
-        except Exception as e:
-            print(f"Error in resetInput function: {e}")
     def create_color_legend(self):
         # Create a frame for the legend
         legend_frame = QFrame(self.centralwidget)

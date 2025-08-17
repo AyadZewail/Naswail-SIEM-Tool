@@ -20,7 +20,7 @@ from PyQt6.QtCore import *
 from PyQt6.QtGui import QPixmap, QPainter, QColor, QPen, QBrush, QFont, QPainterPath, QImage
 from scapy.layers.inet import IP
 from scapy.all import *
-from UI_Analysis import Ui_Naswail_Anlaysis
+from views.UI_Analysis import Ui_Naswail_Anlaysis
 from Code_Tools import Window_Tools
 from Code_IncidentResponse import IncidentResponse
 import math
