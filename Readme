@@ -13,6 +13,7 @@ This software runs only on Windows(linux is in devlopment among other features) 
 1. Npcap
    - Download the Npcap Installer from [Npcap Official Site](https://npcap.com/).
    - Run the installer and follow the on-screen instructions.
+1a.All Machine learning and deep learnign models are in the ml_ids_dl_ids branch
 
 2. Naiswail Repository
    - Download the repository by clicking on Code → Download ZIP.
