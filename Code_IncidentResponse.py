@@ -4,12 +4,8 @@ import gzip
 import psutil
 import platform
 import subprocess
-import json
-import re
-import requests
 import geoip2.database
 import socket
-import paramiko
 import base64
 import urllib.parse
 import binascii
@@ -17,23 +13,8 @@ import codecs
 import threading
 import asyncio
 import concurrent.futures
-import functools
 import asyncio
-import aiohttp
-from bs4 import BeautifulSoup
-from urllib.parse import quote_plus
-import logging
 import time
-from sentence_transformers import SentenceTransformer, util
-import spacy
-import torch
-import pandas as pd
-import numpy as np
-from selenium import webdriver
-from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.common.by import By
-import random
-from tenacity import retry, stop_after_attempt, wait_exponential
 from PyQt6.QtWidgets import *
 from PyQt6.QtCore import *
 from PyQt6.QtGui import *
@@ -41,7 +22,6 @@ from scapy.all import *
 from scapy.layers.inet import IP
 from scapy.layers.l2 import Ether
 from views.UI_IncidentResponse import Ui_IncidentResponse
-
 from core import di
 
 #!/usr/bin/env python
@@ -49,10 +29,6 @@ from core import di
 # type C:\Snort\log\alert.ids
 # echo. > C:\Snort\log\alert.ids
 # ping -n 4 8.8.8.8
-
-# Initialize thread pool at module level for immediate availability
-# Using ThreadPoolExecutor instead of ProcessPool for faster I/O bound operations
-thread_pool = concurrent.futures.ThreadPoolExecutor(max_workers=4)
 
 # Cache for expensive function calls
 function_cache = {}

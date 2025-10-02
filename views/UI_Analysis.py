@@ -7,6 +7,7 @@
 
 
 from PyQt6 import QtCore, QtGui, QtWidgets
+from PyQt6.QtGui import QFont
 
 
 class Ui_Naswail_Anlaysis(object):
@@ -443,6 +444,22 @@ class Ui_Naswail_Anlaysis(object):
         self.geoGroupBox.setMinimumSize(QtCore.QSize(700, 450))  # Make equal to graphGroupBox
         geoLayout = QtWidgets.QVBoxLayout(self.geoGroupBox)
         
+        # Refresh button
+        self.refreshMapButton = QtWidgets.QPushButton("Refresh Map")
+        self.refreshMapButton.setObjectName("refreshMapButton")
+        self.refreshMapButton.setMaximumWidth(120)
+        geoLayout.addWidget(self.refreshMapButton)
+
+        # Location label
+        self.locationLabel = QtWidgets.QLabel("Detecting location...")
+        self.locationLabel.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
+        font = QFont()
+        font.setPointSize(12)
+        font.setBold(True)
+        self.locationLabel.setFont(font)
+        self.locationLabel.setStyleSheet("color: #40E0D0;")
+        geoLayout.addWidget(self.locationLabel)
+
         # Label for geolocation map
         self.label = QtWidgets.QLabel()
         self.label.setMinimumSize(QtCore.QSize(600, 400))  # Increased size for better map visibility

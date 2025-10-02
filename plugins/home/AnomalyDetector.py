@@ -103,7 +103,7 @@ class SnortAnomalyDetector(IAnomalyDetector):
                     print(tb)
                     continue
 
-    def check_packet(self, packet: Any) -> Optional[Dict[str, Any]]:
+    def check(self, packet: Any) -> Optional[Dict[str, Any]]:
         try:
             if IP in packet:
                 src_ip = packet[IP].src
@@ -112,5 +112,5 @@ class SnortAnomalyDetector(IAnomalyDetector):
                     attack_name = self.snort_alerts[(src_ip, dst_ip)][0]
                     return attack_name
         except Exception as e:
-            print(f"[SnortAnomalyDetector] check_packet error: {e}")
+            print(f"[SnortAnomalyDetector] check error: {e}")
         return None

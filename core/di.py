@@ -4,12 +4,13 @@ from plugins.home.ProtocolExtractor import BasicProtocolExtractor
 from plugins.home.ErrorChecker import BasicErrorChecker
 from plugins.home.PacketStatistics import BasicPacketStatistics
 from plugins.home.AnomalyDetector import SnortAnomalyDetector
+from plugins.home.AEAnomalyDetector import AEAnomalyDetector
 from plugins.home.PacketFilter import BasicPacketFilter
 from plugins.home.SensorSystem import BasicSensorSystem
 from plugins.home.ApplicationSystem import BasicApplicationSystem
 from plugins.home.PacketsExporter import BasicPacketExporter
 
-from plugins.incident_response.scrapers import BingSearcher
+from plugins.incident_response.scrapers import BingSearcher, YouTubeSearcher
 from plugins.incident_response.IntelPreprocessor import SimpleIntelPreprocessor
 from plugins.incident_response.ThreatIntelligence import ThreatIntelligence
 from plugins.incident_response.AutopilotEngine import KaggleLLMEngine as Autopilot
@@ -49,6 +50,10 @@ container.register_singleton("qued_packets", [])
 container.register_singleton("packets", [])
 container.register_singleton("time_series", {})
 container.register_singleton("sen_info", [])
+container.register_singleton("packet_stats", {"total": 0, "tcp": 0, "udp": 0, "icmp": 0, "other": 0,"http":0,"https":0,"dns":0,"dhcp":0,"ftp":0,"telnet":0})
+container.register_singleton("total_inside_packets", 0)
+container.register_singleton("total_outside_packets", 0)
+container.register_singleton("bandwidth_data", [])
 
 # ===== Home related =====
 container.register_singleton("packet_decoder", BasicPacketDecoder())
@@ -69,6 +74,12 @@ container.register_singleton(
         rules_file="C:\\Snort\\rules\\custom.rules",
         log_file="C:\\Snort\\log\\alert.ids"
     )
+    # AEAnomalyDetector(
+    #     packets=container.resolve("packets"),
+    #     model_path="resources/mlp_teacher.pth", 
+    #     error_path="resources/all_error.pkl", 
+    #     scaler_path="resources/base_MLP_scaler.pkl",
+    # )
 )
 
 container.register_singleton(
@@ -86,11 +97,12 @@ container.register_singleton("application_system", BasicApplicationSystem())
 
 # ===== Threat Intelligence related =====
 container.register_singleton("bing_searcher", BingSearcher())
+container.register_singleton("yt_searcher", YouTubeSearcher())
 container.register_singleton("simple_intel_preprocessor", SimpleIntelPreprocessor())
 container.register_singleton(
     "threat_intelligence",
     ThreatIntelligence(
-        searchers=[container.resolve("bing_searcher")],
+        searchers=[container.resolve("bing_searcher"), container.resolve("yt_searcher")],
         preprocessor=container.resolve("simple_intel_preprocessor")
     )
 )

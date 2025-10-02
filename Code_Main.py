@@ -35,17 +35,7 @@ import threading
 import ctypes
 from core import di
 from plugins.home.PacketSniffer import PacketSnifferThread
-from plugins.home.PacketDecoder import BasicPacketDecoder
-from plugins.home.PacketDetails import BasicPacketDetails
-from plugins.home.ProtocolExtractor import BasicProtocolExtractor
-from plugins.home.ErrorChecker import BasicErrorChecker
-from plugins.home.PacketStatistics import BasicPacketStatistics
-from plugins.home.PacketsExporter import BasicPacketExporter
 from plugins.home.PacketFabricator import BasicPacketFabricator
-from plugins.home.AnomalyDetector import SnortAnomalyDetector
-from plugins.home.PacketFilter import BasicPacketFilter
-from plugins.home.SensorSystem import BasicSensorSystem
-from plugins.home.ApplicationSystem import BasicApplicationSystem
 
 #sudo /home/hamada/Downloads/Naswail-SIEM-Tool-main/.venv/bin/python /home/hamada/Downloads/Naswail-SIEM-Tool-main/Code_Main.py
 
@@ -161,45 +151,7 @@ class SplashScreen(QSplashScreen):
     # Override mousePressEvent to prevent clicking through splash screen
     def mousePressEvent(self, event):
         pass
-
-class ApplicationsSystem:
-    def __init__(self, application_system):
-        self.ui = None
-        self.packet_obj = None  
-    
-    def set_ui(self, ui):
-        self.ui = ui
-    
-    def set_packet_system(self, packet_obj):
-        self.packet_obj = packet_obj
-    
-    
-
-class SensorSystem:
-    def __init__(self, sensor_system, protocol_extractor, packet_filter):
-        self.ui = None
-        
-        
-    def set_ui(self, ui):
-        self.ui = ui
-    
-    def set_packet_system(self, packet_obj):       
-        self.packet_obj = packet_obj
-
-    
-
- 
-class PacketSystem:
-    def __init__(self, packet_decoder, packet_details, protocol_extractor,
-             error_checker, packet_statistics, anomaly_detector, packet_filter,
-             corrupted_packet_list, network_log,):
-        self.ui = None
-        
-        
-    def set_ui(self, ui):
-        self.ui = ui
-    
-        
+  
 class HomeController:
     def __init__(
         self,
@@ -224,7 +176,11 @@ class HomeController:
         sensor_system,
         application_system,
         packet_exporter,
-        scene
+        scene,
+        totINpacekts,
+        totOUTpacekts,
+        packetStats,
+        bandwidthData,
     ):
         #======================================================================================
         #======================================================================================
@@ -244,8 +200,6 @@ class HomeController:
         self.capture = -1
         self.start_time = QTime.currentTime()
         self.elapsedTime = 0
-        self.total_inside_packets=0
-        self.total_outside_packets=0
         self.packetDecoder = packet_decoder
         self.packetDetails = packet_details
         self.protocolExtractor = protocol_extractor
@@ -264,7 +218,7 @@ class HomeController:
         self.time_series = time_series
         self.packetExporter = packet_exporter
         self.process_packet_index=0
-        self.bandwidth_data = []
+        self.bandwidth_data = bandwidthData
         self.captured_packets = []
         self.putpacketinqueue()
         self.pcap_packets = []
@@ -273,14 +227,14 @@ class HomeController:
         self.filtered_packets = []
         self.packet_features = []
         self.new_packet_features = []
-        self.total_inside_packets = 0
-        self.total_outside_packets = 0
+        self.total_inside_packets = totINpacekts
+        self.total_outside_packets = totOUTpacekts
         self.inside_packets = 0
         self.outside_packets = 0
         self.inside_percentage = 0
         self.filterapplied = False
         self.application_filter_flag=False
-        self.packet_stats = {"total": 0, "tcp": 0, "udp": 0, "icmp": 0, "other": 0,"http":0,"https":0,"dns":0,"dhcp":0,"ftp":0,"telnet":0}
+        self.packet_stats = packetStats
         self.unique_anomalies = set()  # Track unique (src_ip, dst_ip, attack_name) tuples
         self.capture = -1
         self.tot_tcp_packets = 0
@@ -758,10 +712,11 @@ class HomeController:
                         self.new_packet_features.append([packet_info['length'], packet_info['timestamp'], protocol])
                         
                         # Check for anomalies
-                        # if not self.alert_timer_started:
-                        #     self.alert_timer_started = True
-                        #     threading.Timer(15.0, lambda: self.snort_alerts[(packet_info['src_ip'], packet_info['dst_ip'])].append("Port Scanning")).start()
-                        attack_label = self.anomalyDetector.check_packet(packet)
+                        if not self.alert_timer_started:
+                            self.alert_timer_started = True
+                            threading.Timer(15.0, lambda: self.snort_alerts[(packet_info['src_ip'], packet_info['dst_ip'])].append("Port Scanning")).start()
+                        
+                        attack_label = self.anomalyDetector.check(packet)
                         if attack_label:
                             self.anomalies.append(packet)
                             anomaly_signature = (packet_info['src_ip'], packet_info['dst_ip'], attack_label)
@@ -1690,7 +1645,11 @@ class Naswail(QMainWindow, Ui_MainWindow):
             sensor_system = di.container.resolve("sensor_system"),
             application_system = di.container.resolve("application_system"),
             packet_exporter = di.container.resolve("packet_exporter"),
-            scene = self.scene
+            scene = self.scene,
+            totINpacekts= di.container.resolve("total_inside_packets"),
+            totOUTpacekts= di.container.resolve("total_outside_packets"),
+            packetStats= di.container.resolve("packet_stats"),
+            bandwidthData= di.container.resolve("bandwidth_data"),
         )
 
         # Fix the navigation bar buttons - ensure they're above any other elements
@@ -1948,7 +1907,7 @@ if __name__ == "__main__":
         window.raise_()
         
         # On Windows, this can help ensure the window comes to front
-        if platform.system() == "Windows":
+        if 1 == 1:# platform.system() == "Windows":
             # Set window as the foreground window
             hwnd = window.winId()
             try:

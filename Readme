@@ -1,5 +1,18 @@
 Naswail SIEM Tool
 
+Documentation
+-------------
+
+Full documentation is available under `docs/`:
+
+- Overview: `docs/Overview.md`
+- Getting Started: `docs/Getting-Started.md`
+- Architecture: `docs/Architecture.md`
+- Module Reference: `docs/Module-Reference.md`
+- Usage Guides: `docs/Usage.md`
+- Developer Guide: `docs/Developer-Guide.md`
+- FAQ: `docs/FAQ.md`
+
 ## Installation Guide
 
 ### Prerequisites

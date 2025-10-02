@@ -43,10 +43,8 @@ class PacketSnifferThread(QThread):
     def run(self):
         if not self._source_type:
             raise RuntimeError("Source not set; call set_source() before start().")
-        print(self._source_value + "HIDBWIUBD")
         try:
             if self._source_type == 'live':
-                print("HIDBWIUBD")
                 # sniff until stop() is called
                 sniff(
                     prn=self._emit_packet,

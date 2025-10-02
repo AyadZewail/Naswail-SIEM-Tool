@@ -147,7 +147,7 @@ class IPacketFabricator(ABC):
 
 class IAnomalyDetector(ABC):
     @abstractmethod
-    def check_packet(self, packet: Any) -> Optional[Dict[str, Any]]:
+    def check(self, packet: Any) -> Optional[Dict[str, Any]]:
         """
         Determines whether a packet is anomalous based on internal detection logic.
 

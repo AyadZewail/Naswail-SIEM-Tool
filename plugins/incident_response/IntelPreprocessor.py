@@ -54,9 +54,9 @@ class SimpleIntelPreprocessor(IIntelPreprocessor):
         avg_score = torch.mean(torch.stack([s for _, s in top_entries])) if top_entries else 0.0
         return ' '.join(top_sentences), avg_score.item() if hasattr(avg_score, 'item') else avg_score
 
-    def preprocess(self, input_dict: dict) -> dict:
-        data = input_dict.get("data", [])
-        docs = list(self.nlp.pipe(data, batch_size=256))
+    def preprocess(self, input_data: str) -> dict:
+        # data = input_dict.get("data", [])
+        docs = list(self.nlp.pipe([input_data], batch_size=256))
         sentences = [sent.text.strip() for doc in docs for sent in doc.sents]
         mit_emb = self.load_embeddings()
         mitigation_sentence, score = self.extract_mitigation_sentences(sentences, mit_emb)

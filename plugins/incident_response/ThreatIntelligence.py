@@ -7,16 +7,16 @@ class ThreatIntelligence(IThreatIntelAggregator):
         self.preprocessor = preprocessor
 
     async def gather(self, query_data: dict) -> dict:
-        all_results = []
+        all_results = ""
 
         for searcher in self.searchers:
             try:
                 results = await searcher.search(query_data)
                 if results:
-                    all_results.extend(results)
+                    all_results += results['raw_data']
             except Exception as e:
                 print(f"[Aggregator] Searcher {searcher.__class__.__name__} failed: {e}")
 
-        combined_data = {'data': all_results}
-        processed = self.preprocessor.preprocess(combined_data)
+        # combined_data = {'data': all_results}
+        processed = self.preprocessor.preprocess(all_results)
         return processed
