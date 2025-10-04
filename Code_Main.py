@@ -19,8 +19,8 @@ class PacketSnifferThread(QThread):
         self.packet_captured.emit(packet)
 
 class PacketSnifferApp(QMainWindow):
-    def _init_(self):
-        super()._init_()
+    def __init__(self):
+        super().__init__()
         self.setWindowTitle("Packet Sniffer")
         self.setGeometry(100, 100, 1000, 700)
 
@@ -91,8 +91,8 @@ class PacketSnifferApp(QMainWindow):
         self.stats_timer.start(1000)
 
     class StatsWindow(QDialog):
-        def _init_(self, stats, packets, parent=None):
-            super()._init_(parent)
+        def __init__(self, stats, packets, parent=None):
+            super().__init__(parent)
             self.setWindowTitle("Statistics")
             layout = QVBoxLayout(self)
 
@@ -212,8 +212,8 @@ class PacketSnifferApp(QMainWindow):
             self.canvas.draw()
 
     class BandwidthWindow(QDialog):
-        def _init_(self, bandwidth_data, parent=None):
-            super()._init_(parent)
+        def __init__(self, bandwidth_data, parent=None):
+            super().__init__(parent)
             self.setWindowTitle("Bandwidth Usage")
             layout = QVBoxLayout(self)
 
