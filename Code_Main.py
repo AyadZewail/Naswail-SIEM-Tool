@@ -1,13 +1,21 @@
 import sys
-from PyQt6.QtWidgets import (
-    QApplication, QMainWindow, QVBoxLayout, QWidget, QTableWidget, QTableWidgetItem, QTextEdit, QSplitter, QHBoxLayout, QPushButton, QLineEdit, QLabel, QDialog
-)
+import numpy as np
+import time
+import psutil
+from sklearn.svm import OneClassSVM
+from PyQt6.QtWidgets import *
 from PyQt6.QtCore import Qt, QThread, pyqtSignal, QTimer
 from scapy.all import sniff, wrpcap
 from statistics import mean, median, mode, stdev, variance
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LinearRegression
+from sklearn.tree import DecisionTreeRegressor
+from sklearn.metrics import mean_squared_error, r2_score
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
-from datetime import datetime
+from datetime import datetime, timedelta
+
+time_series = {}
 
 class PacketSnifferThread(QThread):
     packet_captured = pyqtSignal(object)
@@ -21,8 +29,25 @@ class PacketSnifferThread(QThread):
 class PacketSnifferApp(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("Packet Sniffer")
-        self.setGeometry(100, 100, 1000, 700)
+        self.setWindowTitle("Naswail")
+        self.setGeometry(0, 0, 1000, 700)
+        self.showMaximized()
+        
+        # Data storage for packets, stats, and processes
+        self.packets = []
+        self.filtered_packets = []
+        self.packet_features = []
+        self.new_packet_features = []
+        self.packet_stats = {"total": 0, "tcp": 0, "udp": 0, "icmp": 0}
+        self.model = LinearRegression()
+        self.anmodel = OneClassSVM(kernel='rbf', gamma=0.1, nu=0.1)
+        self.bandwidth_data = []
+        self.times = []
+        self.counts = []
+        self.anomalies = []
+        self.apps = dict()
+        self.futureTraffic = 0
+        self.r2 = 0
 
         # Main layout
         main_layout = QVBoxLayout()
@@ -30,34 +55,40 @@ class PacketSnifferApp(QMainWindow):
         self.central_widget.setLayout(main_layout)
         self.setCentralWidget(self.central_widget)
 
-        # Splitter to separate table and details
-        splitter = QSplitter(Qt.Orientation.Vertical)
-        main_layout.addWidget(splitter)
+        # Splitter to divide the screen into 2 parts horizontally
+        horizontal_splitter = QSplitter(Qt.Orientation.Horizontal)
+        main_layout.addWidget(horizontal_splitter)
 
-        # Top panel for controls and stats
+        # First vertical splitter (left side)
+        left_splitter = QSplitter(Qt.Orientation.Vertical)
+        horizontal_splitter.addWidget(left_splitter)
+
+        # Second vertical splitter (right side)
+        right_splitter = QSplitter(Qt.Orientation.Vertical)
+        horizontal_splitter.addWidget(right_splitter)
+
+        # bottom panel for controls and stats
         control_layout = QHBoxLayout()
         self.filter_input = QLineEdit()
         self.filter_input.setPlaceholderText("Filter by IP or Protocol")
+
         self.filter_button = QPushButton("Apply Filter")
         self.filter_button.clicked.connect(self.apply_filter)
+
+        self.app_analysis = QPushButton("App Analysis")
+        self.app_analysis.clicked.connect(self.get_applications_with_ports)
+
         self.export_button = QPushButton("Export Packets")
         self.export_button.clicked.connect(self.export_packets)
+
         self.stats_label = QLabel("Packets: 0 | TCP: 0 | UDP: 0 | ICMP: 0")
 
-        # Statistics button
-        self.stats_button = QPushButton("Statistics")
-        self.stats_button.clicked.connect(self.show_statistics)
-        control_layout.addWidget(self.stats_button)
-
-        # Bandwidth button
-        self.bandwidth_button = QPushButton("Bandwidth Usage")
-        self.bandwidth_button.clicked.connect(self.show_bandwidth_usage)
-        control_layout.addWidget(self.bandwidth_button)
-
+        #Add Widgets
         control_layout.addWidget(self.filter_input)
         control_layout.addWidget(self.filter_button)
         control_layout.addWidget(self.export_button)
         control_layout.addWidget(self.stats_label)
+        control_layout.addWidget(self.app_analysis)
         main_layout.addLayout(control_layout)
 
         # Table to display packets
@@ -65,20 +96,20 @@ class PacketSnifferApp(QMainWindow):
         self.packet_table.setColumnCount(4)
         self.packet_table.setHorizontalHeaderLabels(["Timestamp", "Source", "Destination", "Protocol"])
         self.packet_table.cellClicked.connect(self.display_packet_details)
-        splitter.addWidget(self.packet_table)
+        left_splitter.addWidget(self.packet_table)
+        
+        #Display Available Apps
+        self.available_apps = QTableWidget()
+        self.available_apps.setColumnCount(3)
+        self.available_apps.setHorizontalHeaderLabels(["App ID", "App Name", "App Status"])
+        self.available_apps.cellClicked.connect(self.analyze_app)
+        left_splitter.addWidget(self.available_apps)
+
 
         # Text edit to display detailed packet info
         self.packet_details = QTextEdit()
         self.packet_details.setReadOnly(True)
-        splitter.addWidget(self.packet_details)
-
-        # Data storage for packets and stats
-        self.packets = []
-        self.filtered_packets = []
-        self.packet_stats = {"total": 0, "tcp": 0, "udp": 0, "icmp": 0}
-
-        # Bandwidth tracking
-        self.bandwidth_data = []  # List to store bandwidth usage over time
+        left_splitter.addWidget(self.packet_details)
 
         # Start sniffing packets
         self.sniffer_thread = PacketSnifferThread()
@@ -89,168 +120,176 @@ class PacketSnifferApp(QMainWindow):
         self.stats_timer = QTimer()
         self.stats_timer.timeout.connect(self.update_stats)
         self.stats_timer.start(1000)
+        self.ct = 0
 
-    class StatsWindow(QDialog):
-        def __init__(self, stats, packets, parent=None):
-            super().__init__(parent)
-            self.setWindowTitle("Statistics")
-            layout = QVBoxLayout(self)
+        # Create a Matplotlib figure and canvas for the top-right quarter
+        self.figure = Figure()
+        self.canvas = FigureCanvas(self.figure)
 
-            # Create a Matplotlib figure
-            self.figure = Figure()
-            self.canvas = FigureCanvas(self.figure)
-            layout.addWidget(self.canvas)
+        # Create layout for the right panel
+        right_layout = QVBoxLayout()
+        right_layout.addWidget(self.canvas)
 
-            # Add "Show Pie Chart" button
-            self.piechart_button = QPushButton("Show Pie Chart")
-            self.piechart_button.clicked.connect(self.create_pie_chart)
-            layout.addWidget(self.piechart_button)
+        # Add "Show Pie Chart" button
+        self.piechart_button = QPushButton("Show Pie Chart")
+        self.piechart_button.clicked.connect(self.create_pie_chart)
+        right_layout.addWidget(self.piechart_button)
 
-            # Add "Show Histogram" button
-            self.histogram_button = QPushButton("Show Histogram")
-            self.histogram_button.clicked.connect(self.create_histogram_chart)
-            layout.addWidget(self.histogram_button)
+        # Add "Show Histogram" button
+        self.histogram_button = QPushButton("Show Histogram")
+        self.histogram_button.clicked.connect(self.create_histogram_chart)
+        right_layout.addWidget(self.histogram_button)
 
-            # Add "Show Statistics" button
-            self.stats_button = QPushButton("Show Mean, Median, etc.")
-            self.stats_button.clicked.connect(self.show_stats)
-            layout.addWidget(self.stats_button)
+        # Add "Show Statistics" button
+        self.stats_button = QPushButton("Show Mean, Median, etc.")
+        self.stats_button.clicked.connect(self.show_stats)
+        right_layout.addWidget(self.stats_button)
 
-            # Add "Show Time Series" button
-            self.timeseries_button = QPushButton("Show Time Series")
-            self.timeseries_button.clicked.connect(self.create_time_series_chart)
-            layout.addWidget(self.timeseries_button)
+        # Add "Show Time Series" button
+        self.timeseries_button = QPushButton("Show Time Series")
+        self.timeseries_button.clicked.connect(self.create_time_series_chart)
+        right_layout.addWidget(self.timeseries_button)
 
-            # Store stats and packets for use in the charts
-            self.stats = stats
-            self.packets = packets
+        # Bandwidth button
+        self.bandwidth_button = QPushButton("Bandwidth Usage")
+        self.bandwidth_button.clicked.connect(self.plot_bandwidth)
+        right_layout.addWidget(self.bandwidth_button)
 
-        def create_pie_chart(self):
-            """Display a pie chart of the statistics."""
-            self.figure.clear()
-            ax = self.figure.add_subplot(111)
+        self.timer = QTimer(self)  # Timer instance
+        self.timer.timeout.connect(self.tick)  # Connect the timer to a function
+        self.timer.start(1000) 
+        
+        # Create a QWidget to hold the layout
+        right_widget = QWidget()
+        right_widget.setLayout(right_layout)
 
-            labels = ["TCP", "UDP", "ICMP", "Other"]
-            values = [
-                self.stats["tcp"],
-                self.stats["udp"],
-                self.stats["icmp"],
-                self.stats["total"] - (self.stats["tcp"] + self.stats["udp"] + self.stats["icmp"])
-            ]
-            ax.pie(values, labels=labels, autopct='%1.1f%%', colors=['blue', 'orange', 'green', 'red'])
-            ax.set_title("Protocol Usage Distribution")
+        # Add the QWidget to the right_splitter
+        right_splitter.addWidget(right_widget)
 
-            self.canvas.draw()
+        #Bottom-Right Quarter
+        self.MLPrediction = QVBoxLayout()
+        
+        self.noHours = QLineEdit("After How Many Hours?", self)
+        self.estimate = QPushButton("Estimate Future Traffic", self)
+        self.estimate.clicked.connect(self.pred_traffic)
+        self.dispPred = QTextEdit()
+        #self.dispPred.setText(str(self.futureTraffic) + str(self.r2))
+        self.MLPrediction.addWidget(self.noHours)
+        self.MLPrediction.addWidget(self.estimate)
+        self.MLPrediction.addWidget(self.dispPred)
+        
+        right_widget2 = QWidget()
+        right_widget2.setLayout(self.MLPrediction)
+        right_splitter.addWidget(right_widget2)
 
-        def create_histogram_chart(self):
-            """Display a histogram of the statistics."""
-            self.figure.clear()
-            ax = self.figure.add_subplot(111)
+        # Table to display suspicious packets
+        self.anomalies_table = QTableWidget()
+        self.anomalies_table.setColumnCount(4)
+        self.anomalies_table.setHorizontalHeaderLabels(["Timestamp", "Source", "Destination", "Protocol"])
+        self.anomalies_table.cellClicked.connect(self.display_packet_details)
+        right_splitter.addWidget(self.anomalies_table)
 
-            labels = ["TCP", "UDP", "ICMP", "Other"]
-            values = [
-                self.stats["tcp"],
-                self.stats["udp"],
-                self.stats["icmp"],
-                self.stats["total"] - (self.stats["tcp"] + self.stats["udp"] + self.stats["icmp"])
-            ]
-            ax.bar(labels, values, color=['blue', 'orange', 'green', 'red'], edgecolor='black', alpha=0.7)
-            ax.set_title("Protocol Histogram")
-            ax.set_xlabel("Protocol")
-            ax.set_ylabel("Frequency")
+    def create_pie_chart(self):
+        """Display a pie chart of the statistics."""
+        self.figure.clear()
+        ax = self.figure.add_subplot(111)
 
-            self.canvas.draw()
+        labels = ["TCP", "UDP", "ICMP", "Other"]
+        values = [
+            self.packet_stats["tcp"],
+            self.packet_stats["udp"],
+            self.packet_stats["icmp"],
+            self.packet_stats["total"] - (self.packet_stats["tcp"] + self.packet_stats["udp"] + self.packet_stats["icmp"])
+        ]
+        ax.pie(values, labels=labels, autopct='%1.1f%%', colors=['blue', 'orange', 'green', 'red'])
+        ax.set_title("Protocol Usage Distribution")
 
-        def show_stats(self):
-            """Display mean, median, mode, standard deviation, and variance."""
-            self.figure.clear()
-            counts = [
-                self.stats["tcp"],
-                self.stats["udp"],
-                self.stats["icmp"],
-                self.stats["total"] - (self.stats["tcp"] + self.stats["udp"] + self.stats["icmp"])
-            ]
+        self.canvas.draw()
 
-            mean_val = mean(counts)
-            median_val = median(counts)
-            mode_val = mode(counts) if len(set(counts)) != len(counts) else "No mode"
-            stdev_val = stdev(counts) if len(counts) > 1 else "N/A"
-            variance_val = variance(counts) if len(counts) > 1 else "N/A"
+    def create_histogram_chart(self):
+        """Display a histogram of the statistics."""
+        self.figure.clear()
+        ax = self.figure.add_subplot(111)
 
-            stats_text = (f"Mean: {mean_val}\n"
-                          f"Median: {median_val}\n"
-                          f"Mode: {mode_val}\n"
-                          f"Standard Deviation: {stdev_val}\n"
-                          f"Variance: {variance_val}")
+        labels = ["TCP", "UDP", "ICMP", "Other"]
+        values = [
+            self.packet_stats["tcp"],
+            self.packet_stats["udp"],
+            self.packet_stats["icmp"],
+            self.packet_stats["total"] - (self.packet_stats["tcp"] + self.packet_stats["udp"] + self.packet_stats["icmp"])
+        ]
+        ax.bar(labels, values, color=['blue', 'orange', 'green', 'red'], edgecolor='black', alpha=0.7)
+        ax.set_title("Protocol Histogram")
+        ax.set_xlabel("Protocol")
+        ax.set_ylabel("Frequency")
 
-            ax = self.figure.add_subplot(111)
-            ax.text(0.5, 0.5, stats_text, ha='center', va='center', fontsize=12)
-            ax.axis('off')
+        self.canvas.draw()
 
-            self.canvas.draw()
+    def show_stats(self):
+        """Display mean, median, mode, standard deviation, and variance."""
+        self.figure.clear()
+        counts = [
+            self.packet_stats["tcp"],
+            self.packet_stats["udp"],
+            self.packet_stats["icmp"],
+            self.packet_stats["total"] - (self.packet_stats["tcp"] + self.packet_stats["udp"] + self.packet_stats["icmp"])
+        ]
 
-        def create_time_series_chart(self):
-            """Display a time series graph of packet capture over time."""
-            self.figure.clear()
-            ax = self.figure.add_subplot(111)
+        mean_val = mean(counts)
+        median_val = median(counts)
+        mode_val = mode(counts) if len(set(counts)) != len(counts) else "No mode"
+        stdev_val = stdev(counts) if len(counts) > 1 else "N/A"
+        variance_val = variance(counts) if len(counts) > 1 else "N/A"
 
-            # Extract timestamps and group them by second
-            time_series = {}
-            for packet in self.packets:
-                timestamp = datetime.fromtimestamp(packet.time).strftime("%H:%M:%S")
-                time_series[timestamp] = time_series.get(timestamp, 0) + 1
+        stats_text = (f"Mean: {mean_val}\n"
+                        f"Median: {median_val}\n"
+                        f"Mode: {mode_val}\n"
+                        f"Standard Deviation: {stdev_val}\n"
+                        f"Variance: {variance_val}")
 
-            times = list(time_series.keys())
-            counts = list(time_series.values())
+        ax = self.figure.add_subplot(111)
+        ax.text(0.5, 0.5, stats_text, ha='center', va='center', fontsize=12)
+        ax.axis('off')
 
-            ax.plot(times, counts, marker='o', linestyle='-', color='blue')
-            ax.set_title("Packets Over Time")
-            ax.set_xlabel("Time")
-            ax.set_ylabel("Packet Count")
-            ax.tick_params(axis='x', rotation=45)
+        self.canvas.draw()
 
-            self.canvas.draw()
+    def create_time_series_chart(self):
+        """Display a time series graph of packet capture over time."""
+        self.figure.clear()
+        ax = self.figure.add_subplot(211)
 
-    class BandwidthWindow(QDialog):
-        def __init__(self, bandwidth_data, parent=None):
-            super().__init__(parent)
-            self.setWindowTitle("Bandwidth Usage")
-            layout = QVBoxLayout(self)
+        self.times = list(time_series.keys())
+        self.counts = list(time_series.values())
 
-            # Create a Matplotlib figure
-            self.figure = Figure()
-            self.canvas = FigureCanvas(self.figure)
-            layout.addWidget(self.canvas)
+        ax.plot(self.times, self.counts, marker='o', linestyle='-', color='blue')
+        ax.set_title("Packets Over Time")
+        ax.set_xlabel("Time")
+        ax.set_ylabel("Packet Count")
+        ax.tick_params(axis='x', rotation=45)
 
-            # Plot bandwidth usage over time
-            self.figure.clear()
-            ax = self.figure.add_subplot(211)
+        self.canvas.draw()
 
-            # Prepare the data for the graph
-            if bandwidth_data:
-                times, bandwidth = zip(*bandwidth_data)  # Split the data into times and bandwidth
-            else:
-                times, bandwidth = [], []  # Handle case with no data
+    def plot_bandwidth(self):
+        self.figure.clear()
+        ax = self.figure.add_subplot(211)
 
-            # Plot the data as a line graph
-            ax.plot(times, bandwidth, marker='o', linestyle='-', color='blue')
+        # Prepare the data for the graph
+        if self.bandwidth_data:
+            times, bandwidth = zip(*self.bandwidth_data)  # Split the data into times and bandwidth
+        else:
+            times, bandwidth = [], []  # Handle case with no data
 
-            # Add titles and labels for clarity
-            ax.set_title("Bandwidth Usage Over Time")
-            ax.set_xlabel("Time")
-            ax.set_ylabel("Bytes per Second")
-            ax.tick_params(axis='x', rotation=45)  # Rotate x-axis labels for better readability
+        # Plot the data as a line graph
+        ax.plot(times, bandwidth, marker='o', linestyle='-', color='blue')
 
-            # Redraw the canvas to display the updated graph
-            self.canvas.draw()
+        # Add titles and labels for clarity
+        ax.set_title("Bandwidth Usage Over Time")
+        ax.set_xlabel("Time")
+        ax.set_ylabel("Bytes per Second")
+        ax.tick_params(axis='x', rotation=45)  # Rotate x-axis labels for better readability
 
-    def show_statistics(self):
-        dialog = self.StatsWindow(self.packet_stats, self.packets, self)
-        dialog.exec()
-
-    def show_bandwidth_usage(self):
-        dialog = self.BandwidthWindow(self.bandwidth_data, self)
-        dialog.exec()
+        # Redraw the canvas to display the updated graph
+        self.canvas.draw()
 
     def process_packet(self, packet):
         """Process each captured packet and add it to the table."""
@@ -261,6 +300,15 @@ class PacketSnifferApp(QMainWindow):
             src_ip = packet["IP"].src if packet.haslayer("IP") else "N/A"
             dst_ip = packet["IP"].dst if packet.haslayer("IP") else "N/A"
             protocol = packet.sprintf("%IP.proto%") if packet.haslayer("IP") else "Other"
+            packet_length = len(packet)
+
+            self.new_packet_features.append([packet_length, timestamp, protocol])
+            
+            if(self.ct>60):
+                prediction = self.anmodel.predict([self.packet_features])
+        
+                if(prediction == -1):
+                    self.anomalies.append(packet)
 
             # Update stats
             self.packet_stats["total"] += 1
@@ -282,11 +330,17 @@ class PacketSnifferApp(QMainWindow):
             self.packet_table.setItem(row_position, 2, QTableWidgetItem(dst_ip))
             self.packet_table.setItem(row_position, 3, QTableWidgetItem(protocol))
 
+            #Add to timestamp
+            timestamp = datetime.fromtimestamp(packet.time).strftime("%H:%M:%S")
+            time_series[timestamp] = len(self.packets)
+
             # Update bandwidth data
             if len(self.bandwidth_data) == 0 or self.bandwidth_data[-1][0] != readable_time:
                 self.bandwidth_data.append((readable_time, len(packet)))
             else:
                 self.bandwidth_data[-1] = (readable_time, self.bandwidth_data[-1][1] + len(packet))
+
+
         except Exception as e:
             print(f"Error processing packet: {e}")
 
@@ -320,6 +374,32 @@ class PacketSnifferApp(QMainWindow):
                 self.packet_table.setItem(row_position, 2, QTableWidgetItem(dst_ip))
                 self.packet_table.setItem(row_position, 3, QTableWidgetItem(protocol))
 
+    def pred_traffic(self):
+        #Train Regression Model
+        if(len(self.packets) > 300):
+            
+            X = [(datetime.strptime(timestamp, "%H:%M:%S") - datetime.strptime(list(time_series.keys())[0], "%H:%M:%S")).total_seconds() for timestamp in time_series.keys()]
+
+            X = np.array(list(map(int, X))).reshape(-1, 1)
+            y = list(time_series.values())
+            X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, train_size=0.8, random_state=42)
+            self.model.fit(X_train, y_train)
+
+            noHours = int(self.noHours.text())
+            currentTime = datetime.now()
+            oneHourLater = []
+            oneHourLater.append(currentTime.second + 3600 * int(self.noHours.text()))
+            oneHourLater = np.array(oneHourLater).reshape(-1, 1)
+
+            self.futureTraffic = self.model.predict(oneHourLater)
+            y_pred = self.model.predict(X_test)
+            self.r2 = r2_score(y_test, y_pred)
+
+            self.dispPred.setText("Estimated Packet Amount: " + str(self.futureTraffic - len(self.packets)) + "\nPrediciton Accuracy: " + str(self.r2) + "%")
+            print(self.futureTraffic - len(self.packets))
+            print(self.r2)
+            self.update()
+    
     def export_packets(self):
         """Export captured packets to a file."""
         try:
@@ -332,9 +412,73 @@ class PacketSnifferApp(QMainWindow):
         """Update the statistics label."""
         self.stats_label.setText(f"Packets: {self.packet_stats['total']} | TCP: {self.packet_stats['tcp']} | UDP: {self.packet_stats['udp']} | ICMP: {self.packet_stats['icmp']}")
 
+    def tick(self):
+        self.ct += 1
+    
+    def classifierPreprocessing(self):
+        if(self.ct %10 == 0):
+            self.packet_features.extend(self.new_packet_features)
+            self.new_packet_features = []
+            X_train = np.array(self.packet_features)
+            self.anmodel.fit(X_train)
+
+    def get_applications_with_ports(self):
+        apps_with_ports = []
+
+        for proc in psutil.process_iter(attrs=['pid', 'name', 'exe', 'status']):
+            try:
+                pid = proc.info['pid']
+                app_name = proc.info['name']
+                app_path = proc.info['exe']
+                app_status = proc.info['status']
+
+                # Get network connections for this process
+                connections = psutil.Process(pid).net_connections(kind='inet')
+                for conn in connections:
+                    local_ip, local_port = conn.laddr
+                    apps_with_ports.append({
+                        "Application": app_name,
+                        "IP": local_ip,
+                        "Port": local_port,
+                        "Path": app_path,
+                        "Status": app_status
+                    })
+            except (psutil.AccessDenied, psutil.NoSuchProcess):
+                continue
+
+        self.apps = apps_with_ports
+        self.available_apps.setRowCount(0)
+        for app in self.apps:
+            row_position = self.available_apps.rowCount()
+            self.available_apps.insertRow(row_position)
+            self.available_apps.setItem(row_position, 0, QTableWidgetItem(str(app["Port"])))
+            self.available_apps.setItem(row_position, 1, QTableWidgetItem(str(app["Application"])))
+            self.available_apps.setItem(row_position, 2, QTableWidgetItem(str(app["IP"])))
+    
+    def analyze_app(self, row):
+        target_app = self.apps[row]
+        self.packet_table.setRowCount(0)  # Clear the table
+
+        self.filtered_packets = []
+        for packet in self.packets:
+            src_ip = packet["IP"].src if packet.haslayer("IP") else "N/A"
+            dst_ip = packet["IP"].dst if packet.haslayer("IP") else "N/A"
+            protocol = packet.sprintf("%IP.proto%") if packet.haslayer("IP") else "Other"
+            port = packet["TCP"].sport if packet.haslayer("TCP") else "N/A"
+
+            if target_app["IP"] in src_ip.lower() or target_app["IP"] in dst_ip.lower() or str(target_app["Port"]) in port:
+                self.filtered_packets.append(packet)
+
+                row_position = self.packet_table.rowCount()
+                self.packet_table.insertRow(row_position)
+                self.packet_table.setItem(row_position, 0, QTableWidgetItem(datetime.fromtimestamp(packet.time).strftime("%I:%M:%S %p")))
+                self.packet_table.setItem(row_position, 1, QTableWidgetItem(src_ip))
+                self.packet_table.setItem(row_position, 2, QTableWidgetItem(dst_ip))
+                self.packet_table.setItem(row_position, 3, QTableWidgetItem(protocol))
+
+
 if __name__ == "__main__":
     app = QApplication(sys.argv)
     window = PacketSnifferApp()
     window.show()
-    window.showMaximized()
     sys.exit(app.exec())
