@@ -16,9 +16,9 @@ from PyQt6.QtCore import *
 from PyQt6.QtGui import QPixmap
 from scapy.layers.inet import IP
 from scapy.all import *
-from views.UI_Analysis import Ui_Naswail_Anlaysis
-from Code_Tools import Window_Tools
-from Code_IncidentResponse import IncidentResponse
+# from views.UI_Analysis import Ui_Naswail_Anlaysis
+# from Code_Tools import Window_Tools
+# from Code_IncidentResponse import IncidentResponse
 import math
 from models.node import Node
 from core import di
@@ -84,6 +84,10 @@ class AnalysisController(threading.Thread, QObject):
         self.geoMapper = geo_mapper
         self.pixmapReady.connect(self.update_ui_label)
         self.create_map()
+        
+        self.timer = QTimer(self)
+        self.timer.timeout.connect(self.ttTime)
+        self.timer.start(20000)
 
         #======================================================================================
         #======================================================================================
@@ -161,58 +165,52 @@ class AnalysisController(threading.Thread, QObject):
 
     
     def visualize_network(self):
-        # Create a graph
-        G = nx.Graph()
+        # Clear the previous plot
+        self.figure.clear()
 
-        # Add nodes and edges to the graph
-        pos = {}  # Dictionary to store node positions
+        # Create a new 3D subplot
+        ax = self.figure.add_subplot(111, projection='3d')
+        self.figure.patch.set_alpha(0.0)
+        ax.set_facecolor((0, 0, 0, 0))
+
+        # --- Create the graph ---
+        G = nx.Graph()
+        pos = {}
         for i, node in enumerate(self.list_of_nodes):
             G.add_node(node.mac_address)
-            # semi random pos
             pos[node.mac_address] = (i, i % 2, i // 2)
 
-            # Add edges based on connections
             for connected_mac in node.edges:
                 G.add_edge(node.mac_address, connected_mac)
 
-        # Create a 3D 
-        ax = self.figure.add_subplot(111, projection='3d')
-        self.figure.patch.set_alpha(0.0)  
-        ax.set_facecolor((0, 0, 0, 0))  
-
-        # Draw the edges
+        # Draw edges
         for edge in G.edges():
             x = [pos[edge[0]][0], pos[edge[1]][0]]
             y = [pos[edge[0]][1], pos[edge[1]][1]]
             z = [pos[edge[0]][2], pos[edge[1]][2]]
             ax.plot(x, y, z, color='black')
 
-        # Draw the nodes
-        i=1
-        for mac_address, (x, y, z) in pos.items():
-            lab = "device "+i.__str__()+":  "+mac_address
-            i+=1
-            for name,mac in self.sensor_system.sensors.items():
+        # Draw nodes with labels
+        for i, (mac_address, (x, y, z)) in enumerate(pos.items(), start=1):
+            label = f"device {i}: {mac_address}"
+            for name, mac in self.sensor_system.sensors.items():
                 if mac == mac_address:
-                    lab = name+": "+mac  
-                    break  
-            ax.scatter(x, y, z, s=100, label=lab)
+                    label = f"{name}: {mac}"
+                    break
+            ax.scatter(x, y, z, s=100, label=label)
 
-        # Set labels
+        # Labels
         ax.set_xlabel('X')
         ax.set_ylabel('Y')
         ax.set_zlabel('Z')
 
-        # Display legend if nodes exist
+        # Legend
         if self.list_of_nodes:
-             ax.legend(
-                bbox_to_anchor=(1.45, 1.05),  # Move the legend to the right and slightly higher
-                borderaxespad=0.0  # Padding between the legend and the axes
-            )
+            ax.legend(bbox_to_anchor=(1.45, 1.05), borderaxespad=0.0)
 
-        
+        # Redraw canvas
         self.canvas.draw()
-        plt.close()
+
 
     #======================================================================================
     #======================================================================================
@@ -1329,6 +1327,12 @@ class AnalysisController(threading.Thread, QObject):
     #                               Misc Handling
     #======================================================================================
     #======================================================================================
+    def ttTime(self):
+        self.find_unique_devices_and_edges()
+        self.visualize_network()
+        self.display_all()
+        self.create_map()
+    
     def on_combobox_change(self):
         """Handle changes in comboBox_2."""
         self.selected_option = self.ui.comboBox_2.currentText()
@@ -1337,89 +1341,89 @@ class AnalysisController(threading.Thread, QObject):
     
     
 
-class Window_Analysis(QWidget, Ui_Naswail_Anlaysis):
-    def __init__(self, main_window):
-        super().__init__()
-        self.main_window = main_window  # Reference to the main window
-        self.ui = Ui_Naswail_Anlaysis()  # Create an instance of the UI class
-        self.ui.setupUi(self)  # Set up the UI for this widget
-        self.setWindowTitle("Secondary Widget")
-        self.showMaximized()
-        self.setWindowTitle("Naswail - Visualization")
+# class Window_Analysis(QWidget, Ui_Naswail_Anlaysis):
+#     def __init__(self, main_window):
+#         super().__init__()
+#         self.main_window = main_window  # Reference to the main window
+#         self.ui = Ui_Naswail_Anlaysis()  # Create an instance of the UI class
+#         self.ui.setupUi(self)  # Set up the UI for this widget
+#         self.setWindowTitle("Secondary Widget")
+#         self.showMaximized()
+#         self.setWindowTitle("Naswail - Visualization")
         
-        # Then set up UI connections
-        pixmap = QPixmap(r"resources/logo.jpg")  # Fixed to use logo.jpg instead of logo.png
-        self.pixmap_item = QGraphicsPixmapItem(pixmap)
-        self.scene = QGraphicsScene(self)
-        self.scene.addItem(self.pixmap_item)
-        self.ui.graphicsView.setScene(self.scene)
-        self.ui.graphicsView.setFixedSize(71, 61)
-        self.ui.graphicsView.fitInView(self.scene.sceneRect(), Qt.AspectRatioMode.KeepAspectRatio)
+#         # Then set up UI connections
+#         pixmap = QPixmap(r"resources/logo.jpg")  # Fixed to use logo.jpg instead of logo.png
+#         self.pixmap_item = QGraphicsPixmapItem(pixmap)
+#         self.scene = QGraphicsScene(self)
+#         self.scene.addItem(self.pixmap_item)
+#         self.ui.graphicsView.setScene(self.scene)
+#         self.ui.graphicsView.setFixedSize(71, 61)
+#         self.ui.graphicsView.fitInView(self.scene.sceneRect(), Qt.AspectRatioMode.KeepAspectRatio)
         
-        # Connect navigation buttons
-        self.ui.pushButton_4.clicked.connect(self.show_main_window)
-        self.ui.pushButton_3.clicked.connect(self.show_tools_window)
-        self.ui.pushButton_5.clicked.connect(self.show_incidentresponse_window)
+#         # Connect navigation buttons
+#         # self.ui.pushButton_4.clicked.connect(self.show_main_window)
+#         # self.ui.pushButton_3.clicked.connect(self.show_tools_window)
+#         # self.ui.pushButton_5.clicked.connect(self.show_incidentresponse_window)
 
-        self.ui.label.setText("")
+#         self.ui.label.setText("")
 
-        try:
-            # Layout for self.ui.widget_6
-            self.layout = QVBoxLayout(self.ui.widget_6)
+#         try:
+#             # Layout for self.ui.widget_6
+#             self.layout = QVBoxLayout(self.ui.widget_6)
             
-            # Clear any existing widgets in the layout
-            if self.ui.widget_6.layout():
-                while self.ui.widget_6.layout().count():
-                    item = self.ui.widget_6.layout().takeAt(0)
-                    if item.widget():
-                        item.widget().deleteLater()
+#             # Clear any existing widgets in the layout
+#             if self.ui.widget_6.layout():
+#                 while self.ui.widget_6.layout().count():
+#                     item = self.ui.widget_6.layout().takeAt(0)
+#                     if item.widget():
+#                         item.widget().deleteLater()
 
-            self.figure = plt.figure(figsize=(6, 5))  # Reduced figure size
-            self.canvas = FigureCanvas(self.figure)
-            self.layout.addWidget(self.canvas)
+#             self.figure = plt.figure(figsize=(6, 5))  # Reduced figure size
+#             self.canvas = FigureCanvas(self.figure)
+#             self.layout.addWidget(self.canvas)
             
-            print("NetworkTopologyVisualizer initialized successfully")
-        except Exception as e:
-            import traceback
-            print(f"Error initializing NetworkTopologyVisualizer: {e}")
-            print(traceback.format_exc())
+#             print("NetworkTopologyVisualizer initialized successfully")
+#         except Exception as e:
+#             import traceback
+#             print(f"Error initializing NetworkTopologyVisualizer: {e}")
+#             print(traceback.format_exc())
 
-        self.controller = AnalysisController(
-            ui=self.ui,
-            queuedPacekts=di.container.resolve("qued_packets"),
-            sensorSys=di.container.resolve("sensor_system"),
-            totINpacekts=di.container.resolve("total_inside_packets"),
-            totOUTpacekts=di.container.resolve("total_outside_packets"),
-            packetStats=di.container.resolve("packet_stats"),
-            sen_info=di.container.resolve("sen_info"),
-            bandwidthData=di.container.resolve("bandwidth_data"),
-            packets=di.container.resolve("packets"),
-            anomalies=di.container.resolve("anomalies"),
-            geo_mapper=di.container.resolve("geo_mapper"),
-            figure= self.figure,
-            canvas=self.canvas,
-        )
+#         self.controller = AnalysisController(
+#             ui=self.ui,
+#             queuedPacekts=di.container.resolve("qued_packets"),
+#             sensorSys=di.container.resolve("sensor_system"),
+#             totINpacekts=di.container.resolve("total_inside_packets"),
+#             totOUTpacekts=di.container.resolve("total_outside_packets"),
+#             packetStats=di.container.resolve("packet_stats"),
+#             sen_info=di.container.resolve("sen_info"),
+#             bandwidthData=di.container.resolve("bandwidth_data"),
+#             packets=di.container.resolve("packets"),
+#             anomalies=di.container.resolve("anomalies"),
+#             geo_mapper=di.container.resolve("geo_mapper"),
+#             figure= self.figure,
+#             canvas=self.canvas,
+#         )
 
-    def show_main_window(self):
-        """Show the main window and hide this widget."""
-        self.main_window.show()
-        self.hide()
-    def show_tools_window(self):
-        """Show the tools window and hide this widget."""
-        self.secondary_widget2 = Window_Tools(self.main_window)
-        self.hide()
-        self.secondary_widget2.show()
-    def show_incidentresponse_window(self):
-        """Show the tools window and hide this widget."""
-        self.secondary_widget2 = IncidentResponse(self.main_window)
-        self.hide()
-        self.secondary_widget2.show()
+    # def show_main_window(self):
+    #     """Show the main window and hide this widget."""
+    #     self.main_window.show()
+    #     self.hide()
+    # def show_tools_window(self):
+    #     """Show the tools window and hide this widget."""
+    #     self.secondary_widget2 = Window_Tools(self.main_window)
+    #     self.hide()
+    #     self.secondary_widget2.show()
+    # def show_incidentresponse_window(self):
+    #     """Show the tools window and hide this widget."""
+    #     self.secondary_widget2 = IncidentResponse(self.main_window)
+    #     self.hide()
+    #     self.secondary_widget2.show()
 
     
 
 
-if __name__ == "__main__":
-    app = QApplication(sys.argv)
-    main_window = Window_Analysis()
-    main_window.show()
-    sys.exit(app.exec())
+# if __name__ == "__main__":
+#     app = QApplication(sys.argv)
+#     main_window = Window_Analysis()
+#     main_window.show()
+#     sys.exit(app.exec())

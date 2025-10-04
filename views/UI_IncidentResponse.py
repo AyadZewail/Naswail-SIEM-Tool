@@ -8,7 +8,26 @@
 
 from PyQt6 import QtCore, QtGui, QtWidgets
 from PyQt6.QtCore import Qt
+from PyQt6.QtGui import QStandardItem
+from PyQt6.QtWidgets import QMainWindow
 
+
+class LogWindow(QMainWindow):
+        def __init__(self, model):
+            self.logModel = model
+            self.attack_entry = None
+            self.child = None
+
+        def log_attack(self, entry):
+            self.attack_entry = QStandardItem(entry)
+            self.logModel.appendRow(self.attack_entry)
+
+        def log_step(self, description):
+            self.child = QStandardItem(description)
+            self.attack_entry.appendRow(self.child)
+
+        def log_details(self, description):
+            self.child.appendRow(QStandardItem(description))
 
 class Ui_IncidentResponse(object):
     def setupUi(self, Form):

@@ -12,7 +12,7 @@ import time
 import traceback
 from core import di
 
-class ToolsController():
+class ToolsController(QObject):
     def __init__(
             self,
             ui,
@@ -29,6 +29,7 @@ class ToolsController():
         #                               Variable Instantiation
         #======================================================================================
         #======================================================================================
+        QObject.__init__(self)
         self.ui = ui
         self.netActivityAnalyzer = netactv
         self.activityList = activityList
@@ -53,6 +54,11 @@ class ToolsController():
         self.last_packet_count = 0
         self.display_corrupted()
         self.sec = 0
+
+        
+        self.timer = QTimer(self)
+        self.timer.timeout.connect(self.ttTime)
+        self.timer.start(3000)
  
 
         #======================================================================================
@@ -409,69 +415,69 @@ class ToolsController():
 
 
 
-class Window_Tools(QWidget, Ui_Naswail_Tool):
-    def __init__(self, main_window):
-        super().__init__()
-        self.main_window = main_window
-        self.setWindowTitle("Naswail - Tools")
+# class Window_Tools(QWidget, Ui_Naswail_Tool):
+#     def __init__(self, main_window):
+#         super().__init__()
+#         self.main_window = main_window
+#         self.setWindowTitle("Naswail - Tools")
 
-        self.ui = Ui_Naswail_Tool()  
-        self.ui.setupUi(self)  
-        self.init_ui()
+#         self.ui = Ui_Naswail_Tool()  
+#         self.ui.setupUi(self)  
+#         self.init_ui()
 
-        self.controller = ToolsController(
-            ui= self.ui,
-            predmodel= di.container.resolve("regression_predictor"),
-            netactv= di.container.resolve("network_activity_analyzer"),
-            packets= di.container.resolve("packets"),
-            activityList= di.container.resolve("list_of_activity"),
-            timeSeries= di.container.resolve("time_series"),
-            corrPackets= di.container.resolve("corrupted_packet_list"),
-            protocolExtractor= di.container.resolve("protocol_extractor"),
-        )
-        self.timer = QTimer(self)
-        self.timer.timeout.connect(self.controller.ttTime)
-        self.timer.start(3000)  # Update every 3 seconds instead of every 1 second
+#         self.controller = ToolsController(
+#             ui= self.ui,
+#             predmodel= di.container.resolve("regression_predictor"),
+#             netactv= di.container.resolve("network_activity_analyzer"),
+#             packets= di.container.resolve("packets"),
+#             activityList= di.container.resolve("list_of_activity"),
+#             timeSeries= di.container.resolve("time_series"),
+#             corrPackets= di.container.resolve("corrupted_packet_list"),
+#             protocolExtractor= di.container.resolve("protocol_extractor"),
+#         )
+#         self.timer = QTimer(self)
+#         self.timer.timeout.connect(self.controller.ttTime)
+#         self.timer.start(3000)  # Update every 3 seconds instead of every 1 second
         
-        # Set up a second, slower timer for heavy operations
-        self.heavy_timer = QTimer(self)
-        self.heavy_timer.timeout.connect(self.controller.heavy_update)
-        self.heavy_timer.start(6000)
+#         # Set up a second, slower timer for heavy operations
+#         self.heavy_timer = QTimer(self)
+#         self.heavy_timer.timeout.connect(self.controller.heavy_update)
+#         self.heavy_timer.start(6000)
         
-        # Add cleanup when window is closed
-        self.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose, True)
+#         # Add cleanup when window is closed
+#         self.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose, True)
     
-    def init_ui(self):
-        self.showMaximized()
-        self.ui.pushButton_4.clicked.connect(self.show_main_window)
-        self.ui.pushButton_2.clicked.connect(self.show_analysis_window)
-        self.ui.pushButton_8.clicked.connect(self.show_incidentresponse_window)
+#     def init_ui(self):
+#         self.showMaximized()
+        # self.ui.pushButton_4.clicked.connect(self.show_main_window)
+        # self.ui.pushButton_2.clicked.connect(self.show_analysis_window)
+        # self.ui.pushButton_8.clicked.connect(self.show_incidentresponse_window)
 
-    def show_analysis_window(self):
-        try:
-            self.secondary_widget = self.main_window.open_analysis()
-            self.hide()
-        except Exception as e:
-            print(f"Error in show_analysis_window function: {e}")
+    # def show_analysis_window(self):
+    #     try:
+    #         self.secondary_widget = self.main_window.open_analysis()
+    #         self.hide()
+    #     except Exception as e:
+    #         print(f"Error in show_analysis_window function: {e}")
     
-    def show_incidentresponse_window(self):
-        try:
-            self.secondary_widget = self.main_window.open_incidentresponse()
-            self.hide()
-        except Exception as e:
-            print(f"Error in show_incidentresponse_window function: {e}")
+    # def show_incidentresponse_window(self):
+    #     try:
+    #         self.secondary_widget = self.main_window.open_incidentresponse()
+    #         self.hide()
+    #     except Exception as e:
+    #         print(f"Error in show_incidentresponse_window function: {e}")
 
-    def show_main_window(self):
-        try:
-            self.main_window.show()
-            self.hide()
-        except Exception as e:
-            print(f"Error in show_main_window function: {e}")
+    # def show_main_window(self):
+    #     try:
+    #         self.main_window.show()
+    #         self.hide()
+    #     except Exception as e:
+    #         print(f"Error in show_main_window function: {e}")
 
 
 
-if __name__ == "__main__":
-    app = QApplication(sys.argv)
-    main_window = Window_Tools()
-    main_window.show()
-    sys.exit(app.exec())
+# if __name__ == "__main__":
+#     app = QApplication(sys.argv)
+#     main_window = Window_Tools()
+#     main_window.show()
+#     sys.exit(app.exec())

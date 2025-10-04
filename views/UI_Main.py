@@ -138,6 +138,53 @@ class Ui_MainWindow(object):
 
         self.centralwidget = QtWidgets.QWidget(parent=MainWindow)
         self.centralwidget.setObjectName("centralwidget")
+        self.legend_frame = QtWidgets.QFrame(self.centralwidget)
+        self.legend_frame.setFrameShape(QtWidgets.QFrame.Shape.StyledPanel)
+        self.legend_frame.setFrameShadow(QtWidgets.QFrame.Shadow.Raised)
+        self.legend_frame.setStyleSheet("background-color: #2D2A2E; border-radius: 5px; padding: 2px; border: 1px solid #5A595C;")
+        self.legend_frame.setGeometry(QtCore.QRect(1250, 215, 250, 220))  # Position
+
+        # Layout
+        self.legend_layout = QtWidgets.QVBoxLayout(self.legend_frame)
+        self.legend_layout.setContentsMargins(5, 5, 5, 5)
+        self.legend_layout.setSpacing(2)
+
+        # Title
+        self.legend_title = QtWidgets.QLabel("Packet Color Legend", self.legend_frame)
+        self.legend_title.setStyleSheet("color: white; font-weight: bold;")
+        self.legend_layout.addWidget(self.legend_title)
+
+        # Grid for items
+        self.legend_grid = QtWidgets.QGridLayout()
+        self.legend_grid.setHorizontalSpacing(15)
+        self.legend_grid.setVerticalSpacing(8)
+
+        legend_items = [
+        ("Anomaly", "rgba(255, 140, 140, 150)"),
+        ("Blacklisted IP", "rgba(200, 100, 100, 150)"),
+        ("Corrupted Packet", "rgba(255, 200, 100, 150)"),
+        ("HTTP", "rgba(144, 238, 144, 150)"),
+        ("HTTPS", "rgba(144, 238, 144, 150)"),
+        ("DNS", "rgba(202, 255, 191, 150)"),
+        ("ICMP", "rgba(255, 245, 186, 150)"),
+        ("TCP", "rgba(151, 203, 255, 150)"),
+        ("UDP", "rgba(255, 182, 193, 150)")
+        ]
+
+        for i, (text, color) in enumerate(legend_items):
+                color_sample = QtWidgets.QFrame(self.legend_frame)
+                color_sample.setFixedSize(16, 16)
+                color_sample.setStyleSheet(f"background-color: {color}; border-radius: 2px;")
+
+                label = QtWidgets.QLabel(text, self.legend_frame)
+                label.setStyleSheet("color: white;")
+                label.setWordWrap(True)
+                label.setMinimumHeight(20)
+
+                self.legend_grid.addWidget(color_sample, i, 0, 1, 1, QtCore.Qt.AlignmentFlag.AlignTop)
+                self.legend_grid.addWidget(label, i, 1, 1, 1)
+
+        self.legend_layout.addLayout(self.legend_grid)
         self.tabWidget = QtWidgets.QTabWidget(parent=self.centralwidget)
         self.tabWidget.setGeometry(QtCore.QRect(12, 437, 781, 310))
         self.tabWidget.setObjectName("tabWidget")
@@ -592,6 +639,7 @@ class Ui_MainWindow(object):
        
         # Notification Bell Button
         self.notificationButton = QtWidgets.QPushButton(parent=self.centralwidget)
+        self.notificationButton.setGeometry(1300, 15, 40, 30)
         self.notificationButton.setText("🔔")
         self.notificationButton.setFixedSize(40, 30)
         self.notificationButton.setObjectName("notificationButton")

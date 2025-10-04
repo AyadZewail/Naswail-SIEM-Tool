@@ -141,9 +141,6 @@ class IncidentResponseController():
         #======================================================================================
         #======================================================================================
         self.ui = ui
-        self.ui.pushButton_8.clicked.connect(self.show_main_window)
-        self.ui.pushButton_7.clicked.connect(self.show_analysis_window)
-        self.ui.pushButton_6.clicked.connect(self.show_tools_window)
         self.ui.pushButton.clicked.connect(lambda: self.updateBlacklist(1))
         self.ui.pushButton_9.clicked.connect(lambda: self.updateBlacklist(0))
         self.ui.pushButton_10.clicked.connect(lambda: self.updateBlockedPorts(1))
@@ -613,66 +610,66 @@ class IncidentResponseController():
     def ttTime(self):
         self.display_anomalies(self.main_window)
     
-    def show_analysis_window(self):
-        try:
-            self.secondary_widget = self.main_window.open_analysis()
-            self.hide()
-        except Exception as e:
-            print(e)
+    # def show_analysis_window(self):
+    #     try:
+    #         self.secondary_widget = self.main_window.open_analysis()
+    #         self.hide()
+    #     except Exception as e:
+    #         print(e)
 
-    def show_main_window(self):
-        try:
-            self.main_window.show()
-            self.hide()
-        except Exception as e:
-            print(e)
+    # def show_main_window(self):
+    #     try:
+    #         self.main_window.show()
+    #         self.hide()
+    #     except Exception as e:
+    #         print(e)
 
-    def show_tools_window(self):
-        try:
-            self.secondary_widget = self.main_window.open_tool()
-            self.hide()
-        except Exception as e:
-            print(e)
+    # def show_tools_window(self):
+    #     try:
+    #         self.secondary_widget = self.main_window.open_tool()
+    #         self.hide()
+    #     except Exception as e:
+    #         print(e)
 
 
         
 
-class IncidentResponse(QWidget, Ui_IncidentResponse):
-    def __init__(self, main_window):
-        super().__init__()
-        self.main_window = main_window
-        self.ui = Ui_IncidentResponse()
-        self.ui.setupUi(self)
-        self.showMaximized()
+# class IncidentResponse(QWidget, Ui_IncidentResponse):
+#     def __init__(self, main_window):
+#         super().__init__()
+#         self.main_window = main_window
+#         self.ui = Ui_IncidentResponse()
+#         self.ui.setupUi(self)
+#         self.showMaximized()
 
-        self.model = QStandardItemModel()
-        self.model.setHeaderData(0, Qt.Orientation.Horizontal, "Attack Log")
-        self.ui.treeView.setModel(self.model)
-        self.ui.treeView.setWordWrap(True)
-        self.ui.treeView.setUniformRowHeights(False)
-        self.ui.treeView.expandAll()
-        self.logAutopilot = LogWindow(self.model)
+#         self.model = QStandardItemModel()
+#         self.model.setHeaderData(0, Qt.Orientation.Horizontal, "Attack Log")
+#         self.ui.treeView.setModel(self.model)
+#         self.ui.treeView.setWordWrap(True)
+#         self.ui.treeView.setUniformRowHeights(False)
+#         self.ui.treeView.expandAll()
+#         self.logAutopilot = LogWindow(self.model)
 
-        self.controller = IncidentResponseController(
-            ui = self.ui,
-            anomalies = di.container.resolve("anomalies"),
-            protocol_extractor = di.container.resolve("protocol_extractor"),
-            autopilot_engine = di.container.resolve("autopilot"),
-            threat_intel = di.container.resolve("threat_intelligence"),
-            blacklist = di.container.resolve("blacklist"),
-            blocked_ports = di.container.resolve("blocked_ports"),
-            network_log = di.container.resolve("network_log"),
-            mitigation_engine = di.container.resolve("ThreatMitigationEngine"),
-            autopilot_log = self.logAutopilot,
-            main_window = self.main_window
-        )
+#         self.controller = IncidentResponseController(
+#             ui = self.ui,
+#             anomalies = di.container.resolve("anomalies"),
+#             protocol_extractor = di.container.resolve("protocol_extractor"),
+#             autopilot_engine = di.container.resolve("autopilot"),
+#             threat_intel = di.container.resolve("threat_intelligence"),
+#             blacklist = di.container.resolve("blacklist"),
+#             blocked_ports = di.container.resolve("blocked_ports"),
+#             network_log = di.container.resolve("network_log"),
+#             mitigation_engine = di.container.resolve("ThreatMitigationEngine"),
+#             autopilot_log = self.logAutopilot,
+#             main_window = self.main_window
+#         )
 
-        self.timer = QTimer(self)
-        self.timer.timeout.connect(self.controller.ttTime)
-        self.timer.start(1000)
+#         self.timer = QTimer(self)
+#         self.timer.timeout.connect(self.controller.ttTime)
+#         self.timer.start(1000)
         
-if __name__ == "__main__":
-    app = QApplication(sys.argv)
-    window = IncidentResponse()
-    window.show()
-    sys.exit(app.exec())
+# if __name__ == "__main__":
+#     app = QApplication(sys.argv)
+#     window = IncidentResponse()
+#     window.show()
+#     sys.exit(app.exec())

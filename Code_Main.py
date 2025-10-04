@@ -1,8 +1,4 @@
-import sys
 import numpy as np
-import pandas as pd
-import time
-import psutil
 import os
 import platform
 import subprocess
@@ -12,146 +8,25 @@ from PyQt6.QtWidgets import *
 from PyQt6.QtCore import *
 from PyQt6.QtGui import *
 from scapy.all import *
-from scapy.layers.dns import DNS
-from scapy.layers.inet import IP, TCP, UDP
-from scapy.layers.http import HTTPRequest  
-from scapy.layers.inet import IP, TCP, UDP,ICMP
-from scapy.layers.dns import DNS
-from statistics import mean, mode, stdev
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
-from math import pi
 from datetime import datetime
 from views.UI_Main import Ui_MainWindow
-from Code_Analysis import Window_Analysis
-from Code_Tools import Window_Tools
-from Code_IncidentResponse import IncidentResponse
+# from Code_Analysis import Window_Analysis
+# from Code_Tools import Window_Tools
+# from Code_IncidentResponse import IncidentResponse
 from PyQt6 import QtCore, QtWidgets
 from collections import defaultdict
-import re
 import traceback
 import threading
-import ctypes
 from core import di
 from plugins.home.PacketSniffer import PacketSnifferThread
 from plugins.home.PacketFabricator import BasicPacketFabricator
 
 #sudo /home/hamada/Downloads/Naswail-SIEM-Tool-main/.venv/bin/python /home/hamada/Downloads/Naswail-SIEM-Tool-main/Code_Main.py
 
-class SplashScreen(QSplashScreen):
-    def __init__(self):
-        # Get the screen dimensions
-        screen = QApplication.primaryScreen().size()
-        screen_width = screen.width()
-        screen_height = screen.height()
-        
-        logo_path = "resources/logo.png"
-        pixmap = QPixmap(logo_path)
-        
-        # If logo.png doesn't exist, try the alternative name
-        if pixmap.isNull():
-            logo_path = "resources/naswail_logo.png"
-            pixmap = QPixmap(logo_path)
-        
-        # Create a larger canvas for full screen
-        if not pixmap.isNull():
-            # Scale logo to appropriate size (not too large, not too small)
-            logo_height = int(screen_height * 0.4)  # 40% of screen height
-            scaled_pixmap = pixmap.scaled(logo_height, logo_height, 
-                                          Qt.AspectRatioMode.KeepAspectRatio, 
-                                          Qt.TransformationMode.SmoothTransformation)
-            
-            # Create a new full-size pixmap with background color
-            full_pixmap = QPixmap(screen_width, screen_height)
-            full_pixmap.fill(QColor("#17292B"))  # Dark background color
-            
-            # Create a painter to draw on the full pixmap
-            painter = QPainter(full_pixmap)
-            
-            # Draw the logo in the center
-            logo_x = (screen_width - scaled_pixmap.width()) // 2
-            logo_y = (screen_height - scaled_pixmap.height()) // 2 - 50  # Slight offset for progress bar
-            painter.drawPixmap(logo_x, logo_y, scaled_pixmap)
-            painter.end()
-            
-            pixmap = full_pixmap
-        
-        super().__init__(pixmap)
-        
-        # Set window as frameless and fullscreen
-        self.setWindowFlags(Qt.WindowType.FramelessWindowHint | Qt.WindowType.WindowStaysOnTopHint)
-        
-        # Progress bar setup
-        progress_width = int(screen_width * 0.6)  # 60% of screen width
-        progress_height = 40
-        self.progress_bar = QProgressBar(self)
-        self.progress_bar.setGeometry(
-            (screen_width - progress_width) // 2,  # center horizontally 
-            logo_y + scaled_pixmap.height() + 50,  # position below the logo
-            progress_width, 
-            progress_height
-        )
-        self.progress_bar.setStyleSheet("""
-            QProgressBar {
-                border: 2px solid #5A595C;
-                border-radius: 5px;
-                background-color: #2D2A2E;
-                text-align: center;
-                color: white;
-                font-size: 14pt;
-            }
-            
-            QProgressBar::chunk {
-                background-color: #9CB7C8;
-                width: 10px;
-                margin: 0.5px;
-            }
-        """)
-        
-        # Add label for text
-        self.label = QLabel("Loading...", self)
-        self.label.setStyleSheet("color: white; font-size: 18pt; font-weight: bold; background: transparent;")
-        self.label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.label.setGeometry(0, self.progress_bar.y() - 60, screen_width, 50)
-        
-        # Timer for progress updates
-        self.timer = QTimer(self)
-        self.timer.timeout.connect(self.update_progress)
-        self.progress_value = 0
-        
-        # Loading messages
-        self.loading_messages = [
-            "Starting Naswail SIEM...",
-            "Loading network modules...",
-            "Initializing packet capture...",
-            "Setting up analysis engine...",
-            "Loading security components...",
-            "Preparing interface...",
-            "Almost ready..."
-        ]
-        self.message_index = 0
-    
-    def start_progress(self):
-        self.timer.start(30)
-        
-    def update_progress(self):
-        self.progress_value += 1
-        self.progress_bar.setValue(self.progress_value)
-        
-        # Update loading message periodically
-        if self.progress_value % 14 == 0 and self.message_index < len(self.loading_messages):
-            self.label.setText(self.loading_messages[self.message_index])
-            self.message_index += 1
-            
-        # When progress reaches 100, stop the timer
-        if self.progress_value >= 100:
-            self.timer.stop()
-    
-    # Override mousePressEvent to prevent clicking through splash screen
-    def mousePressEvent(self, event):
-        pass
-  
+
 class HomeController:
     def __init__(
         self,
@@ -260,6 +135,7 @@ class HomeController:
         self.sen_ct = 0
         self.ct_sensor_packet=[] # used in analyis to know the number packets in realtion to each sensor    
         self.sensors = {}
+        self.draw_gauge()
 
         # Apps Variables
         self.apps = dict()
@@ -1613,309 +1489,215 @@ class HomeController:
 
 
 
-class Naswail(QMainWindow, Ui_MainWindow):
-    def __init__(self):
-        super().__init__()
-        self.setupUi(self)
-        self.showMaximized()
-        self.setWindowTitle("Naswail - Main")
+# class Naswail(QMainWindow, Ui_MainWindow):
+#     def __init__(self):
+#         super().__init__()
+#         self.setupUi(self)
+#         self.showMaximized()
+#         self.setWindowTitle("Naswail - Main")
 
-        self.fix_navigation_bar()
-        self.create_color_legend()
-        self.scene = QGraphicsScene(self)
-        self.controller = HomeController(
-            ui = self,
-            packet_decoder = di.container.resolve("packet_decoder"),
-            packet_details = di.container.resolve("packet_details"),
-            protocol_extractor = di.container.resolve("protocol_extractor"),
-            error_checker = di.container.resolve("error_checker"),
-            packet_statistics = di.container.resolve("packet_statistics"),
-            anomaly_detector = di.container.resolve("anomaly_detector"),
-            packet_filter = di.container.resolve("packet_filter"),
-            corrupted_packet_list = di.container.resolve("corrupted_packet_list"),
-            network_log = di.container.resolve("network_log"),
-            anomalies = di.container.resolve("anomalies"),
-            blacklist = di.container.resolve("blacklist"),
-            blocked_ports = di.container.resolve("blocked_ports"),
-            list_of_activity = di.container.resolve("list_of_activity"),
-            qued_packets = di.container.resolve("qued_packets"),
-            packets = di.container.resolve("packets"),
-            time_series = di.container.resolve("time_series"),
-            sen_info = di.container.resolve("sen_info"),
-            sensor_system = di.container.resolve("sensor_system"),
-            application_system = di.container.resolve("application_system"),
-            packet_exporter = di.container.resolve("packet_exporter"),
-            scene = self.scene,
-            totINpacekts= di.container.resolve("total_inside_packets"),
-            totOUTpacekts= di.container.resolve("total_outside_packets"),
-            packetStats= di.container.resolve("packet_stats"),
-            bandwidthData= di.container.resolve("bandwidth_data"),
-        )
+#         self.fix_navigation_bar()
+#         self.scene = QGraphicsScene(self)
+#         self.controller = HomeController(
+#             ui = self,
+#             packet_decoder = di.container.resolve("packet_decoder"),
+#             packet_details = di.container.resolve("packet_details"),
+#             protocol_extractor = di.container.resolve("protocol_extractor"),
+#             error_checker = di.container.resolve("error_checker"),
+#             packet_statistics = di.container.resolve("packet_statistics"),
+#             anomaly_detector = di.container.resolve("anomaly_detector"),
+#             packet_filter = di.container.resolve("packet_filter"),
+#             corrupted_packet_list = di.container.resolve("corrupted_packet_list"),
+#             network_log = di.container.resolve("network_log"),
+#             anomalies = di.container.resolve("anomalies"),
+#             blacklist = di.container.resolve("blacklist"),
+#             blocked_ports = di.container.resolve("blocked_ports"),
+#             list_of_activity = di.container.resolve("list_of_activity"),
+#             qued_packets = di.container.resolve("qued_packets"),
+#             packets = di.container.resolve("packets"),
+#             time_series = di.container.resolve("time_series"),
+#             sen_info = di.container.resolve("sen_info"),
+#             sensor_system = di.container.resolve("sensor_system"),
+#             application_system = di.container.resolve("application_system"),
+#             packet_exporter = di.container.resolve("packet_exporter"),
+#             scene = self.scene,
+#             totINpacekts= di.container.resolve("total_inside_packets"),
+#             totOUTpacekts= di.container.resolve("total_outside_packets"),
+#             packetStats= di.container.resolve("packet_stats"),
+#             bandwidthData= di.container.resolve("bandwidth_data"),
+#         )
 
-        # Fix the navigation bar buttons - ensure they're above any other elements
-        self.pushButton_2.clicked.connect(self.open_analysis)
-        self.pushButton_3.clicked.connect(self.open_tool)
-        self.pushButton_13.clicked.connect(self.open_incidentresponse)
-        
-
-        self.secondary_widget3=None
-
-        self.controller.draw_gauge()
-
-        self.notificationButton.clicked.connect(self.show_notifications)
-        self.notificationList.itemClicked.connect(self.show_notification_details)
-        details="ayad has a tendency to goof quite hard these days, so he is a bit busy"
-        title="Ayad be goofing"
-        full_details=""" come on man its too ez btruh i just like the way i fight children i hate kids ama kidnap them"""
-        self.add_notification(title,details,full_details)
+#         # Fix the navigation bar buttons - ensure they're above any other elements
+#         # self.pushButton_2.clicked.connect(self.open_analysis)
+#         # self.pushButton_3.clicked.connect(self.open_tool)
+#         # self.pushButton_13.clicked.connect(self.open_incidentresponse)
+#         self.secondary_widget3=None
+#         self.notificationButton.clicked.connect(self.show_notifications)
+#         self.notificationList.itemClicked.connect(self.show_notification_details)
+#         details="ayad has a tendency to goof quite hard these days, so he is a bit busy"
+#         title="Ayad be goofing"
+#         full_details=""" come on man its too ez btruh i just like the way i fight children i hate kids ama kidnap them"""
+#         self.add_notification(title,details,full_details)
     
-    def fix_navigation_bar(self):
-        """Fix the navigation bar elements to ensure they're properly visible"""
-        # Make sure the navigation elements are raised to the top
-        self.horizontalLayoutWidget.raise_()
-        self.pushButton_4.raise_()  # Home button
-        self.pushButton_13.raise_() # Incident Response button
-        self.pushButton_3.raise_()  # Tools button
-        self.pushButton_2.raise_()  # Analysis button
+#     def fix_navigation_bar(self):
+#         """Fix the navigation bar elements to ensure they're properly visible"""
+#         # Make sure the navigation elements are raised to the top
+#         self.horizontalLayoutWidget.raise_()
+#         self.pushButton_4.raise_()  # Home button
+#         self.pushButton_13.raise_() # Incident Response button
+#         self.pushButton_3.raise_()  # Tools button
+#         self.pushButton_2.raise_()  # Analysis button
+#         self.notificationButton.raise_()
+#     def show_notifications(self):
+#         self.notificationMenu.exec(
+#             self.notificationButton.mapToGlobal(
+#                 QtCore.QPoint(0, self.notificationButton.height())
+#             )
+#         )
+
+#     def show_notification_details(self, item):
+#         """Show detailed view of clicked notification"""
+#         # Get stored data
+#         notification_data = item.data(QtCore.Qt.ItemDataRole.UserRole)
         
-        # Adjust z-index and visibility
-        self.pushButton_4.setStyleSheet("""
-            QPushButton {
-                background-color: #40E0D0;
-                color: #2D2A2E;
-                border: 1px solid #40E0D0;
-                border-radius: 4px;
-                padding: 5px 10px;
-                font-size: 14px;
-                z-index: 999;
-            }
-            QPushButton:hover {
-                background-color: #36C9B0;
-                border: 1px solid #36C9B0;
-            }
-            QPushButton:pressed {
-                background-color: #2DB39E;
-                border: 1px solid #2DB39E;
-            }
-        """)
+#         detail_dialog = QtWidgets.QDialog(parent=self.centralwidget)
+#         detail_dialog.setWindowTitle("Notification Details")
+#         detail_dialog.setFixedSize(400, 400)
         
-        # Move notification button to the right side
-        self.notificationButton.setParent(self.centralwidget)
-        self.notificationButton.setGeometry(1300, 15, 40, 30)
-        self.notificationButton.raise_()
-    def show_notifications(self):
+#         layout = QtWidgets.QVBoxLayout()
+        
+#         detail_text = QtWidgets.QTextEdit()
+#         detail_text.setReadOnly(True)
+#         detail_text.setStyleSheet("""
+#             QTextEdit {
+#                 background-color: #3E3D40;
+#                 color: #FFFFFF;
+#                 border: 1px solid #5A595C;
+#                 border-radius: 5px;
+#                 padding: 10px;
+#                 font-size: 14px;
+#             }
+#         """)
+        
+#         # Set actual content from stored data
+#         detail_text.setText(f"""
+#         {notification_data.get('title', 'Notification')}
+        
+#         Time: {notification_data.get('timestamp', 'Unknown')}
+#         Severity: {notification_data.get('severity', 'Medium')}
+        
+#         Details:
+#         {notification_data.get('details', 'No details available')}
+        
+#         Full Report:
+#         {notification_data.get('full_details', 'No additional information')}
+#         """)
+        
+#         close_btn = QtWidgets.QPushButton("Close")
+#         close_btn.clicked.connect(detail_dialog.close)
+        
+#         layout.addWidget(detail_text)
+#         layout.addWidget(close_btn)
+#         detail_dialog.setLayout(layout)
+#         detail_dialog.exec()
+
+#     def add_notification(self, title, details="", full_details=""):
+#         """Add notification with structured data"""
+#         item = QtWidgets.QListWidgetItem(title)
+        
+#         # Store data as dictionary
+#         item.setData(QtCore.Qt.ItemDataRole.UserRole, {
+#             'title': title,
+#             'details': details,
+#             'full_details': full_details,
+#             'timestamp': QtCore.QDateTime.currentDateTime().toString(),
+#             'severity': 'High'  # Add your severity logic here
+#         })
     
-        self.notificationMenu.exec(
-        self.notificationButton.mapToGlobal(
-        QtCore.QPoint(0, self.notificationButton.height())
-        )
-        )
+#         self.notificationList.addItem(item)
+        
+#     # def open_tool(self):
+#     #     try:
+#     #         self.secondary_widget2 = Window_Tools(self)
+#     #         self.hide()
+#     #         self.secondary_widget2.show()
+#     #     except Exception as e:
+#     #         print(f"Error in open_tool function: {e}")
+#     def open_analysis(self):
+#             try:
+#                 self.secondary_widget = Window_Analysis(self)  
+#                 self.hide()
+#                 self.secondary_widget.show()
+#             except Exception as e:
+#                 print(f"Error in open_analysis function: {e}")
+#                 tb=traceback.format_exc()
+#                 print(tb)
 
-    def show_notification_details(self, item):
-        """Show detailed view of clicked notification"""
-        # Get stored data
-        notification_data = item.data(QtCore.Qt.ItemDataRole.UserRole)
-        
-        detail_dialog = QtWidgets.QDialog(parent=self.centralwidget)
-        detail_dialog.setWindowTitle("Notification Details")
-        detail_dialog.setFixedSize(400, 400)
-        
-        layout = QtWidgets.QVBoxLayout()
-        
-        detail_text = QtWidgets.QTextEdit()
-        detail_text.setReadOnly(True)
-        detail_text.setStyleSheet("""
-            QTextEdit {
-                background-color: #3E3D40;
-                color: #FFFFFF;
-                border: 1px solid #5A595C;
-                border-radius: 5px;
-                padding: 10px;
-                font-size: 14px;
-            }
-        """)
-        
-        # Set actual content from stored data
-        detail_text.setText(f"""
-        {notification_data.get('title', 'Notification')}
-        
-        Time: {notification_data.get('timestamp', 'Unknown')}
-        Severity: {notification_data.get('severity', 'Medium')}
-        
-        Details:
-        {notification_data.get('details', 'No details available')}
-        
-        Full Report:
-        {notification_data.get('full_details', 'No additional information')}
-        """)
-        
-        close_btn = QtWidgets.QPushButton("Close")
-        close_btn.clicked.connect(detail_dialog.close)
-        
-        layout.addWidget(detail_text)
-        layout.addWidget(close_btn)
-        detail_dialog.setLayout(layout)
-        detail_dialog.exec()
+    # def open_incidentresponse(self):
+    #         try:
+    #             if self.secondary_widget3==None:
+    #                  self.secondary_widget3 = IncidentResponse(self)  
+    #             self.hide()
+    #             self.secondary_widget3.show()
+    #         except Exception as e:
+    #             print(f"Error in open_incidentresponse function: {e}")
+    #             tb=traceback.format_exc()
+    #             print(tb)
 
-    def add_notification(self, title, details="", full_details=""):
-        """Add notification with structured data"""
-        item = QtWidgets.QListWidgetItem(title)
-        
-        # Store data as dictionary
-        item.setData(QtCore.Qt.ItemDataRole.UserRole, {
-            'title': title,
-            'details': details,
-            'full_details': full_details,
-            'timestamp': QtCore.QDateTime.currentDateTime().toString(),
-            'severity': 'High'  # Add your severity logic here
-        })
+# def is_admin():
+#         try:
+#             return ctypes.windll.shell32.IsUserAnAdmin()
+#         except:
+#             return False
+
+# def run_command_as_admin():
+#     # Command to execute
+#     cmd_command = 'snort -i 5 -c C:\\Snort\\etc\\snort.conf -l C:\\Snort\\log -A fast'
     
-        self.notificationList.addItem(item)
-        
-    def open_tool(self):
-        try:
-            self.secondary_widget2 = Window_Tools(self)
-            self.hide()
-            self.secondary_widget2.show()
-        except Exception as e:
-            print(f"Error in open_tool function: {e}")
-    def open_analysis(self):
-            try:
-                self.secondary_widget = Window_Analysis(self)  
-                self.hide()
-                self.secondary_widget.show()
-            except Exception as e:
-                print(f"Error in open_analysis function: {e}")
-                tb=traceback.format_exc()
-                print(tb)
-
-    def open_incidentresponse(self):
-            try:
-                if self.secondary_widget3==None:
-                     self.secondary_widget3 = IncidentResponse(self)  
-                self.hide()
-                self.secondary_widget3.show()
-            except Exception as e:
-                print(f"Error in open_incidentresponse function: {e}")
-                tb=traceback.format_exc()
-                print(tb)
-
-
-    def create_color_legend(self):
-        # Create a frame for the legend
-        legend_frame = QFrame(self.centralwidget)
-        legend_frame.setFrameShape(QFrame.Shape.StyledPanel)
-        legend_frame.setFrameShadow(QFrame.Shadow.Raised)
-        legend_frame.setStyleSheet("background-color: #2D2A2E; border-radius: 5px; padding: 2px; border: 1px solid #5A595C;")
-        
-        # Create layout for the legend
-        legend_layout = QVBoxLayout(legend_frame)
-        legend_layout.setContentsMargins(5, 5, 5, 5)
-        legend_layout.setSpacing(2)
-        
-        # Add a title
-        title_label = QLabel("Packet Color Legend", legend_frame)
-        title_label.setStyleSheet("color: white; font-weight: bold;")
-        legend_layout.addWidget(title_label)
-        
-        # Create legend items
-        legend_items = [
-            ("Anomaly", "rgba(255, 140, 140, 150)"),
-            ("Blacklisted IP", "rgba(200, 100, 100, 150)"),
-            ("Corrupted Packet", "rgba(255, 200, 100, 150)"),
-            ("HTTP", "rgba(144, 238, 144, 150)"),
-            ("HTTPS", "rgba(144, 238, 144, 150)"),
-            ("DNS", "rgba(202, 255, 191, 150)"),
-            ("ICMP", "rgba(255, 245, 186, 150)"),
-            ("TCP", "rgba(151, 203, 255, 150)"),
-            ("UDP", "rgba(255, 182, 193, 150)")
-        ]
-        
-        # Create a grid layout for the color samples
-        grid_layout = QGridLayout()
-        grid_layout.setHorizontalSpacing(15)  # More horizontal spacing
-        grid_layout.setVerticalSpacing(8)     # More vertical spacing
-        
-        # Add legend items with color samples
-        for i, (text, color) in enumerate(legend_items):
-            # Use a single column to give more space for text
-            row = i
-            
-            # Create color sample
-            color_sample = QFrame(legend_frame)
-            color_sample.setFixedSize(16, 16)
-            r, g, b, a = map(int, color.replace("rgba(", "").replace(")", "").split(","))
-            color_sample.setStyleSheet(f"background-color: rgba({r}, {g}, {b}, {a}); border-radius: 2px;")
-            
-            # Create label with word wrap
-            label = QLabel(text, legend_frame)
-            label.setStyleSheet("color: white;")
-            label.setWordWrap(True)  # Enable word wrap
-            label.setMinimumHeight(20)  # Ensure enough height for wrapped text
-            
-            # Add to grid layout
-            grid_layout.addWidget(color_sample, row, 0, 1, 1, Qt.AlignmentFlag.AlignTop)
-            grid_layout.addWidget(label, row, 1, 1, 1)
-        
-        legend_layout.addLayout(grid_layout)
-        
-        # Make legend wider and taller to accommodate text
-        legend_frame.setGeometry(1250, 215, 250, 220)  # Slightly taller to fit new entries
-        legend_frame.show()
-def is_admin():
-        try:
-            return ctypes.windll.shell32.IsUserAnAdmin()
-        except:
-            return False
-
-def run_command_as_admin():
-    # Command to execute
-    cmd_command = 'snort -i 5 -c C:\\Snort\\etc\\snort.conf -l C:\\Snort\\log -A fast'
-    
-    # Run in a new persistent command prompt window
-    subprocess.Popen(
-        ['cmd.exe', '/k', cmd_command],
-        creationflags=subprocess.CREATE_NEW_CONSOLE
-    )
+#     # Run in a new persistent command prompt window
+#     subprocess.Popen(
+#         ['cmd.exe', '/k', cmd_command],
+#         creationflags=subprocess.CREATE_NEW_CONSOLE
+#     )
  
-if __name__ == "__main__":
-    app = QApplication(sys.argv)
+# if __name__ == "__main__":
+#     app = QApplication(sys.argv)
     
-    # Create and show the splash screen
-    splash = SplashScreen()
-    splash.show()
-    splash.start_progress()
+#     # Create and show the splash screen
+#     splash = SplashScreen()
+#     splash.show()
+#     splash.start_progress()
     
-    # Create the main window but don't show it yet
-    window = Naswail()
+#     # Create the main window but don't show it yet
+#     window = Naswail()
     
-    # Process events to ensure splash screen is shown
-    app.processEvents()
+#     # Process events to ensure splash screen is shown
+#     app.processEvents()
     
-    # Simulate loading delay
-    def finish_loading():
-        # Check admin privileges and run command if needed
-        if is_admin():
-            run_command_as_admin()
+#     # Simulate loading delay
+#     def finish_loading():
+#         # Check admin privileges and run command if needed
+#         if is_admin():
+#             run_command_as_admin()
         
-        # Close splash and show main window
-        splash.finish(window)
-        window.show()
+#         # Close splash and show main window
+#         splash.finish(window)
+#         window.show()
         
-        # Force the window to activate and come to the foreground
-        window.activateWindow()
-        window.raise_()
+#         # Force the window to activate and come to the foreground
+#         window.activateWindow()
+#         window.raise_()
         
-        # On Windows, this can help ensure the window comes to front
-        if 1 == 1:# platform.system() == "Windows":
-            # Set window as the foreground window
-            hwnd = window.winId()
-            try:
-                ctypes.windll.user32.SetForegroundWindow(hwnd)
-            except:
-                pass
+#         # On Windows, this can help ensure the window comes to front
+#         if 1 == 1:# platform.system() == "Windows":
+#             # Set window as the foreground window
+#             hwnd = window.winId()
+#             try:
+#                 ctypes.windll.user32.SetForegroundWindow(hwnd)
+#             except:
+#                 pass
     
-    # Use QTimer to transition from splash to main window
-    QTimer.singleShot(3000, finish_loading)  # 3 seconds delay
+#     # Use QTimer to transition from splash to main window
+#     QTimer.singleShot(3000, finish_loading)  # 3 seconds delay
     
-    sys.exit(app.exec())
+#     sys.exit(app.exec())
