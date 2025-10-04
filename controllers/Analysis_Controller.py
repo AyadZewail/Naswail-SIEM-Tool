@@ -1,4 +1,3 @@
-import sys
 import numpy as np
 import threading
 import ipaddress
@@ -16,12 +15,8 @@ from PyQt6.QtCore import *
 from PyQt6.QtGui import QPixmap
 from scapy.layers.inet import IP
 from scapy.all import *
-# from views.UI_Analysis import Ui_Naswail_Anlaysis
-# from Code_Tools import Window_Tools
-# from Code_IncidentResponse import IncidentResponse
 import math
 from models.node import Node
-from core import di
 
 class AnalysisController(threading.Thread, QObject):
     pixmapReady = pyqtSignal(QPixmap)
@@ -1338,92 +1333,3 @@ class AnalysisController(threading.Thread, QObject):
         self.selected_option = self.ui.comboBox_2.currentText()
         self.display_all()
         print(f"Selected option: {self.selected_option}")  # Debugging output
-    
-    
-
-# class Window_Analysis(QWidget, Ui_Naswail_Anlaysis):
-#     def __init__(self, main_window):
-#         super().__init__()
-#         self.main_window = main_window  # Reference to the main window
-#         self.ui = Ui_Naswail_Anlaysis()  # Create an instance of the UI class
-#         self.ui.setupUi(self)  # Set up the UI for this widget
-#         self.setWindowTitle("Secondary Widget")
-#         self.showMaximized()
-#         self.setWindowTitle("Naswail - Visualization")
-        
-#         # Then set up UI connections
-#         pixmap = QPixmap(r"resources/logo.jpg")  # Fixed to use logo.jpg instead of logo.png
-#         self.pixmap_item = QGraphicsPixmapItem(pixmap)
-#         self.scene = QGraphicsScene(self)
-#         self.scene.addItem(self.pixmap_item)
-#         self.ui.graphicsView.setScene(self.scene)
-#         self.ui.graphicsView.setFixedSize(71, 61)
-#         self.ui.graphicsView.fitInView(self.scene.sceneRect(), Qt.AspectRatioMode.KeepAspectRatio)
-        
-#         # Connect navigation buttons
-#         # self.ui.pushButton_4.clicked.connect(self.show_main_window)
-#         # self.ui.pushButton_3.clicked.connect(self.show_tools_window)
-#         # self.ui.pushButton_5.clicked.connect(self.show_incidentresponse_window)
-
-#         self.ui.label.setText("")
-
-#         try:
-#             # Layout for self.ui.widget_6
-#             self.layout = QVBoxLayout(self.ui.widget_6)
-            
-#             # Clear any existing widgets in the layout
-#             if self.ui.widget_6.layout():
-#                 while self.ui.widget_6.layout().count():
-#                     item = self.ui.widget_6.layout().takeAt(0)
-#                     if item.widget():
-#                         item.widget().deleteLater()
-
-#             self.figure = plt.figure(figsize=(6, 5))  # Reduced figure size
-#             self.canvas = FigureCanvas(self.figure)
-#             self.layout.addWidget(self.canvas)
-            
-#             print("NetworkTopologyVisualizer initialized successfully")
-#         except Exception as e:
-#             import traceback
-#             print(f"Error initializing NetworkTopologyVisualizer: {e}")
-#             print(traceback.format_exc())
-
-#         self.controller = AnalysisController(
-#             ui=self.ui,
-#             queuedPacekts=di.container.resolve("qued_packets"),
-#             sensorSys=di.container.resolve("sensor_system"),
-#             totINpacekts=di.container.resolve("total_inside_packets"),
-#             totOUTpacekts=di.container.resolve("total_outside_packets"),
-#             packetStats=di.container.resolve("packet_stats"),
-#             sen_info=di.container.resolve("sen_info"),
-#             bandwidthData=di.container.resolve("bandwidth_data"),
-#             packets=di.container.resolve("packets"),
-#             anomalies=di.container.resolve("anomalies"),
-#             geo_mapper=di.container.resolve("geo_mapper"),
-#             figure= self.figure,
-#             canvas=self.canvas,
-#         )
-
-    # def show_main_window(self):
-    #     """Show the main window and hide this widget."""
-    #     self.main_window.show()
-    #     self.hide()
-    # def show_tools_window(self):
-    #     """Show the tools window and hide this widget."""
-    #     self.secondary_widget2 = Window_Tools(self.main_window)
-    #     self.hide()
-    #     self.secondary_widget2.show()
-    # def show_incidentresponse_window(self):
-    #     """Show the tools window and hide this widget."""
-    #     self.secondary_widget2 = IncidentResponse(self.main_window)
-    #     self.hide()
-    #     self.secondary_widget2.show()
-
-    
-
-
-# if __name__ == "__main__":
-#     app = QApplication(sys.argv)
-#     main_window = Window_Analysis()
-#     main_window.show()
-#     sys.exit(app.exec())

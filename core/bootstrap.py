@@ -2,14 +2,14 @@
 from PyQt6.QtWidgets import *
 from PyQt6.QtCore import *
 from PyQt6.QtGui import *
-from views.UI_Main import Ui_MainWindow  # extracted your class here
-from views.UI_IncidentResponse import Ui_IncidentResponse, LogWindow  # extracted your class here
-from views.UI_Tools import Ui_Naswail_Tool  # extracted your class here
-from views.UI_Analysis import Ui_Naswail_Anlaysis  # extracted your class here
-from Code_Main import HomeController
-from Code_IncidentResponse import IncidentResponseController
-from Code_Tools import ToolsController
-from Code_Analysis import AnalysisController
+from views.Home_VIew import Ui_MainWindow  # extracted your class here
+from views.IncidentResponse_View import Ui_IncidentResponse, LogWindow  # extracted your class here
+from views.Tools_View import Ui_Naswail_Tool  # extracted your class here
+from views.Analysis_View import Ui_Naswail_Anlaysis  # extracted your class here
+from controllers.Home_Controller import HomeController
+from controllers.IncidentResponse_Controller import IncidentResponseController
+from controllers.Tools_Controller import ToolsController
+from controllers.Analysis_Controller import AnalysisController
 from core import di
 from PyQt6 import QtCore
 import matplotlib.pyplot as plt
