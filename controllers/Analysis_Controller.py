@@ -16,6 +16,11 @@ from PyQt6.QtGui import QPixmap
 from scapy.layers.inet import IP
 from scapy.all import *
 import math
+import traceback
+from PyQt6.QtGui import QPainter, QColor, QPen, QBrush, QFont, QPainterPath, QImage
+from PyQt6.QtCore import Qt, QPointF, QRect
+from PyQt6.QtGui import QImage
+import os
 from models.node import Node
 
 class AnalysisController(threading.Thread, QObject):
@@ -71,7 +76,7 @@ class AnalysisController(threading.Thread, QObject):
         self.real_location_fetched = False
         self.real_lat = 30.0444
         self.real_lon = 31.2357
-        self.real_location_name = "Cairo (Default)"
+        self.real_location_name = "Cairo, Egypt"
         self.lastindex = 0
         self.src_lats, self.src_lons = [], []
         self.dst_lats, self.dst_lons = [], []
@@ -82,7 +87,8 @@ class AnalysisController(threading.Thread, QObject):
         
         self.timer = QTimer(self)
         self.timer.timeout.connect(self.ttTime)
-        self.timer.start(20000)
+        self.timer.start(30000)
+        self.redraw = 1
 
         #======================================================================================
         #======================================================================================
@@ -154,7 +160,6 @@ class AnalysisController(threading.Thread, QObject):
             print(f"Successfully processed {len(self.list_of_nodes)} nodes with their connections")
             
         except Exception as e:
-            import traceback
             print(f"Error in find_unique_devices_and_edges: {e}")
             print(traceback.format_exc())
 
@@ -986,9 +991,6 @@ class AnalysisController(threading.Thread, QObject):
             # Create a basic plot without a map
             print("Creating map visualization with world map background...")
             # Create a direct rendering using QPainter
-            from PyQt6.QtGui import QPainter, QColor, QPen, QBrush, QFont, QPainterPath, QImage
-            from PyQt6.QtCore import Qt, QPointF, QRect
-            import os
             
             # Create a new QPixmap with appropriate size
             pixmap_width, pixmap_height = 700, 450
@@ -1006,7 +1008,6 @@ class AnalysisController(threading.Thread, QObject):
             else:
                 try:
                     # Load the world map as background and convert to grayscale
-                    from PyQt6.QtGui import QImage
                     print(f"Converting world map to grayscale...")
                     
                     # Load the image
@@ -1280,7 +1281,6 @@ class AnalysisController(threading.Thread, QObject):
             self.pixmapReady.emit(pixmap)
 
         except Exception as e:
-            import traceback
             print(f"Error in create_map function: {e}")
             print(traceback.format_exc())
 
@@ -1311,7 +1311,6 @@ class AnalysisController(threading.Thread, QObject):
             self.update_location_label()
             
         except Exception as e:
-            import traceback
             print(f"Error refreshing GeoMap: {e}")
             print(traceback.format_exc())
 
@@ -1323,10 +1322,13 @@ class AnalysisController(threading.Thread, QObject):
     #======================================================================================
     #======================================================================================
     def ttTime(self):
-        self.find_unique_devices_and_edges()
-        self.visualize_network()
-        self.display_all()
-        self.create_map()
+        if self.redraw == 1:
+            self.find_unique_devices_and_edges()
+            self.visualize_network()
+        else:
+            self.display_all()
+            self.create_map()
+        self.redraw *= -1
     
     def on_combobox_change(self):
         """Handle changes in comboBox_2."""

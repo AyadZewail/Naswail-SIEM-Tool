@@ -1,17 +1,20 @@
+from collections import deque
+
 from plugins.home.PacketDecoder import BasicPacketDecoder
 from plugins.home.PacketDetails import BasicPacketDetails
 from plugins.home.ProtocolExtractor import BasicProtocolExtractor
 from plugins.home.ErrorChecker import BasicErrorChecker
 from plugins.home.PacketStatistics import BasicPacketStatistics
 from plugins.home.AnomalyDetector import SnortAnomalyDetector
-from plugins.home.AEAnomalyDetector import AEAnomalyDetector
+from plugins.home.AEAnomalyDetector import CloudAnomalyDetector
 from plugins.home.PacketFilter import BasicPacketFilter
 from plugins.home.SensorSystem import BasicSensorSystem
 from plugins.home.ApplicationSystem import BasicApplicationSystem
 from plugins.home.PacketsExporter import BasicPacketExporter
 
-from plugins.incident_response.scrapers import BingSearcher, YouTubeSearcher
+from plugins.incident_response.scrapers import BingSearcher, YouTubeSearcher, DeepSeekSearcher
 from plugins.incident_response.IntelPreprocessor import SimpleIntelPreprocessor
+from plugins.incident_response.DeepSeekPreprocessor import LLMIntelPreprocessor
 from plugins.incident_response.ThreatIntelligence import ThreatIntelligence
 from plugins.incident_response.AutopilotEngine import KaggleLLMEngine as Autopilot
 from plugins.incident_response.network_engines import WindowsNetworkAdmin as AdminImpl
@@ -46,8 +49,8 @@ container.register_singleton("anomalies", [])
 container.register_singleton("blacklist", [])
 container.register_singleton("blocked_ports", [])
 container.register_singleton("list_of_activity", [])
-container.register_singleton("qued_packets", [])
-container.register_singleton("packets", [])
+container.register_singleton("qued_packets", deque(maxlen=15000))
+container.register_singleton("packets", deque(maxlen=15000))
 container.register_singleton("time_series", {})
 container.register_singleton("sen_info", [])
 container.register_singleton("packet_stats", {"total": 0, "tcp": 0, "udp": 0, "icmp": 0, "other": 0,"http":0,"https":0,"dns":0,"dhcp":0,"ftp":0,"telnet":0})
@@ -74,12 +77,13 @@ container.register_singleton(
         rules_file="C:\\Snort\\rules\\custom.rules",
         log_file="C:\\Snort\\log\\alert.ids"
     )
-    # AEAnomalyDetector(
-    #     packets=container.resolve("packets"),
-    #     model_path="resources/mlp_teacher.pth", 
-    #     error_path="resources/all_error.pkl", 
-    #     scaler_path="resources/base_MLP_scaler.pkl",
-    # )
+)
+
+container.register_singleton(
+    "anomaly_detector_2",
+    CloudAnomalyDetector(
+        "http://101.46.64.170:8080"
+    )
 )
 
 container.register_singleton(
@@ -98,11 +102,17 @@ container.register_singleton("application_system", BasicApplicationSystem())
 # ===== Threat Intelligence related =====
 container.register_singleton("bing_searcher", BingSearcher())
 container.register_singleton("yt_searcher", YouTubeSearcher())
+# container.register_singleton("deepseek_searcher", DeepSeekSearcher("https://api-ap-southeast-1.modelarts-maas.com/v1/chat/completions", 
+#                                                                    "fce64bd1-948b-4b4d-b998-729fc4c12db8_8947A6A7229BA554F81256D428EB618303FE2E35A63A8C29FF0F98F7EAAB85CA",
+#                                                                    "deepseek-v3.1"))
 container.register_singleton("simple_intel_preprocessor", SimpleIntelPreprocessor())
+# container.register_singleton("deepseek_intel_preprocessor", LLMIntelPreprocessor("https://api-ap-southeast-1.modelarts-maas.com/v1/chat/completions", 
+#                                                                                  "fce64bd1-948b-4b4d-b998-729fc4c12db8_8947A6A7229BA554F81256D428EB618303FE2E35A63A8C29FF0F98F7EAAB85CA",
+#                                                                                  "deepseek-v3.1"))
 container.register_singleton(
     "threat_intelligence",
     ThreatIntelligence(
-        searchers=[container.resolve("bing_searcher"), container.resolve("yt_searcher")],
+        searchers=[container.resolve("bing_searcher"), container.resolve("yt_searcher")],#, container.resolve("deepseek_searcher")],
         preprocessor=container.resolve("simple_intel_preprocessor")
     )
 )

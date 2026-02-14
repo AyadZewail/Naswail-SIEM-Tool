@@ -44,6 +44,7 @@ class Bootstrap:
             error_checker = di.container.resolve("error_checker"),
             packet_statistics = di.container.resolve("packet_statistics"),
             anomaly_detector = di.container.resolve("anomaly_detector"),
+            anomaly_detector_2 = di.container.resolve("anomaly_detector_2"),
             packet_filter = di.container.resolve("packet_filter"),
             corrupted_packet_list = di.container.resolve("corrupted_packet_list"),
             network_log = di.container.resolve("network_log"),
@@ -325,7 +326,6 @@ class Bootstrap:
             
             print("NetworkTopologyVisualizer initialized successfully")
         except Exception as e:
-            import traceback
             print(f"Error initializing NetworkTopologyVisualizer: {e}")
             print(traceback.format_exc())
 

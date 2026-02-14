@@ -12,7 +12,8 @@ class MaxMindGeoMapper(IGeoMapper):
         self.real_lat = default_lat
         self.real_lon = default_lon
         self.real_location_name = default_name
-        self.get_real_location()
+        if self.real_location_fetched == False:
+            self.get_real_location()
 
     def get_real_location(self):
         """Fetch real location once and store it."""

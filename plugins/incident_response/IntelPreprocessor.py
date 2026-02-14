@@ -3,14 +3,17 @@ import torch
 import numpy as np
 import pandas as pd
 import spacy
-from sentence_transformers import SentenceTransformer, util
 
 from plugins.incident_response.interfaces import IIntelPreprocessor
 
 class SimpleIntelPreprocessor(IIntelPreprocessor):
+    model = None
+
     def __init__(self):
         self.mit_emb_file = "data/mitigation_embeddings.pt"
-        self.model = SentenceTransformer('all-MiniLM-L6-v2')
+        if SimpleIntelPreprocessor.model is None:
+            from sentence_transformers import SentenceTransformer, util
+            SimpleIntelPreprocessor.model = SentenceTransformer('all-MiniLM-L6-v2')
         self.nlp = spacy.load("en_core_web_sm", disable=["parser", "ner"])
         self.nlp.add_pipe("sentencizer")
         self.key_words = {"block", "blocking", "reject", "disable", "restrict", "terminate", "limit", "limiting", "rate", "rate-limiting"}
@@ -22,7 +25,7 @@ class SimpleIntelPreprocessor(IIntelPreprocessor):
         except FileNotFoundError:
             with open("data/mit_refs.txt", "r") as f:
                 mitigation_refs = [line.strip() for line in f.readlines()]
-            mitigation_embeddings = self.model.encode(mitigation_refs, convert_to_tensor=True)
+            mitigation_embeddings = SimpleIntelPreprocessor.model.encode(mitigation_refs, convert_to_tensor=True)
             torch.save(mitigation_embeddings, self.mit_emb_file, _use_new_zipfile_serialization=False)
             return mitigation_embeddings
 
@@ -30,7 +33,7 @@ class SimpleIntelPreprocessor(IIntelPreprocessor):
         if not sentences:
             return "No sentences were retrieved", 0.0
 
-        embeddings = self.model.encode(sentences, convert_to_tensor=True)
+        embeddings = SimpleIntelPreprocessor.model.encode(sentences, convert_to_tensor=True)
         scores = util.pytorch_cos_sim(embeddings, mitigation_embeddings).max(dim=1)[0]
 
         mask = scores > 0.7
@@ -54,9 +57,9 @@ class SimpleIntelPreprocessor(IIntelPreprocessor):
         avg_score = torch.mean(torch.stack([s for _, s in top_entries])) if top_entries else 0.0
         return ' '.join(top_sentences), avg_score.item() if hasattr(avg_score, 'item') else avg_score
 
-    def preprocess(self, input_data: str) -> dict:
+    def preprocess(self, raw_data: str) -> dict:
         # data = input_dict.get("data", [])
-        docs = list(self.nlp.pipe([input_data], batch_size=256))
+        docs = list(self.nlp.pipe([raw_data], batch_size=256))
         sentences = [sent.text.strip() for doc in docs for sent in doc.sents]
         mit_emb = self.load_embeddings()
         mitigation_sentence, score = self.extract_mitigation_sentences(sentences, mit_emb)

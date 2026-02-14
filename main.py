@@ -28,9 +28,7 @@ class SplashScreen(QSplashScreen):
         if not pixmap.isNull():
             # Scale logo to appropriate size (not too large, not too small)
             logo_height = int(screen_height * 0.4)  # 40% of screen height
-            scaled_pixmap = pixmap.scaled(logo_height, logo_height, 
-                                          Qt.AspectRatioMode.KeepAspectRatio, 
-                                          Qt.TransformationMode.SmoothTransformation)
+            scaled_pixmap = pixmap.scaled(logo_height, logo_height, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
             
             # Create a new full-size pixmap with background color
             full_pixmap = QPixmap(screen_width, screen_height)

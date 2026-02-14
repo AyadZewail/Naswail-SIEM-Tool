@@ -13,6 +13,7 @@ import threading
 import asyncio
 import asyncio
 import time
+import warnings
 from PyQt6.QtWidgets import *
 from PyQt6.QtCore import *
 from PyQt6.QtGui import *
@@ -289,7 +290,6 @@ class IncidentResponseController():
             print(e)
 
     def decode_payload(self, payload):
-        import warnings
         warnings.filterwarnings("ignore", category=UserWarning, module="your_font_module")
         if isinstance(payload, bytes):
             payload = payload.decode(errors="ignore")  #UTF-8 decoding
@@ -366,7 +366,7 @@ class IncidentResponseController():
                 sport = target["UDP"].sport
                 self.dport = target["UDP"].dport
             flow_key = tuple(sorted([(self.src_ip, sport), (dst_ip, self.dport)])) + (protocol,)
-            attack_entry = f"{datetime.fromtimestamp(float(target.time)).strftime("%I:%M:%S %p")} - {self.attack_family} - {str(flow_key)}"
+            attack_entry = f"{datetime.fromtimestamp(float(target.time)).strftime('%I:%M:%S %p')} - {self.attack_family} - {str(flow_key)}"
             self.logModel.log_attack(attack_entry)
             self.logModel.log_step("Performing web scraping...")
             

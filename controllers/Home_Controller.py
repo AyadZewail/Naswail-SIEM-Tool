@@ -31,6 +31,7 @@ class HomeController:
         error_checker,
         packet_statistics,
         anomaly_detector,
+        anomaly_detector_2,
         packet_filter,
         corrupted_packet_list,
         network_log,
@@ -68,6 +69,7 @@ class HomeController:
         self.counts = []
         self.capture = -1
         self.start_time = QTime.currentTime()
+        self.elapsed_seconds = 0
         self.elapsedTime = 0
         self.packetDecoder = packet_decoder
         self.packetDetails = packet_details
@@ -75,6 +77,7 @@ class HomeController:
         self.error_checker = error_checker
         self.packetStatistics = packet_statistics
         self.anomalyDetector = anomaly_detector
+        self.anomalyDetector_2 = anomaly_detector_2
         self.packetFilter = packet_filter
         self.corrupted_packet = corrupted_packet_list
         self.networkLog = network_log
@@ -89,7 +92,6 @@ class HomeController:
         self.process_packet_index=0
         self.bandwidth_data = bandwidthData
         self.captured_packets = []
-        self.putpacketinqueue()
         self.pcap_packets = []
         self.que_flag=False
         self.pcap_process_packet_index = 0
@@ -196,13 +198,13 @@ class HomeController:
         self.sniffer_thread.start()
         self.stats_timer = QTimer()
         self.stats_timer.timeout.connect(self.tick)
-
-        self.num=100
-      
-        self.stats_timer.start(10)
+        self.stats_timer.start(500)
         self.packet_per_seconds_timer = QTimer()
         self.packet_per_seconds_timer.timeout.connect(self.ppsttick)
         self.packet_per_seconds_timer.start(1000)
+        # self.IDS_timer = QTimer()
+        # self.IDS_timer.timeout.connect(self.IDStick)
+        # self.IDS_timer.start(30000)
         self.ct = 0
         #notifications
 
@@ -403,23 +405,17 @@ class HomeController:
             tb=traceback.format_exc()
             print(tb)
             print(f"Error drawing gauge: {e}")
-    def putpacketinqueue(self):
+            
+    def put_packet_in_queue(self, packets):
         try:
-            fake_packet=Packet()
-            thread = threading.Thread(target=self.put_packet_in_queue,args=(fake_packet,))
-            thread.start()
-        except Exception as e:
-            print(f"Error in put_packet_in_queue_thread function: {e}")
-    def put_packet_in_queue(self, packet):
-        try:
-            if self.packetInput == 0:
-                self.qued_packets.append(packet)
-                self.recently_qued_packets+=1
-                
-            if self.packetInput == 1:
-                self.recently_qued_packets+=1
-                self.qued_packets.append(packet)   
-                self.que_flag=False         
+            # packets is now a list
+            if self.packetInput in (0, 1):
+                self.qued_packets.extend(packets)  # <-- extend instead of append
+                self.recently_qued_packets += len(packets)
+
+                if self.packetInput == 1:
+                    self.que_flag = False
+
         except Exception as e:
             print(f"Error putting packet in queue: {e}")
     def updateBlacklist(self, f):
@@ -461,21 +457,22 @@ class HomeController:
         except Exception as e:
             print(f"Error in packet_statistics function: {e}")
 
-    def change_chart(self,index):#function for changing beteen guage and donut chart
+    def change_chart(self,index):#function for changing between guage and donut chart
         if index==1:
             self.typeOFchartToPlot=1
             self.show_donut_chart()
         else:
             self.typeOFchartToPlot=0
+
     def processpacket(self):
         try:
             thread = threading.Thread(target=self.process_packet)
             thread.start()
         except Exception as e:
             print(f"Error in process_packet function: {e}")
+    
     def process_packet(self):
         try:
-            
             if self.flag_process_packet==False:
                 self.flag_process_packet=True
                 if self.packetInput == 0:
@@ -531,16 +528,16 @@ class HomeController:
                     self.packets.append(packet)
                     
                     # Handle packet storage limits
-                    if len(self.packets) >= 15000:
-                        removed_elements = self.packets[0:5000]
-                        del self.qued_packets[0:5000]
-                        del self.packets[0:5000]
-                        self.process_packet_index -= 5000
-                        for key in list(self.time_series.keys())[:2000]:
-                            del self.time_series[key]
-                        wrpcap("data/packet_file" + str(self.packetfile) + ".pcap", removed_elements)
-                        removed_elements.clear()
-                        self.packetfile += 1
+                    # if len(self.packets) >= 15000:
+                    #     removed_elements = self.packets[0:5000]
+                    #     del self.qued_packets[0:5000]
+                    #     del self.packets[0:5000]
+                    #     self.process_packet_index -= 5000
+                    #     for key in list(self.time_series.keys())[:2000]:
+                    #         del self.time_series[key]
+                    #     wrpcap("data/packet_file" + str(self.packetfile) + ".pcap", removed_elements)
+                    #     removed_elements.clear()
+                    #     self.packetfile += 1
 
                     # Verify checksum and update stats
                     is_corrupted = self.error_checker.is_corrupted(packet)
@@ -582,9 +579,9 @@ class HomeController:
                         self.new_packet_features.append([packet_info['length'], packet_info['timestamp'], protocol])
                         
                         # Check for anomalies
-                        if not self.alert_timer_started:
-                            self.alert_timer_started = True
-                            threading.Timer(15.0, lambda: self.snort_alerts[(packet_info['src_ip'], packet_info['dst_ip'])].append("Port Scanning")).start()
+                        # if not self.alert_timer_started:
+                        #     self.alert_timer_started = True
+                        #     threading.Timer(15.0, lambda: self.snort_alerts[(packet_info['src_ip'], packet_info['dst_ip'])].append("Port Scanning")).start()
                         
                         attack_label = self.anomalyDetector.check(packet)
                         if attack_label:
@@ -1452,7 +1449,7 @@ class HomeController:
             print(tb)
     def ppsttick(self):
         try:
-            self.rate_of_packets=self.recently_qued_packets/1
+            self.rate_of_packets=self.recently_qued_packets/self.elapsed_seconds
             if self.rate_of_packets>=100 and  self.rate_of_packets<=300:
                 current_time = datetime.now().strftime("%H:%M:%S")
                 self.networkLog.append(current_time + " - " + "Moderately high increase in packets")
@@ -1469,14 +1466,73 @@ class HomeController:
     def tick(self):
         try:
             current_time = QTime.currentTime()
-            elapsed_seconds = self.start_time.secsTo(current_time)
-            hours = elapsed_seconds // 3600
-            minutes = (elapsed_seconds % 3600) // 60
-            seconds = elapsed_seconds % 60
+            self.elapsed_seconds = self.start_time.secsTo(current_time)
+            hours = self.elapsed_seconds // 3600
+            minutes = (self.elapsed_seconds % 3600) // 60
+            seconds = self.elapsed_seconds % 60
             self.elapsedTime = f"{hours:02}:{minutes:02}:{seconds:02}"
             self.ui.label_6.setText(str(self.elapsedTime))
-            if self.process_packet_index<len(self.qued_packets)and self.pcap_process_packet_index<len(self.qued_packets):
+            if self.process_packet_index < len(self.qued_packets) and self.pcap_process_packet_index < len(self.qued_packets):
                 self.process_packet()
                 self.packet_statistics()
         except Exception as e:
             print(f"Error in tick function: {e}")
+
+    def IDStick(self):
+        try:
+            pcap_path = "D:\\Work\\University\\GradProject\\Naswail-SIEM-Tool\\data\\anomalyTest.pcap"
+            wrpcap(pcap_path, self.packets)
+            anomalies = self.anomalyDetector_2.check(pcap_path)
+            for a in anomalies:
+                src_ip = a.get('src_ip')
+                dst_ip = a.get('dst_ip')
+                src_port = a.get('src_port', None)
+                dst_port = a.get('dst_port', None)
+                protocol = a.get('protocol', None)
+
+                # Find only the *first* matching packet
+                for pkt in self.packets:
+                    if "IP" not in pkt:
+                        continue
+
+                    pkt_src = pkt["IP"].src
+                    pkt_dst = pkt["IP"].dst
+                    pkt_sport = getattr(pkt, "sport", None)
+                    pkt_dport = getattr(pkt, "dport", None)
+                    pkt_proto = pkt.lastlayer().name.upper()
+
+                    if (pkt_src == src_ip and
+                        pkt_dst == dst_ip and
+                        pkt_sport == src_port and
+                        pkt_dport == dst_port and
+                        (protocol is None or protocol.upper() in pkt_proto)):
+
+                        self.anomalies.append(pkt)
+                        break
+                anomaly_signature = (a['src_ip'], a['dst_ip'], a['label'])
+                
+                if anomaly_signature not in self.unique_anomalies:
+                    self.unique_anomalies.add(anomaly_signature)
+                    current_time = datetime.now().strftime("%H:%M:%S")
+                    self.networkLog.append(f"{current_time} - An anomaly occurred")
+
+                    # Add to anomaly table
+                    row_position = self.ui.tableWidget_4.rowCount()
+                    self.ui.tableWidget_4.insertRow(row_position)
+
+                    row_color = "rgba(255, 140, 140, 150)"
+                    qcolor = self.get_qcolor(row_color)
+
+                    items = [
+                        QTableWidgetItem(current_time),
+                        QTableWidgetItem(a['src_ip']),
+                        QTableWidgetItem(a['dst_ip']),
+                        QTableWidgetItem(str(a['label']))
+                    ]
+
+                    for item in items:
+                        item.setBackground(qcolor)
+                    for col, item in enumerate(items):
+                        self.ui.tableWidget_4.setItem(row_position, col, item)
+        except Exception as e:
+            print(f"Error in IDStick function: {e}")
