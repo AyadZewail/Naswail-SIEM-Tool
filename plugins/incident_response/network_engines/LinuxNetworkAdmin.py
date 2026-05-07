@@ -1,33 +1,72 @@
 import subprocess
 from core.interfaces import INetworkAdministration
 
+
 class LinuxNetworkAdmin(INetworkAdministration):
-    def block_ip(self, ip):
-        cmd = f"iptables -A INPUT -s {ip} -j DROP"
-        subprocess.run(["sudo", "sh", "-c", cmd], check=True)
-    
-    def unblock_ip(self, ip):
-        cmd = f"iptables -D INPUT -s {ip} -j DROP"
-        subprocess.run(["sudo", "sh", "-c", cmd], check=True)
-    
-    def block_port(self, port):
-        cmd = f"iptables -A INPUT -p tcp --dport {port} -j DROP"
-        subprocess.run(["sudo", "sh", "-c", cmd], check=True)
+    def __init__(self, executor=None):
+        # dependency injection for testability
+        self.executor = executor or subprocess.run
 
-    def unblock_port(self, port):
-        cmd = f"iptables -D INPUT -p tcp --dport {port} -j DROP"
-        subprocess.run(["sudo", "sh", "-c", cmd], check=True)
+    # -------------------------
+    # Command builders (pure)
+    # -------------------------
 
-    def limit_rate(self, ip, rate):
-        cmd = [
+    def _build_block_ip(self, ip):
+        return f"iptables -A INPUT -s {ip} -j DROP"
+
+    def _build_unblock_ip(self, ip):
+        return f"iptables -D INPUT -s {ip} -j DROP"
+
+    def _build_block_port(self, port):
+        return f"iptables -A INPUT -p tcp --dport {port} -j DROP"
+
+    def _build_unblock_port(self, port):
+        return f"iptables -D INPUT -p tcp --dport {port} -j DROP"
+
+    def _build_limit_rate(self, ip, rate):
+        return [
             "sudo", "iptables", "-A", "FORWARD", "-s", ip,
             "-m", "hashlimit", "--hashlimit-name", f"rate_{ip}",
-            "--hashlimit-above", f"{rate}/sec", "--hashlimit-mode", "srcip", "-j", "DROP"
+            "--hashlimit-above", f"{rate}/sec",
+            "--hashlimit-mode", "srcip",
+            "-j", "DROP"
         ]
-        subprocess.run(cmd, check=True)
+
+    def _build_reset_rate_limit(self, ip):
+        return [
+            "sudo", "iptables", "-D", "FORWARD", "-s", ip, "-j", "DROP"
+        ]
+
+    # -------------------------
+    # Execution layer
+    # -------------------------
+
+    def block_ip(self, ip):
+        cmd = self._build_block_ip(ip)
+        self.executor(["sudo", "sh", "-c", cmd], check=True)
+
+    def unblock_ip(self, ip):
+        cmd = self._build_unblock_ip(ip)
+        self.executor(["sudo", "sh", "-c", cmd], check=True)
+
+    def block_port(self, port):
+        cmd = self._build_block_port(port)
+        self.executor(["sudo", "sh", "-c", cmd], check=True)
+
+    def unblock_port(self, port):
+        cmd = self._build_unblock_port(port)
+        self.executor(["sudo", "sh", "-c", cmd], check=True)
+
+    def limit_rate(self, ip, rate):
+        cmd = self._build_limit_rate(ip, rate)
+        self.executor(cmd, check=True)
 
     def reset_rate_limit(self, ip):
-        subprocess.run(["sudo", "iptables", "-D", "FORWARD", "-s", ip, "-j", "DROP"], check=False)
+        cmd = self._build_reset_rate_limit(ip)
+        self.executor(cmd, check=False)
 
-    def terminate_processes(self, identifier): pass  # Copy logic from your original method
-    def broadcast_termination(self, pid): pass  # Same here
+    def terminate_processes(self, identifier):
+        pass
+
+    def broadcast_termination(self, pid):
+        pass

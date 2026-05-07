@@ -173,11 +173,3 @@ class TransformerAutopilot(IAutopilotEngine):
                 best_func = func_name
 
         return best_func, ""
-    
-
-# if __name__ == "__main__":
-#     ta = TransformerAutopilot()
-#     prompt = "Now, in some cases we want to control the rate of the incoming traffic, from certain IP addresses"
-#     function, log = ta.decide(prompt)
-#     print(function)
-#     print(log)

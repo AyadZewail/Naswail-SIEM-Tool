@@ -9,7 +9,10 @@ class BasicSensorSystem(ISensorSystem):
         self.sensors[name] = mac_address
 
     def remove_sensor(self, name: str) -> None:
-        print(f"[SensorSystem] Removing sensor '{name}' with MAC {self.sensors[name]}")
+        mac = self.sensors.get(name)
+        if mac:
+            print(f"[SensorSystem] Removing sensor '{name}' with MAC {mac}")
+
         self.sensors.pop(name, None)
 
     def list_sensors(self) -> dict:

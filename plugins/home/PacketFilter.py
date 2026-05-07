@@ -65,8 +65,8 @@ class BasicPacketFilter(IPacketFilter):
                 time_match = (stime == 946677600 or stime <= timestamp) and \
                              (etime == 946677600 or etime >= timestamp)
 
-                src_match = src_filter in src_ip if src_filter else True
-                dst_match = dst_filter in dst_ip if dst_filter else True
+                src_match = src_ip == src_filter if src_filter else True
+                dst_match = dst_ip == dst_filter if dst_filter else True
 
                 mac_match = macsrc in mac_filter if mac_filter else True
 

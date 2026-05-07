@@ -33,14 +33,6 @@ class IPacketSniffer(ABC):
     def set_source(self, source_type: str, source_value: str) -> None:
         pass
 
-class IPacketSystem(Protocol):
-    packets = []
-    anomalies = []
-
-    @abstractmethod
-    def process_packet(self) -> None:
-        pass
-
 class IPacketDecoder(ABC):
     @abstractmethod
     def decode(self, packet: Any) -> List[str]:

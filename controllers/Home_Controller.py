@@ -1291,7 +1291,6 @@ class HomeController:
     
     def toggleCapture(self):
         self.capture *= -1
-        self.capture*=-1
 
     def import_file(self):
         try:

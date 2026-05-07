@@ -13,6 +13,8 @@ class BasicErrorChecker(IErrorChecker):
 
     def is_corrupted(self, packet: Any) -> Optional[bool]:
         try:
+            if packet is None:
+                return None
             if hasattr(packet, 'chksum'):
                 original_checksum = packet.chksum
 

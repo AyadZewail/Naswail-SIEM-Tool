@@ -23,6 +23,9 @@ from plugins.tools.NetworkActivityAnalyzer import NetworkActivityAnalyzer
 from plugins.tools.TrafficPredictor import BasicRegressionPredictor
 
 from plugins.analysis.GeoMapper import MaxMindGeoMapper
+import geoip2.database
+import requests
+import subprocess
 
 
 class ServiceContainer:
@@ -118,7 +121,7 @@ container.register_singleton(
 )
 
 # ===== Net Admin implementation (used by controller) =====
-container.register_singleton("ThreatMitigationEngine", AdminImpl())
+container.register_singleton("ThreatMitigationEngine", AdminImpl(subprocess.run))
 
 # ===== Autopilot =====
 container.register_singleton(
@@ -130,7 +133,17 @@ container.register_singleton("network_activity_analyzer", NetworkActivityAnalyze
 
 container.register_singleton("regression_predictor", BasicRegressionPredictor())
 
+def geoip_reader_factory():
+    return geoip2.database.Reader("resources/GeoLite2-City.mmdb")
+
+
+http_client = requests
+
+
 container.register_singleton(
     "geo_mapper",
-    MaxMindGeoMapper("resources/GeoLite2-City.mmdb")
+    MaxMindGeoMapper(
+        geoip_reader_factory=geoip_reader_factory,
+        http_client=http_client
+    )
 )
