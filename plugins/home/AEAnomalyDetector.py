@@ -129,7 +129,7 @@ class CloudAnomalyDetector(IAnomalyDetector):
 
         # print(dl_results + "\n" + ml_results)
 
-        m = re.search(r'idx\s*(\d+)', dl_results)
+        m = re.search(r'idx\s*(\d+)', dl_results or "")
         first_idx = int(m.group(1)) if m else None
         # print(first_idx)
 

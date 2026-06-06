@@ -1,3 +1,6 @@
 __pycache__/
 venv-python12/
 naswail.screenshots/
+.env
+tests/fixtures/generated/
+tests/performance/reports/

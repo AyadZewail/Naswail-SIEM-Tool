@@ -3,7 +3,7 @@ import torch
 import numpy as np
 import pandas as pd
 import spacy
-# from sentence_transformers import SentenceTransformer, util
+from sentence_transformers import SentenceTransformer, util
 
 from plugins.incident_response.interfaces import IIntelPreprocessor
 

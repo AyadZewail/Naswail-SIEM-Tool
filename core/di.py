@@ -24,9 +24,19 @@ from plugins.tools.TrafficPredictor import BasicRegressionPredictor
 
 from plugins.analysis.GeoMapper import MaxMindGeoMapper
 import geoip2.database
+import os
 import requests
 import subprocess
+from dotenv import load_dotenv
 
+load_dotenv()
+
+class Config:
+    SCRAPINGBEE_API = os.getenv("SCRAPINGBEE_API")
+    SEARCHAPI_KEY = os.getenv("SEARCHAPI_KEY")
+    DEEPSEEK_API = os.getenv("DEEPSEEK_API")
+    NGROK_API = os.getenv("NGROK_API")
+    IDS_IP = os.getenv("IDS_IP")
 
 class ServiceContainer:
     def __init__(self):
@@ -85,7 +95,7 @@ container.register_singleton(
 container.register_singleton(
     "anomaly_detector_2",
     CloudAnomalyDetector(
-        "http://101.46.64.170:8080"
+        Config.IDS_IP
     )
 )
 
@@ -105,17 +115,17 @@ container.register_singleton("application_system", BasicApplicationSystem())
 # ===== Threat Intelligence related =====
 container.register_singleton("bing_searcher", BingSearcher())
 container.register_singleton("yt_searcher", YouTubeSearcher())
-# container.register_singleton("deepseek_searcher", DeepSeekSearcher("https://api-ap-southeast-1.modelarts-maas.com/v1/chat/completions", 
-#                                                                    "fce64bd1-948b-4b4d-b998-729fc4c12db8_8947A6A7229BA554F81256D428EB618303FE2E35A63A8C29FF0F98F7EAAB85CA",
-#                                                                    "deepseek-v3.1"))
+# container.register_singleton("searchapi_searcher", SearchApiSearcher(Config.SEARCHAPI_KEY))
+# container.register_singleton("scrapingbee_searcher", ScrapingbeeSearcher(Config.SCRAPINGBEE_API))
+# container.register_singleton("deepseek_searcher", DeepSeekSearcher("https://api-ap-southeast-1.modelarts-maas.com/v1/chat/completions", Config.DEEPSEEK_API, "deepseek-v3.1"))
+
 container.register_singleton("simple_intel_preprocessor", SimpleIntelPreprocessor())
-# container.register_singleton("deepseek_intel_preprocessor", LLMIntelPreprocessor("https://api-ap-southeast-1.modelarts-maas.com/v1/chat/completions", 
-#                                                                                  "fce64bd1-948b-4b4d-b998-729fc4c12db8_8947A6A7229BA554F81256D428EB618303FE2E35A63A8C29FF0F98F7EAAB85CA",
-#                                                                                  "deepseek-v3.1"))
+# container.register_singleton("deepseek_intel_preprocessor", LLMIntelPreprocessor("https://api-ap-southeast-1.modelarts-maas.com/v1/chat/completions", Config.DEEPSEEK_API, "deepseek-v3.1"))
+
 container.register_singleton(
     "threat_intelligence",
     ThreatIntelligence(
-        searchers=[container.resolve("bing_searcher"), container.resolve("yt_searcher")],#, container.resolve("deepseek_searcher")],
+        searchers=[container.resolve("bing_searcher"), container.resolve("yt_searcher")],
         preprocessor=container.resolve("simple_intel_preprocessor")
     )
 )
@@ -126,7 +136,7 @@ container.register_singleton("ThreatMitigationEngine", AdminImpl(subprocess.run)
 # ===== Autopilot =====
 container.register_singleton(
     "autopilot",
-    Autopilot("https://7f7f-34-80-211-129.ngrok-free.app")
+    Autopilot(Config.NGROK_API)
 )
 
 container.register_singleton("network_activity_analyzer", NetworkActivityAnalyzer())
