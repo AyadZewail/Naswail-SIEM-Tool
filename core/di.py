@@ -12,7 +12,7 @@ from plugins.home.SensorSystem import BasicSensorSystem
 from plugins.home.ApplicationSystem import BasicApplicationSystem
 from plugins.home.PacketsExporter import BasicPacketExporter
 
-from plugins.incident_response.scrapers import BingSearcher, YouTubeSearcher, DeepSeekSearcher
+from plugins.incident_response.scrapers import BingSearcher, YouTubeSearcher, DeepSeekSearcher, DuckDuckGoSearcher
 from plugins.incident_response.IntelPreprocessor import SimpleIntelPreprocessor
 from plugins.incident_response.DeepSeekPreprocessor import LLMIntelPreprocessor
 from plugins.incident_response.ThreatIntelligence import ThreatIntelligence
@@ -115,6 +115,7 @@ container.register_singleton("application_system", BasicApplicationSystem())
 # ===== Threat Intelligence related =====
 container.register_singleton("bing_searcher", BingSearcher())
 container.register_singleton("yt_searcher", YouTubeSearcher())
+container.register_singleton("ddg_searcher", DuckDuckGoSearcher())
 # container.register_singleton("searchapi_searcher", SearchApiSearcher(Config.SEARCHAPI_KEY))
 # container.register_singleton("scrapingbee_searcher", ScrapingbeeSearcher(Config.SCRAPINGBEE_API))
 # container.register_singleton("deepseek_searcher", DeepSeekSearcher("https://api-ap-southeast-1.modelarts-maas.com/v1/chat/completions", Config.DEEPSEEK_API, "deepseek-v3.1"))
@@ -125,7 +126,7 @@ container.register_singleton("simple_intel_preprocessor", SimpleIntelPreprocesso
 container.register_singleton(
     "threat_intelligence",
     ThreatIntelligence(
-        searchers=[container.resolve("bing_searcher"), container.resolve("yt_searcher")],
+        searchers=[container.resolve("ddg_searcher")],
         preprocessor=container.resolve("simple_intel_preprocessor")
     )
 )
