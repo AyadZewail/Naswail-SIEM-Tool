@@ -2,7 +2,12 @@ Naswail SIEM Tool
 
 Documentation
 -------------
-
+Datasets:
+autopilot dataset is text file so its already including in this github, however all other datasets must be downloaded through:
+https://www.kaggle.com/datasets/youssefnassar4/um-nids-benign-of-cic-ids2017-and-all-attack
+and
+https://www.kaggle.com/datasets/youssefnassar4/um-nids-synthesizedfr
+both must be installed and manually placed in the code
 Full documentation is available under `docs/`:
 
 - Overview: `docs/Overview.md`
